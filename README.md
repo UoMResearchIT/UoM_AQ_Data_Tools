@@ -1,7 +1,7 @@
 # UoM_AQ_Data_Tools
 This repository contains tools for obtaining and processing UK air quality data.
 
-## Obtaining DEFRA AURN data
+## Obtaining DEFRA AURN Measurement Data
 
 `defra_website_automation.py`
 
@@ -28,6 +28,28 @@ To use the script:
 
 Do not attempt to do anything else on your computer while it is running - otherwise you
 risk disrupting the automated process.
+
+## Obtaining DEFRA AURN Station Location Information
+
+Note: this step only needs to be followed if more AURN stations have been added since the
+time of writing (March 2020). Otherwise the included csv data file can be used. 
+
+To download a list of all DEFRA AURN stations use this website:
+https://uk-air.defra.gov.uk/networks/find-sites?view=advanced
+Select the "Include closed monitoring sites in search" radio button, leave all other 
+options as the defaults (giving as wide a search as possible), and press the green 
+"search network" button.
+
+The station information contains latitude and longitude, but no address. To get the address
+information use this script `aurn_address_postcode_calculator.py`. This will require you
+to create a Google API key for the Geocoding service - you can do this here: 
+https://console.developers.google.com (at the time of writing, March 2020, this is free
+for reasonable usage in the first year).
+
+This script creates the file `aurn_measurement_sites_addresses_postcodes.csv`. A copy of
+this file, containing information for 272 AURN stations is included in this repository.
+
+
 
 ## Processing DEFRA AURN data
 
