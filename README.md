@@ -19,7 +19,7 @@ In summary (and using conda, not pure pip), install:
  - create -n webscraper selenium
 
 The script has been developed on OSX 10.14.6, using chrome 80.0.x and selenium 3.141.0
-It was developed in January 2020 - if changes are made to the DEFRA AURN website after
+It was developed in February 2020 - if changes are made to the DEFRA AURN website after
 this then the script may need modifying.
 
 To use the script:
@@ -50,8 +50,24 @@ This script creates the file `aurn_measurement_sites_addresses_postcodes.csv`. A
 this file, containing information for 272 AURN stations is included in this repository.
 
 
-
 ## Processing DEFRA AURN data
+
+The raw data files obtained from the DEFRA website can be processed using the script
+`aurn_files_combined_and_process.py`. This invoked as:
+`python aurn_files_combine_and_process.py -i [input directory] -o [output directory] -s [AURN station file]`
+All input flags are optional, if they are not included then default values are used
+(the current working directory for input / output directory, and the file 
+`aurn_measurement_sites_addresses_postcodes.csv` for the AURN station file).
+
+A single csv file is generated, following this naming convention:
+`AURN_AQ_data_[start date]_[end date].csv`
+The start and end dates will be for the data contained within that file. 
+
+Note that the date range of the final file may shorter than the date ranges that you 
+have downloaded, as this script drops all non-validated data points (and data validation 
+can take several months to perform). If you wish to include all data (validated or otherwise) 
+then you can comment out this line of code in the function `extract_aurn_values_data`: 
+`value_data[bool_mask] = np.nan` 
 
 
 ## Obtaining Met & Pollen data
