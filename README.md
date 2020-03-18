@@ -16,7 +16,7 @@ In summary (and using conda, not pure pip), install:
 - chrome
 - chrome drivers for selenium (https://sites.google.com/a/chromium.org/chromedriver/downloads)
 - selenium, via conda, creating a virtual environment for this:
- - create -n webscraper selenium
+ - conda create -n webscraper selenium
 
 The script has been developed on OSX 10.14.6, using chrome 80.0.x and selenium 3.141.0
 It was developed in February 2020 - if changes are made to the DEFRA AURN website after
