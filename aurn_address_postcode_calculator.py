@@ -98,7 +98,7 @@ if __name__ == '__main__':
     
     print('reading station data')
     site_metadata = pd.read_csv('aurn_measurement_sites.csv')
-    site_metadata = site_metadata.drop(['UK-AIR ID', 'EU Site ID', 'EMEP Site ID',
+    site_metadata = site_metadata.drop(['EU Site ID', 'EMEP Site ID',
            'Zone', 'Start Date', 'End Date',
            'Northing', 'Easting', 'Altitude (m)', 'Networks',
            'AURN Pollutants Measured', 'Site Description'],axis=1)

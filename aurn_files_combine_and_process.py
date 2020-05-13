@@ -245,6 +245,7 @@ def add_address_data(value_data,aurn_file):
     aurn_postcodes = aurn_postcodes.set_index('Site Name')
     
     # create new columns
+    value_data['UK-AIR ID']=''
     value_data['Address']=''
     value_data['PostCode']=''
     value_data['lati']=np.nan
@@ -254,10 +255,11 @@ def add_address_data(value_data,aurn_file):
     value_data = value_data.swaplevel()
     
     for station in value_data.index.levels[0]:
-        value_data.loc[(station,),'Address']  = aurn_postcodes.loc[station,'Address']
-        value_data.loc[(station,),'PostCode'] = aurn_postcodes.loc[station,'Postcode']
-        value_data.loc[(station,),'lati']     = aurn_postcodes.loc[station,'Latitude']
-        value_data.loc[(station,),'loni']     = aurn_postcodes.loc[station,'Longitude']
+        value_data.loc[(station,),'UK-AIR ID']  = aurn_postcodes.loc[station,'UK-AIR ID']
+        value_data.loc[(station,),'Address']    = aurn_postcodes.loc[station,'Address']
+        value_data.loc[(station,),'PostCode']   = aurn_postcodes.loc[station,'Postcode']
+        value_data.loc[(station,),'lati']       = aurn_postcodes.loc[station,'Latitude']
+        value_data.loc[(station,),'loni']       = aurn_postcodes.loc[station,'Longitude']
     
 
     # restore the order of 'date' 'location' in index
