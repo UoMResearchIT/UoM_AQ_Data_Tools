@@ -3,6 +3,8 @@ This repository contains tools for obtaining and processing UK air quality data.
 
 ## Obtaining DEFRA AURN Measurement Data
 
+(All scripts for processing DEFRA AURN data are in the `AURN_DATA_Download` directory)
+
 `defra_website_automation.py`
 
 This script will automate the filling in and submitting of the DEFRA AURN website. 
