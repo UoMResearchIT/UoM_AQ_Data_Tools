@@ -19,6 +19,29 @@ def extraction_function(source_dict,settings_dict):
 			dfile.write('{}, {}, {}\n'.format(d_date,d_siteid,d_val))
 
 
+def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
+	datadata = Dataset(source_dict)
+	datadata.default()
+	for ds in extra_datasets:
+		datadata.add(ds)
+	
+	with open(settings_dict['fname'],'w') as dfile:
+	
+		dfile.write(settings_dict['headstring'])
+		dfile.write(settings_dict['columnstring'])
+	
+		for data in datadata.values():
+			d_date = data['Time']
+			d_siteid = data['Site identifier']	
+			d_val = data['Value']
+			d_extra = data['Additional field values']
+			
+			dfile.write('{}, {}, {}'.format(d_date,d_siteid,d_val))
+			for d_ev in d_extra:
+				dfile.write(', {}'.format(d_ev))
+			dfile.write('\n')
+
+
 def extraction_wind_function(source_dict,settings_dict):
 	datadata = Dataset(source_dict)
 	datadata.default()
@@ -45,8 +68,8 @@ if __name__ == '__main__':
 
 	Dates = ['2016-1-1 0','2019-12-31 23']
 	Dates_string = '2016-2019'
-
 	dict_base = {'Time range':Dates,'Latitude range': [48,60], 'Longitude range': [-11,3]}
+	
 	
 	print('extracting rain data for date range: {} to {}'.format(Dates[0],Dates[1]))
 	rain_dict = dict_base.copy()
@@ -57,31 +80,15 @@ if __name__ == '__main__':
 	extraction_function(rain_dict,rain_settings)
 
 
-	print('extracting relative humidity data for date range: {} to {}'.format(Dates[0],Dates[1]))
-	relhum_dict = dict_base.copy()
-	relhum_dict.update({'Source reference':'midas.weather_hrly_ob.rltv_hum'})
-	relhum_settings = {'fname':'data_met/relhum_{}.csv'.format(Dates_string),\
-					'headstring':'Relative Humidity hourly data for date range: {} to {}\n'.format(Dates[0],Dates[1]),\
-					'columnstring':'date,siteID,rh\n'}
-	extraction_function(relhum_dict,relhum_settings)
-	
-	
-	print('extracting station pressure data for date range: {} to {}'.format(Dates[0],Dates[1]))
-	stnpres_dict = dict_base.copy()
-	stnpres_dict.update({'Source reference':'midas.weather_hrly_ob.stn_pres'})
-	stnpres_settings = {'fname':'data_met/stnpres_{}.csv'.format(Dates_string),\
-					'headstring':'Station Pressure hourly data for date range: {} to {}\n'.format(Dates[0],Dates[1]),\
-					'columnstring':'date,siteID,pressure\n'}
-	extraction_function(stnpres_dict,stnpres_settings)
-
-
-	print('extracting temperature data for date range: {} to {}'.format(Dates[0],Dates[1]))
+	print('extracting temperature, relative humidity, and pressure data for date range: {} to {}'.format(Dates[0],Dates[1]))
 	temperature_dict = dict_base.copy()
 	temperature_dict.update({'Source reference':'midas.weather_hrly_ob.air_temperature'})
-	temperature_settings = {'fname':'data_met/temperature_{}.csv'.format(Dates_string),\
-					'headstring':'Temperature hourly data for date range: {} to {}\n'.format(Dates[0],Dates[1]),\
-					'columnstring':'date,siteID,temperature\n'}
-	extraction_function(temperature_dict,temperature_settings)
+	temperature_settings = {'fname':'data_met/temp_rh_press_{}.csv'.format(Dates_string),\
+					'headstring':'Temperature, Relative Humidity, and Station Pressure  hourly data for date range: {} to {}\n'.format(Dates[0],Dates[1]),\
+					'columnstring':'date,siteID,temperature,rh,pressure\n'}
+	extra_datasets = ['midas.weather_hrly_ob.rltv_hum','midas.weather_hrly_ob.stn_pres']
+	extraction_add_data_function(temperature_dict,temperature_settings,extra_datasets)
+
 	
 
 	print('extracting wind data for date range: {} to {}'.format(Dates[0],Dates[1]))
