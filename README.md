@@ -24,9 +24,11 @@ packages require installing to run the scripts for this.
 
 The processing scripts for extracting the EMEP data are written in python3. To
 install the packages needed for these (using conda and pip) use this script:
+`conda env create -f env_emep.yml`
 
 The processing scripts for obtaining the AURN dataset, and processing all datasets, are
 written in python3. To install the packages needed for these, use this script: 
+`conda env create -f env_aurn_medmi.yml`
 
 
 ## Extracting EMEP Model Air Quality Data
