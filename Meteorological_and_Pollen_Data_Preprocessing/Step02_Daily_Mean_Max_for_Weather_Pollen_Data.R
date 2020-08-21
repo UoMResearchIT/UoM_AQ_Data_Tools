@@ -49,27 +49,43 @@ initialize()
 
 message("finished initialization")
 
+
+pollen_file<-"midas_pollen_drnl_ob.clean.csv"
+weather_17_file<-"midas_weather_hrly_ob__2017.clean.csv"
+weather_18_file<-"midas_weather_hrly_ob__2018.clean.csv"
+weather_19_file<-"midas_weather_hrly_ob__2019.clean.csv"
+rain_17_file<-"midas_rain_drnl_ob__1__2017.clean.csv"
+rain_18_file<-"midas_rain_drnl_ob__1__2018.clean.csv"
+rain_19_file<-"midas_rain_drnl_ob__1__2019.clean.csv"
+
+
+
+weather_out_file<-"weather_df_Max_Mean_Intermediate.csv"
+pollen_out_file<-"pollen_df_Max_Mean_Intermediate.csv"
+rain_out_file<-"rain_df_Max_Mean_Intermediate.csv"
+
+
 # ----------------------------------------------------------------------
 #                 Load and clean the datasets  
 # ----------------------------------------------------------------------
 # set working dir
-setwd("/mnt/iusers01/support/mbessdl2/scratch/Turing_AQ_Data_Prep")
+setwd("/Users/mbessdl2/work/manchester/Turing_Project_AQ/Britain_Breathing_Data/MIDAS_Datasets_Processing/Manuele_Reani_Raw_Data/test_processes")
 # load tha data 
 message("loading pollen data")
-pollen_data <- read.csv(file="midas_pollen_drnl_ob.csv",header=TRUE,sep=",")
+pollen_data <- read.csv(file=pollen_file,header=TRUE,sep=",")
 
 message("loading and merging weather data")
-weather_data17 <- read.csv(file="midas_weather_hrly_ob__2017.csv",header=TRUE,sep=",")
-weather_data18 <- read.csv(file="midas_weather_hrly_ob__2018.csv",header=TRUE,sep=",")
-weather_data19 <- read.csv(file="midas_weather_hrly_ob__2019.csv",header=TRUE,sep=",")
+weather_data17 <- read.csv(file=weather_17_file,header=TRUE,sep=",")
+weather_data18 <- read.csv(file=weather_18_file,header=TRUE,sep=",")
+weather_data19 <- read.csv(file=weather_19_file,header=TRUE,sep=",")
 names(weather_data18)<-names(weather_data17)
 names(weather_data19)<-names(weather_data17)
 weather_data <- rbind(weather_data17, weather_data18, weather_data19)
 
 message("loading and merging rain data")
-rain_data17 <- read.csv(file="midas_rain_drnl_ob__1__2017.csv",header=TRUE,sep=",")
-rain_data18 <- read.csv(file="midas_rain_drnl_ob__1__2018.csv",header=TRUE,sep=",")
-rain_data19 <- read.csv(file="midas_rain_drnl_ob__1__2019.csv",header=TRUE,sep=",")
+rain_data17 <- read.csv(file=rain_17_file,header=TRUE,sep=",")
+rain_data18 <- read.csv(file=rain_18_file,header=TRUE,sep=",")
+rain_data19 <- read.csv(file=rain_19_file,header=TRUE,sep=",")
 names(rain_data18)<-names(rain_data17)
 names(rain_data19)<-names(rain_data17)
 rain_data <- rbind(rain_data17, rain_data18, rain_data19) 
@@ -87,9 +103,9 @@ names(rain_data) <-
 
 message("deleting empty records")
 # eliminate empty record
-pollen_data <- pollen_data[-c(10000, 20000, 22300, 22301),]
-weather_data <- weather_data[-2950071, -6026440, -9748861]
-rain_data <- rain_data[-2564857, -1735098, -871592] 
+#pollen_data <- pollen_data[-c(10000, 20000, 22300, 22301),]
+#weather_data <- weather_data[-2950071, -6026440, -9748861]
+#rain_data <- rain_data[-2564857, -1735098, -871592] 
 
 message("removing timestamp from date information")
 # add the Date column and remove the Date.precise 
@@ -215,9 +231,9 @@ rain_df_Final <- merge(rain_data, StationDate_df,
  
 message("Saving Intermediate Data Files")
 # temporarily save DF files #############################################
-write.csv(weather_df_Final, file = "weather_df_Max_Mean_Intermediate.csv", row.names=F)
-write.csv(pollen_df_Final, file = "pollen_df_Max_Mean_Intermediate.csv", row.names=F)
-write.csv(rain_df_Final, file = "rain_df_Max_Mean_Intermediate.csv", row.names=F)
+write.csv(weather_df_Final, file = weather_out_file, row.names=F)
+write.csv(pollen_df_Final, file = pollen_out_file, row.names=F)
+write.csv(rain_df_Final, file = rain_out_file, row.names=F)
 # --------------------------------------------------------------------
 
 

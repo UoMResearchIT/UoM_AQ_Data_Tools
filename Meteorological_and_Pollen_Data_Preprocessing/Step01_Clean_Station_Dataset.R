@@ -8,10 +8,10 @@ set.seed(171219)
 
 
 # set working dir
-setwd("/mnt/iusers01/support/mbessdl2/scratch/Turing_AQ_Data_Prep")
+setwd("/Users/mbessdl2/work/manchester/Turing_Project_AQ/Britain_Breathing_Data/MIDAS_Datasets_Processing/Manuele_Reani_Raw_Data/test_processes")
 
-original_filename <- "midas_source.csv"
-output_filename <- "station_data_clean2.csv"
+original_filename <- "midas_source.clean.csv"
+output_filename <- "station_data_clean.csv"
 
 # -------------------------------------------------------------------
 # stations data
@@ -26,9 +26,9 @@ station_data <- station_data[,c(1,3,4,8)]
 names(station_data) <- 
   c("Station", "Latitude", "Longitude", "Postcode")
   
-message("dropping empty records")
+#message("dropping empty records")
 # eliminate empty record
-station_data <- station_data[-c(29870,26186,26190,26185, 26189),]
+#station_data <- station_data[-c(29870,26186,26190,26185, 26189),]
 
 message("stripping out the primary postcode area")
 # keep only the postcode area
