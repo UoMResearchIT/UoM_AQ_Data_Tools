@@ -1,0 +1,13 @@
+name: aurn_medmi
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.7
+  - pyreadr
+  - python-wget
+  - pandas
+  - numpy
+  - scipy
+  - scikit-learn
+
