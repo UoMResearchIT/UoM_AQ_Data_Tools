@@ -1,0 +1,17 @@
+name: emep
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.7
+  - joblib
+  - xarray
+  - pandas
+  - numpy
+  - scipy
+  - pyproj
+  - netcdf4
+  - pyreadr
+  - pip
+  - pip:
+    - salem
