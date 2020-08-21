@@ -1,8 +1,35 @@
-# UoM\_AQ\_Data_Tools
+# UoM AQ Data Tools
+
 This repository contains tools for obtaining and processing UK air quality data.
 
-## Extracting EMEP Model Data
+The sections below are:
+ - Requirements
+ - Extracting EMEP Model Air Quality Data
+ - Obtaining and Processing AURN Air Quality Data
+ - Obtaining MEDMI Meteorological and Pollen Data
+ - Processing MEDMI Data
+ - Combining Datasets
 
+
+## Requirements
+
+The processing scripts in this repository are written in python, tested on unix and OSX
+systems.
+
+The EMEP (and WRF) models are written in fortran - follow these references for compiling 
+theses, preparing model inputs, and performing the simulations.
+
+The MEDMI dataset are accessed using the python2 installation on their system, no more
+packages require installing to run the scripts for this.
+
+The processing scripts for extracting the EMEP data are written in python3. To
+install the packages needed for these (using conda and pip) use this script:
+
+The processing scripts for obtaining the AURN dataset, and processing all datasets, are
+written in python3. To install the packages needed for these, use this script: 
+
+
+## Extracting EMEP Model Air Quality Data
 
 EMEP simulations should be carried out using the tools available in the X repository.
 
@@ -12,7 +39,7 @@ These will extract the hourly data, and daily mean / max values, for locations t
 from the AURN metadata files. Bash scripts are provided for running these tools.
  
 
-## Obtaining and Processing DEFRA AURN Measurement Data 
+## Obtaining and Processing AURN Air Quality Data
 
 (All scripts for processing DEFRA AURN data are in the `AURN_DATA_Download` directory)
 
@@ -29,7 +56,7 @@ data file called `pollution_daily_data_[start year]-[end year].csv` in the same 
 This data file contains the combined daily mean, max, and data count for all AURN sites.
 
 
-## Obtaining Met & Pollen data
+## Obtaining MEDMI Meteorological and Pollen Data
 
 All scripts for obtaining Met and Pollen data are in the `MEDMI_Data_Download` directory.
 The scripts are:
@@ -55,7 +82,7 @@ depending on the time period you've chosen, could take several hours to complete
 
 Once all scripts have finished running you can copy the data back to your local computer.
 
-## Processing Met & Pollen data
+## Processing MEDMI Data
 
 
-## Combining Met, Pollen, and AURN data
+## Combining Datasets
