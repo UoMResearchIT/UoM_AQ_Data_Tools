@@ -80,13 +80,13 @@ if __name__ == '__main__':
 	extraction_function(rain_dict,rain_settings)
 
 
-	print('extracting temperature, relative humidity, and pressure data for date range: {} to {}'.format(Dates[0],Dates[1]))
+	print('extracting temperature, relative humidity, pressure, and wet bulb temperature data for date range: {} to {}'.format(Dates[0],Dates[1]))
 	temperature_dict = dict_base.copy()
 	temperature_dict.update({'Source reference':'midas.weather_hrly_ob.air_temperature'})
-	temperature_settings = {'fname':'data_met/temp_rh_press_{}.csv'.format(Dates_string),\
-					'headstring':'Temperature, Relative Humidity, and Station Pressure  hourly data for date range: {} to {}\n'.format(Dates[0],Dates[1]),\
-					'columnstring':'date,siteID,temperature,rh,pressure\n'}
-	extra_datasets = ['midas.weather_hrly_ob.rltv_hum','midas.weather_hrly_ob.stn_pres']
+	temperature_settings = {'fname':'data_met/temp_rh_press_wbulb_{}.csv'.format(Dates_string),\
+					'headstring':'Temperature, Relative Humidity, Station Pressure, and Wet Bulb Temperature hourly data for date range: {} to {}\n'.format(Dates[0],Dates[1]),\
+					'columnstring':'date,siteID,temperature,rh,pressure,wbtemp\n'}
+	extra_datasets = ['midas.weather_hrly_ob.rltv_hum','midas.weather_hrly_ob.stn_pres','midas.weather_hrly_ob.dewpoint']
 	extraction_add_data_function(temperature_dict,temperature_settings,extra_datasets)
 
 	
