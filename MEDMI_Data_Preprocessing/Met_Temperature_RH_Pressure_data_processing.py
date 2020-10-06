@@ -511,12 +511,50 @@ def remove_low_temperature_data(met_data_in,min_temperature):
     return(met_data_in)
 
 
+
+
+#%%
+    
+def extract_mean_max(ts_in,var_in_string,var_out_string):
+    
+    tempgroups = ts_in.groupby([pd.Grouper(level="Date",freq='1D'),'siteID'])
+
+
+    out_data = pd.DataFrame()
+
+    out_data['{}.max'.format(var_out_string)] = tempgroups.max()[var_in_string]
+    out_data['{}.mean'.format(var_out_string)] = tempgroups.mean()[var_in_string]
+    out_data['{}.flag'.format(var_out_string)] = tempgroups.mean()['{}.flag'.format(var_in_string)]
+    
+
+    return(out_data)
+
+
+def combine_and_organise_mean_max(met_data_temp,met_data_pres,met_data_rh):
+    
+    met_groups_rh   = extract_mean_max(met_data_rh,'rh','RelativeHumidity')
+    met_groups_temp = extract_mean_max(met_data_temp,'temperature','Temperature')
+    met_groups_pres = extract_mean_max(met_data_pres,'pressure','Pressure')
+
+    combined_data = met_groups_temp.merge(met_groups_rh,how='outer',left_index=True,right_index=True)
+    combined_data = combined_data.merge(met_groups_pres,how='outer',left_index=True,right_index=True)
+
+
+    combined_data.sort_index(level=1,inplace=True)    
+    combined_data.index = combined_data.index.set_levels(['{} [WEATHER]'.format(x) for x in combined_data.index.levels[1]], level=1)
+    combined_data.index.rename(['time_stamp','sensor_name'],inplace=True)
+
+
+    return(combined_data)
+
+
 #%%
 
 
 if __name__ == '__main__':
     
     file_in = 'data_met/temp_rh_press_dewtemp_2016-2019.csv'
+    file_out = 'daily_mean_max_temp_RH_pres.csv'
     col_list = ['date','siteID','temperature','rh','pressure','dewtemp']
     station_drop_list = [117]
     min_temperature = -20
@@ -572,9 +610,10 @@ if __name__ == '__main__':
     met_data_rh = rh_calculations(met_data_temp,met_data_dewtemp,print_stats,met_data)
     
     # calculate the daily max and mean for each station
-    
+    met_data_hourly = combine_and_organise_mean_max(met_data_temp,met_data_pres,met_data_rh)
     
     # write data to file
+    met_data_hourly.to_csv(file_out,index=True,header=True,float_format='%.2f')
     
     
     
