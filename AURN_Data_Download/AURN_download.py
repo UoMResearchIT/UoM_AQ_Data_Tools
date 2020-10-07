@@ -129,7 +129,7 @@ def proc_all_stations(stations_centre,stations_input,station_number):
     
 
 
-def station_listing(grouped_data_in,min_years=1,useful_num_years=3.5):
+def station_listing(grouped_data_in, min_years=1, useful_num_years=3.5):
     '''    
     arguments:
         grouped_data_in: 
@@ -139,7 +139,7 @@ def station_listing(grouped_data_in,min_years=1,useful_num_years=3.5):
             days which meet that criteria)
         min_years (default 1): 
             minimum number of years of data that a site must have
-        useful_num_years (default 3.5): 
+        useful_num_years (default 3.5):
             minimum number of years of data for any site that we
             are going to use as a reference site later
     
@@ -361,7 +361,7 @@ def transform_and_impute_data(df_in,pt,imputer):
 
 
 
-def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values):
+def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values, useful_num_years):
     
     final_dataframe = pd.DataFrame()
     site_list_internal = hourly_dataframe["SiteID"].unique()
@@ -396,7 +396,7 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
             print('site day counts for {}'.format(spc))
             req_days_counts = daily_hour_counts[spc]
             req_days_counts = req_days_counts[req_days_counts>0]
-            req_sites[spc], use_sites[spc] = station_listing(req_days_counts)
+            req_sites[spc], use_sites[spc] = station_listing(req_days_counts, useful_num_years=useful_num_years)
 
         if emep_dataframe:
             emep_dataframe_internal = emep_dataframe.set_index('Date')
@@ -652,8 +652,6 @@ if __name__ == '__main__':
         print('No impute_values provided, so using default: True')
         impute_values = True
 
-
-
     # Does the metadatafile exist?
     if os.path.isfile(meta_data_filename) is True:
         print("Meta data file already exists in this directory, will use this")
@@ -716,7 +714,9 @@ if __name__ == '__main__':
 
     # pull out the daily mean and max values for the site list
     # postprocessing the data set, to get daily data
-    daily_dataframe = postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values)
+    useful_num_years = 0.8*len(years)
+    daily_dataframe = postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values,
+        useful_num_years)
 
 
     # sort the data
