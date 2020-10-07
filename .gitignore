@@ -1,0 +1,29 @@
+#-------------------------
+# env
+#-------------------------
+
+/env
+
+#-------------------------
+# IDE / Development Files
+#-------------------------
+# Jetbrains editors (PHPStorm, etc)
+.idea/
+*.iml
+.Rhistory
+
+#-------------------------
+# Temp files
+#-------------------------
+
+/AURN_Data_Download/AURN_data_download
+
+#-------------------------
+# Data files
+#-------------------------
+
+AURN_metadata.RData
+
+
+
+

@@ -42,6 +42,7 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 
 """
 
+import sys
 import wget
 from pathlib import Path
 import os
@@ -57,6 +58,9 @@ from sklearn.linear_model import BayesianRidge
 from sklearn import preprocessing
 
 import geopy.distance as distance
+import argparse
+
+AVAILABLE_YEARS = [2016,2017,2018,2019]
 
 
 #%%
@@ -220,7 +224,7 @@ def download_and_open_datafiles(subset_df,site,station_name,years,data_path):
 
     for year in years:
         try:
-            downloaded_file=site+"_"+str(year)+".RData"
+            downloaded_file = site+"_"+str(year)+".RData"
             download_url = "https://uk-air.defra.gov.uk/openair/R_data/"+downloaded_file
             print("\tdownloading file {}".format(download_url))
 
@@ -357,8 +361,7 @@ def transform_and_impute_data(df_in,pt,imputer):
 
 
 
-def postprocess_organisation(hourly_dataframe,emep_dataframe,stations,site_list,
-                                                   use_emep_data,impute_values):
+def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values):
     
     final_dataframe = pd.DataFrame()
     site_list_internal = hourly_dataframe["SiteID"].unique()
@@ -395,7 +398,7 @@ def postprocess_organisation(hourly_dataframe,emep_dataframe,stations,site_list,
             req_days_counts = req_days_counts[req_days_counts>0]
             req_sites[spc], use_sites[spc] = station_listing(req_days_counts)
 
-        if use_emep_data:
+        if emep_dataframe:
             emep_dataframe_internal = emep_dataframe.set_index('Date')
             emep_dataframe_internal
         
@@ -420,7 +423,7 @@ def postprocess_organisation(hourly_dataframe,emep_dataframe,stations,site_list,
                                 hourly_dataframe_internal[hourly_dataframe_internal['SiteID']==station_code][spc]
             
             # get EMEP predictions of chemical species of interest (if needed)
-            if use_emep_data:
+            if emep_dataframe:
                 for spc in spc_list:
                     working_hourly_dataframe['{}_{}'.format(spc,'EMEP')] = \
                                 emep_dataframe_internal[emep_dataframe_internal['SiteID']==site][spc]
@@ -576,38 +579,85 @@ def test_preprocess_code(df_in,pt,spc_zero_process = ['O3','NO2','NOXasNO2'],min
     return(pt,df_out)
 
 
-
-
-
 #%%
 
 
 
-
 if __name__ == '__main__':
+    # -todo add stations subset to params
 
-    meta_data_url = "https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData"
-    meta_data_filename = 'AURN_metadata.RData'
+    # read arguments from the command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
+    parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData)")
+    parser.add_argument("--data_url","-d", help="url of the AURN data")
+    parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
+    parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be in (and defaults to) {}".format(
+        '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']'))
+    parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites to be processed.")
+    parser.add_argument("--save_to_csv", "-c", dest="save_to_csv",  help="save output into CSV format? (Default: True)")
+    parser.add_argument("--load_from_csv", "-l", dest="load_from_csv", help="load input from CSV file? (Default: False)")
+    parser.add_argument("--impute_values", "-i", dest="impute_values", help="impute missing values? (Default: True)")
 
-    data_url = "https://uk-air.defra.gov.uk/openair/R_data/"
+    # read arguments from the command line
+    args = parser.parse_args()
 
-    # settings and containers for downloading data
-    years = [2016,2017,2018,2019]
+    if args.meta_data_url:
+        meta_data_url = Path(args.meta_data_url)
+    else:
+        print('No meta-data_url given, so will look in local folder for meta_data_filename')
+        meta_data_url = None
 
-    # emep data file
-    emep_file = "emep_site_data_hourly_2016-2019.csv"
+    if args.meta_data_filename:
+        meta_data_filename = args.meta_data_filename
+    else:
+        print('No meta_data_filename provided, so using default: "AURN_metadata.RData"')
+        meta_data_filename = 'AURN_metadata.RData'
+
+    if args.data_url:
+        data_url = Path(args.data_url)
+    else:
+        print('Please provide data url, using --data_url')
+        sys.exit()
+
+    if args.emep_filename:
+        emep_filename = args.emep_filename
+    else:
+        print('No emep_filename provided, so not using emep data')
+        emep_filename = None
+
+    if args.years:
+        years = args.years
+        print('Years selected:', years)
+    else:
+        print('No years provided, so using default: ', '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']')
+        years = AVAILABLE_YEARS
+
+    if args.sites:
+        site_list = args.sites
+    else:
+        print('No sites provided, so using all available sites in metadata file')
+        site_list = None
 
 
     # process control flags
-    save_to_csv = True
-    load_from_csv = False
-    
-    use_emep_data = True
-    impute_values = True
+    if args.save_to_csv:
+        save_to_csv = args.save_to_csv
+    else:
+        print('No save_to_csv provided, so using default: True')
+        save_to_csv = True
 
+    if args.load_from_csv:
+        load_from_csv = args.load_from_csv
+    else:
+        print('No load_from_csv provided, so using default: False')
+        load_from_csv = False
 
-
-
+    if args.impute_values:
+        impute_values = args.impute_values
+    else:
+        print('No impute_values provided, so using default: True')
+        impute_values = True
 
 
 
@@ -618,6 +668,8 @@ if __name__ == '__main__':
         print("Downloading Meta data file")
         wget.download(meta_data_url)
 
+    sys.exit()
+
 
     # Read the RData file into a Pandas dataframe
     metadata = pyreadr.read_r(meta_data_filename)
@@ -626,29 +678,36 @@ if __name__ == '__main__':
     # If a single year is passed then convert to a list with a single value
     if type(years) is int:
         years = [years]
+    print('Years:', years)
     current_year = datetime.datetime.now()
 
 
     base_path = Path("AURN_data_download")
-    if (base_path.is_dir() is False): 
-        base_path.mkdir() 
-    # change this if we need more organised data storage later  
+    if (base_path.is_dir() is False):
+        base_path.mkdir()
+    # change this if we need more organised data storage later
     data_path = base_path
 
-    # get list of sites to process
-    site_list = metadata['AURN_metadata']['site_id'].unique()
-    
+    # get list of sites to processextract_site_data
+    if not site_list:
+        site_list = metadata['AURN_metadata']['site_id'].unique()
+    else:
+        # Todo - Test that sites provided are correct
+        pass
+    #print('Site list', site_list)
+    #sys.exit(0)
+
     # create the station location dataset
     stations = metadata['AURN_metadata'][['site_id','latitude', 'longitude','site_name']].drop_duplicates()
     stations = stations.rename(columns={"site_id":"SiteID","latitude":"Latitude","longitude":"Longitude"})
     stations = stations.set_index('SiteID')
-    
-    
+
+
     # create a dataframe with the hourly dataset for all stations
-    #daily_dataframe = extract_site_data(site_list,metadata,years,data_path,save_to_csv)
-    hourly_dataframe = extract_site_data(site_list,metadata,years,data_path,save_to_csv)
-    hourly_dataframe= hourly_dataframe.rename(columns={'siteID':'SiteID'})
-    
+    #daily_dataframe = (site_list,metadata,years,data_path,save_to_csv)
+    hourly_dataframe = extract_site_data(site_list, metadata, years, data_path, save_to_csv)
+    hourly_dataframe = hourly_dataframe.rename(columns={'siteID':'SiteID'})
+
     # apply some filtering of negative and zero values
     spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2']
     for spc in spc_list:
@@ -658,23 +717,26 @@ if __name__ == '__main__':
         hourly_dataframe[spc][hourly_dataframe[spc]<=0.0]   = np.nan
 
     # load the EMEP model data
-    if use_emep_data:
-        emep_dataframe = pd.read_csv(emep_file)
+    if emep_filename:
+        emep_dataframe = pd.read_csv(emep_filename)
         emep_dataframe = emep_dataframe.rename(columns={'NOx':'NOXasNO2'})
     else:
-        emep_dataframe = pd.DataFrame()
+        emep_dataframe = None
 
     # pull out the daily mean and max values for the site list
     # postprocessing the data set, to get daily data
-    daily_dataframe = postprocess_organisation(hourly_dataframe,emep_dataframe,stations,site_list,
-                                                   use_emep_data,impute_values)
+    daily_dataframe = postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values)
 
 
     # sort the data
     daily_dataframe = daily_dataframe.sort_index()
-    
+
     # write this dataset to file
     daily_dataframe.to_csv(data_path.joinpath('pollution_daily_data_{}-{}.csv'.format(years[0],years[-1])),index=True,header=True,float_format='%.2f')
+
+
+
+
 
 
 
