@@ -590,7 +590,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
     parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData)")
-    parser.add_argument("--data_url","-d", help="url of the AURN data")
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be in (and defaults to) {}".format(
         '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']'))
@@ -613,12 +612,6 @@ if __name__ == '__main__':
     else:
         print('No meta_data_filename provided, so using default: "AURN_metadata.RData"')
         meta_data_filename = 'AURN_metadata.RData'
-
-    if args.data_url:
-        data_url = Path(args.data_url)
-    else:
-        print('Please provide data url, using --data_url')
-        sys.exit()
 
     if args.emep_filename:
         emep_filename = args.emep_filename
@@ -667,8 +660,6 @@ if __name__ == '__main__':
     else:
         print("Downloading Meta data file")
         wget.download(meta_data_url)
-
-    sys.exit()
 
 
     # Read the RData file into a Pandas dataframe
