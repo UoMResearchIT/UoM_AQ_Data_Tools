@@ -584,8 +584,6 @@ def test_preprocess_code(df_in,pt,spc_zero_process = ['O3','NO2','NOXasNO2'],min
 
 
 if __name__ == '__main__':
-    # -todo add stations subset to params
-
     # read arguments from the command line
     parser = argparse.ArgumentParser()
     parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
@@ -683,7 +681,7 @@ if __name__ == '__main__':
     else:
         # Todo - Test that sites provided are correct
         pass
-    #print('Site list', site_list)
+    print('Site list', site_list)
     #sys.exit(0)
 
     # create the station location dataset
@@ -700,10 +698,14 @@ if __name__ == '__main__':
     # apply some filtering of negative and zero values
     spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2']
     for spc in spc_list:
-        print('{} has {} positive values'.format(spc,len(hourly_dataframe[spc][hourly_dataframe[spc]>0.0])))
-        print('{} has {} NaNs'.format(spc,len(hourly_dataframe[spc][hourly_dataframe[spc].isna()])))
-        print('{} has {} negative or zero values that will be replaced with NaNs'.format(spc,len(hourly_dataframe[spc][hourly_dataframe[spc]<=0.0])))
-        hourly_dataframe[spc][hourly_dataframe[spc]<=0.0]   = np.nan
+        try:
+            print('{} has {} positive values'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]>0.0])))
+            print('{} has {} NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc].isna()])))
+            print('{} has {} negative or zero values that will be replaced with NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]<=0.0])))
+            hourly_dataframe.loc[hourly_dataframe[spc]<=0.0, 'spc'] = np.nan
+        except:
+            print('{} has  no values'.format(spc))
+
 
     # load the EMEP model data
     if emep_filename:
