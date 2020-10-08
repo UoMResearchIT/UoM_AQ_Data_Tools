@@ -226,14 +226,14 @@ def download_and_open_datafiles(subset_df,site,station_name,years,data_path):
         try:
             downloaded_file = site+"_"+str(year)+".RData"
             download_url = "https://uk-air.defra.gov.uk/openair/R_data/"+downloaded_file
-            print("\tdownloading file {}".format(download_url))
+            print("\ndownloading file {}".format(download_url))
 
             # Check to see if file exists or not. Special case for current year as updates on hourly basis
             filename_path = data_path.joinpath(downloaded_file)
             if (filename_path.is_file() is True):
-                print("\t\tData file already exists, will use this")
+                print("\n\nData file already exists, will use this")
             else:
-                print("\t\tDownloading data file for ", station_name ," in ",str(year))
+                print("\n\nDownloading data file for ", station_name ," in ",str(year))
                 wget.download(download_url,out=str(data_path))
 
             # Read the RData file into a Pandas dataframe
@@ -245,7 +245,7 @@ def download_and_open_datafiles(subset_df,site,station_name,years,data_path):
             # Append to dataframe list
             downloaded_site_data.append(downloaded_data[site+"_"+str(year)])
         except:
-            print("\t\tCouldn't download and extract data from {} for {}".format(year,station_name))
+            print("\n\nCouldn't download and extract data from {} for {}".format(year,station_name))
 
 
     return(downloaded_site_data)
@@ -505,7 +505,7 @@ def extract_site_data(site_list,metadata,years,data_path,save_to_csv):
 
         # if the list of years is empty, then skip this site
         if not years_process:
-            print("\t\tNo data for years of interest, skipping this site")
+            print("\n\nNo data for years of interest, skipping this site")
             continue
 
         # download the datasets
@@ -513,7 +513,7 @@ def extract_site_data(site_list,metadata,years,data_path,save_to_csv):
 
         # if we couldn't download the data, skip this site
         if len(downloaded_site_data) == 0:
-            print("\t\tNo data could be downloaded for {}".format(station_name))
+            print("\n\nNo data could be downloaded for {}".format(station_name))
             continue
 
         # combine and sort data
@@ -634,7 +634,7 @@ if __name__ == '__main__':
 
     if args.min_years:
         min_years = args.min_years
-        print('Min years ()minimum number of years of data that a site must have):', min_years)
+        print('Min years (minimum number of years of data that a site must have):', min_years)
     else:
         print('No min_years provided, so using default: 0.4 * number of years')
         min_years = 0.4*len(years)
