@@ -361,7 +361,8 @@ def transform_and_impute_data(df_in,pt,imputer):
 
 
 
-def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values, useful_num_years):
+def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values, useful_num_years,
+    min_years):
     
     final_dataframe = pd.DataFrame()
     site_list_internal = hourly_dataframe["SiteID"].unique()
@@ -396,7 +397,8 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
             print('site day counts for {}'.format(spc))
             req_days_counts = daily_hour_counts[spc]
             req_days_counts = req_days_counts[req_days_counts>0]
-            req_sites[spc], use_sites[spc] = station_listing(req_days_counts, useful_num_years=useful_num_years)
+            req_sites[spc], use_sites[spc] = station_listing(req_days_counts, min_years=min_years,
+                useful_num_years=useful_num_years)
 
         if emep_dataframe:
             emep_dataframe_internal = emep_dataframe.set_index('Date')
@@ -589,12 +591,18 @@ if __name__ == '__main__':
     parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
     parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData)")
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
-    parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be in (and defaults to) {}".format(
+    parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
+        in (and defaults to) {}".format(
         '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']'))
-    parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites to be processed.")
+    parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
+    parser.add_argument("--useful_num_years", "-u", type=int, help="minimum number of years of data for any site that \
+        we are going to use as a reference site later")
+    parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
+        to be processed.")
     parser.add_argument("--save_to_csv", "-c", dest="save_to_csv",  help="save output into CSV format? (Default: True)")
     parser.add_argument("--load_from_csv", "-l", dest="load_from_csv", help="load input from CSV file? (Default: False)")
     parser.add_argument("--impute_values", "-i", dest="impute_values", help="impute missing values? (Default: True)")
+
 
     # read arguments from the command line
     args = parser.parse_args()
@@ -623,6 +631,21 @@ if __name__ == '__main__':
     else:
         print('No years provided, so using default: ', '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']')
         years = AVAILABLE_YEARS
+
+    if args.min_years:
+        min_years = args.min_years
+        print('Min years ()minimum number of years of data that a site must have):', min_years)
+    else:
+        print('No min_years provided, so using default: 0.4 * number of years')
+        min_years = 0.4*len(years)
+
+    if args.useful_num_years:
+        useful_num_years = args.useful_num_years
+        print('Useful number of  years (minimum number of years of data for any site that we are going to use as a \
+            reference site later):', useful_num_years)
+    else:
+        print('No useful_num_years provided, so using default: 0.8 * number of years')
+        useful_num_years = 0.8*len(years)
 
     if args.sites:
         site_list = args.sites
@@ -715,9 +738,8 @@ if __name__ == '__main__':
 
     # pull out the daily mean and max values for the site list
     # postprocessing the data set, to get daily data
-    useful_num_years = 0.8*len(years)
     daily_dataframe = postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values,
-        useful_num_years)
+        useful_num_years, min_years)
 
 
     # sort the data
