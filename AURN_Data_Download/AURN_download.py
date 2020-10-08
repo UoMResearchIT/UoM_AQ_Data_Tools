@@ -691,7 +691,6 @@ if __name__ == '__main__':
 
 
     # create a dataframe with the hourly dataset for all stations
-    #daily_dataframe = (site_list,metadata,years,data_path,save_to_csv)
     hourly_dataframe = extract_site_data(site_list, metadata, years, data_path, save_to_csv)
     hourly_dataframe = hourly_dataframe.rename(columns={'siteID':'SiteID'})
 
