@@ -486,7 +486,7 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
 
 
 #%%
-
+#extract_site_data(site_list, metadata, years, data_path, save_to_csv)
 def extract_site_data(site_list,metadata,years,data_path,save_to_csv):
 
     final_dataframe = pd.DataFrame()
@@ -725,7 +725,7 @@ if __name__ == '__main__':
             print('\t{} has {} positive values'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]>0.0])))
             print('\t{} has {} NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc].isna()])))
             print('\t{} has {} negative or zero values that will be replaced with NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]<=0.0])))
-            hourly_dataframe.loc[hourly_dataframe[spc]<=0.0, 'spc'] = np.nan
+            hourly_dataframe.loc[hourly_dataframe[spc]<=0.0, spc] = np.nan
         except:
             print('\t{} has  no values'.format(spc))
 
