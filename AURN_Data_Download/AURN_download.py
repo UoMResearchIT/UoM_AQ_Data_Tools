@@ -162,7 +162,7 @@ def station_listing(grouped_data_in, min_years=1, useful_num_years=3.5):
             date_num = 0
         if(date_num > min_years*365):
             required_site_list.append(site)
-            print('{} has {} years of data'.format(site,date_num/365))
+            print('\t{} has {} years of data'.format(site,date_num/365))
         if(date_num > useful_num_years*365):
             useful_site_list.append(site)
     
@@ -226,26 +226,26 @@ def download_and_open_datafiles(subset_df,site,station_name,years,data_path):
         try:
             downloaded_file = site+"_"+str(year)+".RData"
             download_url = "https://uk-air.defra.gov.uk/openair/R_data/"+downloaded_file
-            print("\ndownloading file {}".format(download_url))
+            print("\tdownloading file {}".format(download_url))
 
             # Check to see if file exists or not. Special case for current year as updates on hourly basis
             filename_path = data_path.joinpath(downloaded_file)
             if (filename_path.is_file() is True):
-                print("\n\nData file already exists, will use this")
+                print("\t\tData file already exists, will use this")
             else:
-                print("\n\nDownloading data file for ", station_name ," in ",str(year))
+                print("\t\tDownloading data file for ", station_name ," in ",str(year))
                 wget.download(download_url,out=str(data_path))
 
             # Read the RData file into a Pandas dataframe
             downloaded_data = pyreadr.read_r(str(filename_path))
             # Drop non-required fields
-            
+
 
 
             # Append to dataframe list
             downloaded_site_data.append(downloaded_data[site+"_"+str(year)])
         except:
-            print("\n\nCouldn't download and extract data from {} for {}".format(year,station_name))
+            print("\t\tCouldn't download and extract data from {} for {}".format(year,station_name))
 
 
     return(downloaded_site_data)
@@ -266,51 +266,51 @@ def tidy_hourly_data(hourly_dataframe,site):
 
     columns_of_interest = ['datetime','O3','NO2','SO2','NOXasNO2','PM2.5','PM10']
     ds_columns = hourly_dataframe.columns
-    
+
     # retain the data we are interested in (as not all datasets have all variables)
     columns_to_retain = set(columns_of_interest) & set(ds_columns)
     working_dataframe = hourly_dataframe[columns_to_retain]
-    
+
     working_dataframe = working_dataframe.rename(columns={'datetime':'Date'})
-    
+
     # add the site as a new column, and set as part of multiindex with the date
     #site_name = "{} [AQ]".format(site)
     site_name = "{}".format(site)
-    
-    
+
+
     working_dataframe['siteID'] = site_name
-    
+
     return(working_dataframe)
 
 
 
 def postprocess_data(input_dataframe,site):
-    
+
     working_dataframe = input_dataframe.drop(columns='SiteID')
     tempgroups = working_dataframe.groupby(pd.Grouper(key='Date', freq='1D'))
-    
+
     data_counts = tempgroups.count()
     data_max    = tempgroups.max()
     data_mean   = tempgroups.mean()
-    
+
     cols_old = data_counts.columns
-    
-    cols_counts = dict((key,key+'_count') for key in cols_old.values) 
-    cols_max    = dict((key,key+'_max') for key in cols_old.values) 
-    cols_mean   = dict((key,key+'_mean') for key in cols_old.values) 
-    
+
+    cols_counts = dict((key,key+'_count') for key in cols_old.values)
+    cols_max    = dict((key,key+'_max') for key in cols_old.values)
+    cols_mean   = dict((key,key+'_mean') for key in cols_old.values)
+
     data_counts = data_counts.rename(columns=cols_counts)
     data_max    = data_max.rename(columns=cols_max)
     data_mean   = data_mean.rename(columns=cols_mean)
-    
+
     data_out = data_mean.join([data_max,data_counts])
-    
+
     # add the site as a new column, and set as part of multiindex with the date
     site_name = "{} [AQ]".format(site)
-    
+
     data_out['SiteID'] = site_name
-    data_out = data_out.reset_index(drop=False).set_index(['Date','SiteID'])    
-    
+    data_out = data_out.reset_index(drop=False).set_index(['Date','SiteID'])
+
     return(data_out)
 
 #%%
@@ -319,14 +319,14 @@ def postprocess_data(input_dataframe,site):
 #%%  testing the reshaping code
 
 def transform_and_impute_data(df_in,pt,imputer):
-    
+
     # define the method we wish to use
     #pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
-   
+
     # copy the input array, and note the columns
     df_work = df_in.copy(deep=True)
     cols = df_in.columns
-    
+
     # find missing datasets to remove
     # also we note the columns that will be saved, and their order, for transferring data back!
     col_remove = []
@@ -337,15 +337,15 @@ def transform_and_impute_data(df_in,pt,imputer):
         else:
             col_save.append(col)
     df_work = df_work.drop(columns=col_remove)
-    
+
     # power transformer fitting and transforming
     pt.fit(df_work.dropna())
     np_out = pt.transform(df_work)
-    
+
     # impute the missing values in this new dataframe
     imputer.fit(np_out)
     imp_out = imputer.transform(np_out)
-            
+
     # apply the inverse transformation for our datasets (leaving out the indicator flags)
     np_inv = pt.inverse_transform(imp_out[:,:np_out.shape[1]])
 
@@ -354,7 +354,7 @@ def transform_and_impute_data(df_in,pt,imputer):
     for pos,col in enumerate(col_save):
         pos_out = list(cols).index(col)
         df_out.iloc[:,pos_out] = np_inv[:,pos]
-    
+
     return(df_out)
 
 
@@ -363,7 +363,7 @@ def transform_and_impute_data(df_in,pt,imputer):
 
 def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_list, impute_values, useful_num_years,
     min_years):
-    
+
     final_dataframe = pd.DataFrame()
     site_list_internal = hourly_dataframe["SiteID"].unique()
 
@@ -381,18 +381,18 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
     # imputation of the values requires more preprocessing and work...
     if impute_values:
         # set the imputer options (if we are using them)
-        imputer = IterativeImputer(random_state=0, add_indicator=False, 
+        imputer = IterativeImputer(random_state=0, add_indicator=False,
                             initial_strategy='mean',max_iter=100, verbose=2,
                             estimator=BayesianRidge())
         # set the power transform options
         pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
 
-        
+
         station_number = 5
-        
+
         req_sites = {}
         use_sites = {}
-        
+
         for spc in spc_list:
             print('site day counts for {}'.format(spc))
             req_days_counts = daily_hour_counts[spc]
@@ -403,19 +403,19 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
         if emep_dataframe:
             emep_dataframe_internal = emep_dataframe.set_index('Date')
             emep_dataframe_internal
-        
+
         for site in site_list_internal:
-            
+
             # get list of chemical species that we need to impute for this site (including Date info)
             req_spc = []
             for spc in spc_list:
                 if site in req_sites[spc]:
                     req_spc.append(spc)
-            
+
             # copy these to a new dataframe
             working_hourly_dataframe = pd.DataFrame([],index=date_index)
             working_hourly_dataframe[req_spc] = hourly_dataframe_internal[hourly_dataframe_internal['SiteID']==site][req_spc]
-            
+
             # get list of neighbouring sites for each of the chemical species of interest
             for spc in spc_list:
                 station_distances = get_station_distances(stations,site,use_sites[spc])
@@ -423,17 +423,17 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
                     station_code = station_distances.index[ii]
                     working_hourly_dataframe['{}_{}'.format(spc,station_code)] = \
                                 hourly_dataframe_internal[hourly_dataframe_internal['SiteID']==station_code][spc]
-            
+
             # get EMEP predictions of chemical species of interest (if needed)
             if emep_dataframe:
                 for spc in spc_list:
                     working_hourly_dataframe['{}_{}'.format(spc,'EMEP')] = \
                                 emep_dataframe_internal[emep_dataframe_internal['SiteID']==site][spc]
 
-            
+
             # run the imputation process
             imputed_hourly_dataframe = transform_and_impute_data(working_hourly_dataframe,pt=pt,imputer=imputer)
-            
+
             # copy imputed data of interest into original dataframe
             for spc in spc_list:
                 working_hourly_dataframe['imputed {}'.format(spc)] = 0
@@ -454,7 +454,7 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
                 else:
                     temp_dataframe['{}.flag'.format(spc)] = 0.0
                 temp_dataframe['sensor_name'] = '{} [AQ]'.format(site)
-            
+
             temp_dataframe = temp_dataframe.rename_axis('time_stamp',axis=0).set_index('sensor_name',append=True)
             final_dataframe = final_dataframe.append(temp_dataframe)
 
@@ -477,7 +477,7 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
                 temp_dataframe['{}.max'.format(spc)] = daily_grouped_data.max()[spc]
                 temp_dataframe['{}.flag'.format(spc)] = 0.0
                 temp_dataframe['sensor_name'] = '{} [AQ]'.format(site)
-            
+
             temp_dataframe = temp_dataframe.rename_axis('time_stamp',axis=0).set_index('sensor_name',append=True)
             final_dataframe = final_dataframe.append(temp_dataframe)
 
@@ -498,14 +498,14 @@ def extract_site_data(site_list,metadata,years,data_path,save_to_csv):
         station_name = subset_df['site_name'].values[0]
 
         print("processing site {} ({})".format(site,station_name))
-    
+
 
         # get the list of years of data for this station
         years_process = define_years_to_download(subset_df,years)
 
         # if the list of years is empty, then skip this site
         if not years_process:
-            print("\n\nNo data for years of interest, skipping this site")
+            print("\t\tNo data for years of interest, skipping this site")
             continue
 
         # download the datasets
@@ -513,7 +513,7 @@ def extract_site_data(site_list,metadata,years,data_path,save_to_csv):
 
         # if we couldn't download the data, skip this site
         if len(downloaded_site_data) == 0:
-            print("\n\nNo data could be downloaded for {}".format(station_name))
+            print("\t\tNo data could be downloaded for {}".format(station_name))
             continue
 
         # combine and sort data
@@ -720,17 +720,19 @@ if __name__ == '__main__':
     # apply some filtering of negative and zero values
     spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2']
     for spc in spc_list:
+        print('filtering {}:'.format(spc))
         try:
-            print('{} has {} positive values'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]>0.0])))
-            print('{} has {} NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc].isna()])))
-            print('{} has {} negative or zero values that will be replaced with NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]<=0.0])))
+            print('\t{} has {} positive values'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]>0.0])))
+            print('\t{} has {} NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc].isna()])))
+            print('\t{} has {} negative or zero values that will be replaced with NaNs'.format(spc,len(hourly_dataframe.loc[hourly_dataframe[spc]<=0.0])))
             hourly_dataframe.loc[hourly_dataframe[spc]<=0.0, 'spc'] = np.nan
         except:
-            print('{} has  no values'.format(spc))
+            print('\t{} has  no values'.format(spc))
 
 
     # load the EMEP model data
     if emep_filename:
+        print('reading emep file')
         emep_dataframe = pd.read_csv(emep_filename)
         emep_dataframe = emep_dataframe.rename(columns={'NOx':'NOXasNO2'})
     else:
