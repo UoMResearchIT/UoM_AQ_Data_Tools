@@ -387,8 +387,8 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
         # set the power transform options
         pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
 
-
-        station_number = 5
+        # Set station number
+        station_number = min(5,len(site_list_internal)-1)
 
         req_sites = {}
         use_sites = {}
@@ -399,12 +399,16 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
             req_days_counts = req_days_counts[req_days_counts>0]
             req_sites[spc], use_sites[spc] = station_listing(req_days_counts, min_years=min_years,
                 useful_num_years=useful_num_years)
+            if verbose: print('\t\treq sites {}:'.format(spc), req_sites[spc])
+            if verbose: print('\t\tuse sites {}:'.format(spc), use_sites[spc])
 
         if emep_dataframe:
             emep_dataframe_internal = emep_dataframe.set_index('Date')
             emep_dataframe_internal
 
+        if verbose: print('1. Site list internal: ', site_list_internal)
         for site in site_list_internal:
+            if verbose: print('2. Site: ', site)
 
             # get list of chemical species that we need to impute for this site (including Date info)
             req_spc = []
@@ -418,8 +422,13 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
 
             # get list of neighbouring sites for each of the chemical species of interest
             for spc in spc_list:
+                if verbose: print('3. Species: ', spc)
                 station_distances = get_station_distances(stations,site,use_sites[spc])
-                for ii in range(0,station_number):
+                if verbose: print('4. Station number:', station_number)
+                if verbose: print('5. distances:', station_distances)
+                if verbose: print('6.', len(station_distances))
+                for ii in range(0, min(station_number, len(station_distances))):
+                    if verbose: print('7. ii', ii)
                     station_code = station_distances.index[ii]
                     working_hourly_dataframe['{}_{}'.format(spc,station_code)] = \
                                 hourly_dataframe_internal[hourly_dataframe_internal['SiteID']==station_code][spc]
@@ -583,7 +592,7 @@ def test_preprocess_code(df_in,pt,spc_zero_process = ['O3','NO2','NOXasNO2'],min
 
 #%%
 
-
+verbose = False
 
 if __name__ == '__main__':
     # read arguments from the command line
@@ -602,6 +611,7 @@ if __name__ == '__main__':
     parser.add_argument("--save_to_csv", "-c", dest="save_to_csv",  help="save output into CSV format? (Default: True)")
     parser.add_argument("--load_from_csv", "-l", dest="load_from_csv", help="load input from CSV file? (Default: False)")
     parser.add_argument("--impute_values", "-i", dest="impute_values", help="impute missing values? (Default: True)")
+    parser.add_argument("--verbose", "-v", default=False, help="Verbose output for debugging (Default: False)")
 
 
     # read arguments from the command line
@@ -672,6 +682,13 @@ if __name__ == '__main__':
     else:
         print('No impute_values provided, so using default: True')
         impute_values = True
+
+    if args.verbose:
+        print('verbose: ', verbose)
+        verbose = args.verbose
+    else:
+        print('No verbose flag provided, so using default: False')
+        verbose = False
 
     # Does the metadatafile exist?
     if os.path.isfile(meta_data_filename) is True:

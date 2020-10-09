@@ -12,7 +12,7 @@ ARGUMENTS_1=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_
 
 # EXAMPLE 2
 YEARS="2017"
-ARGUMENTS_2=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES}"
+ARGUMENTS_2=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} --verbose True"
 
 
 python AURN_download.py ${ARGUMENTS_2}
