@@ -609,9 +609,21 @@ if __name__ == '__main__':
         we are going to use as a reference site later")
     parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed.")
-    parser.add_argument("--save_to_csv", "-c", type=bool, dest="save_to_csv",  help="save output into CSV format? (Default: True)")
-    parser.add_argument("--load_from_csv", "-l", type=bool, dest="load_from_csv", help="load input from CSV file? (Default: False)")
-    parser.add_argument("--impute_values", "-i", type=bool, dest="impute_values", help="impute missing values? (Default: True)")
+
+    parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format.")
+    parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
+    parser.set_defaults(save_to_csv=True)
+
+    parser.add_argument("--load_from_csv",dest="load_from_csv",action='store_true',help="load input from CSV file.")
+    parser.add_argument("--no_load_from_csv",dest="load_from_csv",action='store_false',help="don't load input from csv file.")
+    parser.set_defaults(load_from_csv=False)
+
+    parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values.")
+    parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
+    parser.set_defaults(impute_values=True)
+
+
+
     parser.add_argument("--verbose", "-v", type=int, help="Level of output for debugging (Default: 0 (=no verbose output))")
 
     # read arguments from the command line
