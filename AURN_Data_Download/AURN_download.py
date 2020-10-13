@@ -496,8 +496,7 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
 
 
 #%%
-#extract_site_data(site_list, metadata, years, data_path, save_to_csv)
-def extract_site_data(site_list,metadata,years,data_path,save_to_csv):
+def extract_site_data(site_list, metadata, years, data_path, save_to_csv):
 
     final_dataframe = pd.DataFrame()
 
@@ -608,17 +607,17 @@ if __name__ == '__main__':
     parser.add_argument("--useful_num_years", "-u", type=int, help="minimum number of years of data for any site that \
         we are going to use as a reference site later")
     parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
-        to be processed.")
+        to be processed. Default is to process all available AURN sites.")
 
-    parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format.")
+    parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.set_defaults(save_to_csv=True)
 
     parser.add_argument("--load_from_csv",dest="load_from_csv",action='store_true',help="load input from CSV file.")
-    parser.add_argument("--no_load_from_csv",dest="load_from_csv",action='store_false',help="don't load input from csv file.")
+    parser.add_argument("--no_load_from_csv",dest="load_from_csv",action='store_false',help="don't load input from csv file (default).")
     parser.set_defaults(load_from_csv=False)
 
-    parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values.")
+    parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values (default).")
     parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
     parser.set_defaults(impute_values=True)
 
