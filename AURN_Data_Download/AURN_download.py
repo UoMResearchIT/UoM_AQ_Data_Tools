@@ -401,9 +401,8 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
             if VERBOSE > 0: print('\t\treq sites {}:'.format(spc), req_sites[spc])
             if VERBOSE > 0: print('\t\tuse sites {}:'.format(spc), use_sites[spc])
 
-        if emep_dataframe:
+        if not emep_dataframe.empty:
             emep_dataframe_internal = emep_dataframe.set_index('Date')
-            emep_dataframe_internal
 
         if VERBOSE > 0: print('1. Site list internal: ', site_list_internal)
         for site in site_list_internal:
@@ -433,7 +432,7 @@ def postprocess_organisation(hourly_dataframe, emep_dataframe, stations, site_li
                                 hourly_dataframe_internal[hourly_dataframe_internal['SiteID']==station_code][spc]
 
             # get EMEP predictions of chemical species of interest (if needed)
-            if emep_dataframe:
+            if not emep_dataframe.empty:
                 for spc in spc_list:
                     working_hourly_dataframe['{}_{}'.format(spc,'EMEP')] = \
                                 emep_dataframe_internal[emep_dataframe_internal['SiteID']==site][spc]
@@ -758,13 +757,13 @@ if __name__ == '__main__':
             print('\t{} has  no values'.format(spc))
 
 
-    # load the EMEP model data
+    # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
     if emep_filename:
         print('reading emep file')
         emep_dataframe = pd.read_csv(emep_filename)
         emep_dataframe = emep_dataframe.rename(columns={'NOx':'NOXasNO2'})
     else:
-        emep_dataframe = None
+        emep_dataframe = pd.DataFrame()
 
     # pull out the daily mean and max values for the site list
     # postprocessing the data set, to get daily data
