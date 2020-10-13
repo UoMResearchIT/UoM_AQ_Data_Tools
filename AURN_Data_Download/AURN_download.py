@@ -666,7 +666,7 @@ if __name__ == '__main__':
             reference site later; this cannot be less than min_years):', useful_num_years)
     else:
         print('No useful_num_years provided, so using default: 0.8 * number of years')
-        useful_num_years = 0.8*len(years)
+        useful_num_years = max(0.8*len(years),min_years)
 
     if args.sites:
         site_list = args.sites
