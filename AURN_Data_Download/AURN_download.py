@@ -661,9 +661,9 @@ if __name__ == '__main__':
         min_years = 0.4*len(years)
 
     if args.useful_num_years:
-        useful_num_years = args.useful_num_years
-        print('Useful number of  years (minimum number of years of data for any site that we are going to use as a \
-            reference site later):', useful_num_years)
+        useful_num_years = max(args.useful_num_years,min_years)
+        print('Useful number of years (minimum number of years of data for any site that we are going to use as a \
+            reference site later; this cannot be less than min_years):', useful_num_years)
     else:
         print('No useful_num_years provided, so using default: 0.8 * number of years')
         useful_num_years = 0.8*len(years)
