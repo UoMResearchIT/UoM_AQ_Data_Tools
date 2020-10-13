@@ -45,8 +45,6 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 import sys
 import wget
 from pathlib import Path
-import os
-import os.path
 import pyreadr
 import datetime
 import pandas as pd
@@ -629,19 +627,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.meta_data_url:
-        meta_data_url = Path(args.meta_data_url)
+        meta_data_url = args.meta_data_url
     else:
         print('No meta-data_url given, so will look in local folder for meta_data_filename')
         meta_data_url = None
 
     if args.meta_data_filename:
-        meta_data_filename = args.meta_data_filename
+        meta_data_filename = Path(args.meta_data_filename)
     else:
         print('No meta_data_filename provided, so using default: "AURN_metadata.RData"')
-        meta_data_filename = 'AURN_metadata.RData'
+        meta_data_filename = Path('AURN_metadata.RData')
 
     if args.emep_filename:
-        emep_filename = args.emep_filename
+        emep_filename = Path(args.emep_filename)
+        if not emep_filename.is_file():
+            print('{} does not exist, so not using emep data'.format(emep_filename))
+            emep_filename = None
     else:
         print('No emep_filename provided, so not using emep data')
         emep_filename = None
@@ -702,7 +703,7 @@ if __name__ == '__main__':
         VERBOSE = 0
 
     # Does the metadatafile exist?
-    if os.path.isfile(meta_data_filename) is True:
+    if meta_data_filename.is_file():
         print("Meta data file already exists in this directory, will use this")
     else:
         print("Downloading Meta data file")
@@ -710,7 +711,7 @@ if __name__ == '__main__':
 
 
     # Read the RData file into a Pandas dataframe
-    metadata = pyreadr.read_r(meta_data_filename)
+    metadata = pyreadr.read_r(meta_data_filename.name)
 
 
     # If a single year is passed then convert to a list with a single value
