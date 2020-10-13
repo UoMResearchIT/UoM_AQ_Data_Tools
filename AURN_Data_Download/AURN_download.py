@@ -694,8 +694,8 @@ if __name__ == '__main__':
         print('No impute_values provided, so using default: True')
         impute_values = True
 
-    if args.verbose >= 0:
-        VERBOSE = args.verbose
+    if args.verbose:
+        VERBOSE = max(args.verbose,0)
         print('verbose: ', VERBOSE)
     else:
         print('No verbose flag provided, so using default: 0')
