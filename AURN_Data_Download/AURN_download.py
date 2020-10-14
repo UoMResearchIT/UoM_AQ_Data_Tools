@@ -593,7 +593,7 @@ if __name__ == '__main__':
     global VERBOSE
 
     # read arguments from the command line
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
     parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
     parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData)")
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")

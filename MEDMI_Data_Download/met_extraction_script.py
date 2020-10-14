@@ -1,5 +1,6 @@
 from medmi_database import Dataset
 from cmath import polar
+import argparse
 
 
 
@@ -65,6 +66,8 @@ def extraction_wind_function(source_dict,settings_dict):
 
 
 if __name__ == '__main__':
+	parser = argparse.ArgumentParser(
+		description="*** A script for automated downloading of MET data for a given date range. ***")
 
 	Dates = ['2016-1-1 0','2019-12-31 23']
 	Dates_string = '2016-2019'

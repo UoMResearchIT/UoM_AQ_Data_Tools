@@ -50,9 +50,9 @@ from the AURN metadata files. Bash scripts are provided for running these tools.
 This script accesses the AURN datasets that are provided in RData format on the UK-Air
 DEFRA website.
 
-Edit the script to set the years of interest, and run via python.
+Run using python and use the -help command to get the full set of parameters/options.
 
-This will create the `AURN_data_download` directory, in which the available RData format
+This script creates a `AURN_data_download` directory, in which the available RData format
 files for all AURN sites will be downloaded and stored, and then will create a combined
 data file called `pollution_daily_data_[start year]-[end year].csv` in the same directory.
 This data file contains the combined daily mean, max, and data count for all AURN sites.
@@ -67,11 +67,14 @@ The scripts are:
 - `pollen_site_met_calculations.py`
 
 
-Log onto the MEDMI ssh server (details for which can be obtained from this website:
-https://www.data-mashup.org.uk/contact-us/; or emailing health at metoffice dot gov dot uk).
+To use these scripts, it is neccessary to log onto the MEDMI ssh server. Details of how to do 
+this can be obtained from the MED-MI website:
+https://www.data-mashup.org.uk/contact-us/
+and  following the instructions for:  ***connect to the server using an SSH client***.
+Alternatively, email: *health at metoffice dot gov dot uk*
 
-Create these directories for the extracted data : `data_met`, `data_rain`, and `data_pollen`
-(you can change these, in the scripts edit the `file_base` or `fname` strings to do this).
+Once logged in, create these directories for the extracted data : `data_met`, `data_rain`, and `data_pollen`
+(to change these directory names, in the scripts edit the `file_base` or `fname` strings).
 
 Edit the `Dates` and `Dates_string` variables in each script. `Dates` sets the start and 
 end dates (and hour) of your period of interest. `Dates_string` is the string to use in your
