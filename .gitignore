@@ -17,6 +17,7 @@
 #-------------------------
 
 /AURN_Data_Download/AURN_data_download
+*.tmp
 
 #-------------------------
 # Data files

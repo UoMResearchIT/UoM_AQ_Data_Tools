@@ -76,11 +76,9 @@ Alternatively, email: *health at metoffice dot gov dot uk*
 Once logged in, create these directories for the extracted data : `data_met`, `data_rain`, and `data_pollen`
 (to change these directory names, in the scripts edit the `file_base` or `fname` strings).
 
-Edit the `Dates` and `Dates_string` variables in each script. `Dates` sets the start and 
-end dates (and hour) of your period of interest. `Dates_string` is the string to use in your
-filenames to identify this period.
+Run using python and use the -help command to get the full set of parameters/options.
 
-Copy the scripts to the ssh server. Then run each in turn (simply `python [script name]`).
+Copy the scripts to the ssh server. Then run each in turn (simply `python [script name] [params/options]`).
 The `pollen_site_met_calculations.py` script will take longest to run, as this interpolates
 met data to the pollen measurement site locations - it is computationally intensive and,
 depending on the time period you've chosen, could take several hours to complete.

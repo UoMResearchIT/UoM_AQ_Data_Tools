@@ -591,11 +591,14 @@ def test_preprocess_code(df_in,pt,spc_zero_process = ['O3','NO2','NOXasNO2'],min
 
 if __name__ == '__main__':
     global VERBOSE
+    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
+    DEFAULT_VERBOSE = 0
 
     # read arguments from the command line
     parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
     parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
-    parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData)")
+    parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData). \
+                                                           Default: " + DEFAULT_METADATA_FILE)
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
         in (and defaults to) {}".format(
@@ -618,9 +621,9 @@ if __name__ == '__main__':
     parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
     parser.set_defaults(impute_values=True)
 
-
-
-    parser.add_argument("--verbose", "-v", type=int, help="Level of output for debugging (Default: 0 (=no verbose output))")
+    # Log verbose-ness
+    parser.add_argument("--verbose", "-v", type=int, help="Level of output for debugging (Default: " +
+                                                          str(DEFAULT_VERBOSE) + " (0 = no verbose output))")
 
     # read arguments from the command line
     args = parser.parse_args()
@@ -634,7 +637,7 @@ if __name__ == '__main__':
     if args.meta_data_filename:
         meta_data_filename = Path(args.meta_data_filename)
     else:
-        print('No meta_data_filename provided, so using default: "AURN_metadata.RData"')
+        print('No meta_data_filename provided, so using default:', DEFAULT_METADATA_FILE)
         meta_data_filename = Path('AURN_metadata.RData')
 
     if args.emep_filename:
@@ -695,11 +698,11 @@ if __name__ == '__main__':
         impute_values = True
 
     if args.verbose:
-        VERBOSE = max(args.verbose,0)
+        VERBOSE = max(args.verbose, 0)
         print('verbose: ', VERBOSE)
     else:
-        print('No verbose flag provided, so using default: 0')
-        VERBOSE = 0
+        print('No verbose flag provided, so using default: ' + str(DEFAULT_VERBOSE))
+        VERBOSE = DEFAULT_VERBOSE
 
     # Does the metadatafile exist?
     if meta_data_filename.is_file():

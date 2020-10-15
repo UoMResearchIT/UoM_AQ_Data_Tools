@@ -1,20 +1,17 @@
 #!/bin/bash
 
-EMEP_FILE="emep_site_data_hourly_2016-2019.csv"
-META_DATA_URL="https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData"
-META_DATA_FILENAME="AURN_metadata.RData"
-SITES="ABD ABD7 ABD8 ARM6 AH"
+OUTFILE_PREFIX = 'dataxxx_'
+DATE_RANGE = ['2016-1-1 0','2019-12-31 23']
+DATES_STRING = '2016-2019'
+LATITUDES = [48,60]
+LONGITUDES = [-11,3]
+VERBOSE = 0
 
 
 # EXAMPLE 1
-YEARS="2016 2017"
-ARGUMENTS_1=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES}"
-
-# EXAMPLE 2
-YEARS="2017"
-ARGUMENTS_2=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} --verbose 0"
+ARGUMENTS_1=" --outfile_prefix ${OUTFILE_PREFIX} --date_range ${DATE_RANGE} --dates_string ${DATE_STRING}"
 
 
-python AURN_download.py ${ARGUMENTS_2}
+python met_extraction_script.py ${ARGUMENTS_1}
 
 
