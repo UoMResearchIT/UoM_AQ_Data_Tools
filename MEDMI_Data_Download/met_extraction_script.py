@@ -2,20 +2,30 @@ from medmi_database import Dataset
 from cmath import polar
 import argparse
 
+import os, errno
+
+
+def create_directory(dir_name):
+	try:
+		os.makedirs(dir_name)
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			raise
 
 
 def extraction_function(source_dict,settings_dict):
 	datadata = Dataset(source_dict)
 	datadata.default()
-	
+
+	create_directory(os.path.dirname(settings_dict['fname']))
+
 	with open(settings_dict['fname'],'w') as dfile:
-	
 		dfile.write(settings_dict['headstring'])
 		dfile.write(settings_dict['columnstring'])
-	
+
 		for data in datadata.values():
 			d_date = data['Time']
-			d_siteid = data['Site identifier']	
+			d_siteid = data['Site identifier']
 			d_val = data['Value']
 			dfile.write('{}, {}, {}\n'.format(d_date,d_siteid,d_val))
 
@@ -25,6 +35,8 @@ def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
 	datadata.default()
 	for ds in extra_datasets:
 		datadata.add(ds)
+
+	create_directory(os.path.dirname(settings_dict['fname']))
 	
 	with open(settings_dict['fname'],'w') as dfile:
 	
@@ -46,6 +58,8 @@ def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
 def extraction_wind_function(source_dict,settings_dict):
 	datadata = Dataset(source_dict)
 	datadata.default()
+
+	create_directory(os.path.dirname(settings_dict['fname']))
 	
 	with open(settings_dict['fname'],'w') as dfile:
 	
