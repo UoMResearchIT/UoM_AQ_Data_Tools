@@ -104,16 +104,12 @@ if __name__ == '__main__':
 	 					(array - first two values only). Default: " + str(DEFAULT_DATE_RANGE))
 	parser.add_argument("--dates_string", "-s", dest="dates_string", help= "date string to be used in file search. \
 																		   Default: " + DEFAULT_DATES_STRING)
-	parser.set_defaults(date_range=DEFAULT_DATE_RANGE)
-	parser.set_defaults(dates_string=DEFAULT_DATES_STRING)
 
 	# Latitude / longitude
 	parser.add_argument("--latitude_range", "-t", dest="latitude_range", type=int, nargs='+',
-						help="start and end latitude range (array - first two values only). Default: " + DEFAULT_LATITUDES)
-	parser.set_defaults(latitude_range=DEFAULT_LATITUDES)
+						help="start and end latitude range (array - first two values only). Default: " + str(DEFAULT_LATITUDES))
 	parser.add_argument("--longitude_range", "-n", dest="longitude_range", type=int, nargs='+',
-						help="start and end longitude range (array - first two values only). Default: " + DEFAULT_LONGITUDES)
-	parser.set_defaults(longitude_range=DEFAULT_LONGITUDES)
+						help="start and end longitude range (array - first two values only). Default: " + str(DEFAULT_LONGITUDES))
 
 	# Log verbose-ness
 	parser.add_argument("--verbose", "-v", type=int,
