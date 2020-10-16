@@ -73,12 +73,12 @@ https://www.data-mashup.org.uk/contact-us/
 and  following the instructions for:  ***connect to the server using an SSH client***.
 Alternatively, email: *health at metoffice dot gov dot uk*
 
-Once logged in, create these directories for the extracted data : `data_met`, `data_rain`, and `data_pollen`
-(to change these directory names, in the scripts edit the `file_base` or `fname` strings).
+Copy the scripts to the ssh server. Then run each in turn (simply `python [script name] [params/options]`) 
+using python and use the --help command to get the full set of parameters/options.
 
-Run using python and use the -help command to get the full set of parameters/options.
+The scripts will create these directories for the extracted data : `data_met`, `data_rain`, and `data_pollen`
+(To change the directory name prefixes from the default ('data_') use the --outdir_prefix (-o) parameter.)
 
-Copy the scripts to the ssh server. Then run each in turn (simply `python [script name] [params/options]`).
 The `pollen_site_met_calculations.py` script will take longest to run, as this interpolates
 met data to the pollen measurement site locations - it is computationally intensive and,
 depending on the time period you've chosen, could take several hours to complete.
