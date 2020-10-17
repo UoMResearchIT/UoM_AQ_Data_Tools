@@ -17,8 +17,6 @@ def extraction_function(source_dict,settings_dict):
 	datadata = Dataset(source_dict)
 	datadata.default()
 
-	create_directory(os.path.dirname(settings_dict['fname']))
-
 	with open(settings_dict['fname'],'w') as dfile:
 		dfile.write(settings_dict['headstring'])
 		dfile.write(settings_dict['columnstring'])
@@ -35,8 +33,6 @@ def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
 	datadata.default()
 	for ds in extra_datasets:
 		datadata.add(ds)
-
-	create_directory(os.path.dirname(settings_dict['fname']))
 	
 	with open(settings_dict['fname'],'w') as dfile:
 	
@@ -58,8 +54,6 @@ def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
 def extraction_wind_function(source_dict,settings_dict):
 	datadata = Dataset(source_dict)
 	datadata.default()
-
-	create_directory(os.path.dirname(settings_dict['fname']))
 	
 	with open(settings_dict['fname'],'w') as dfile:
 	
@@ -172,15 +166,35 @@ if __name__ == '__main__':
 		print('No verbose flag provided, so using default: {}'.format(str(DEFAULT_VERBOSE)))
 		VERBOSE = DEFAULT_VERBOSE
 
+	# Check filenames valid
+	filename_rain = '{}met/temp_rh_press_wbulb_{}.csv'.format(outdir_prefix, outfile_suffix)
+	filename_temp_etc = '{}met/temp_rh_press_wbulb_{}.csv'.format(outdir_prefix, outfile_suffix)
+	filename_wind = '{}met/wind_{}.csv'.format(outdir_prefix, outfile_suffix)
+	try:
+		print('Creating file: {}'.format(filename_rain))
+		create_directory(os.path.dirname(filename_rain))
+	except:
+		raise ValueError('Unable to create directory/file: {}.'.format(filename_rain))
+	try:
+		print('Creating file: {}'.format(filename_temp_etc))
+		create_directory(os.path.dirname(filename_temp_etc))
+	except:
+		raise ValueError('Unable to create directory/file: {}.'.format(filename_temp_etc))
+	try:
+		print('Creating file: {}'.format(filename_wind))
+		create_directory(os.path.dirname(filename_wind))
+	except:
+		raise ValueError('Unable to create directory/file: {}.'.format(filename_wind))
 
+
+	### Prepare inputs and perform data extraction
 
 	dict_base = {'Time range':date_range,'Latitude range': latitude_range, 'Longitude range': longitude_range}
-	
 	
 	print('extracting rain data for date range: {} to {}'.format(date_range[0],date_range[1]))
 	rain_dict = dict_base.copy()
 	rain_dict.update({'Source reference':'midas.rain_drnl_ob.prcp_amt 1'})
-	rain_settings = {'fname':'{}rain/rain_{}.csv'.format(outdir_prefix, outfile_suffix),\
+	rain_settings = {'fname':filename_rain,\
 					'headstring':'Rain gauge daily data for date range: {} to {}\n'.format(date_range[0],date_range[1]),\
 					'columnstring':'date,siteID,rain\n'}
 	extraction_function(rain_dict,rain_settings)
@@ -190,7 +204,7 @@ if __name__ == '__main__':
 		  .format(date_range[0],date_range[1]))
 	temperature_dict = dict_base.copy()
 	temperature_dict.update({'Source reference':'midas.weather_hrly_ob.air_temperature'})
-	temperature_settings = {'fname':'{}met/temp_rh_press_wbulb_{}.csv'.format(outdir_prefix, outfile_suffix),\
+	temperature_settings = {'fname':filename_temp_etc,\
 					'headstring':'Temperature, Relative Humidity, Station Pressure, and Wet Bulb Temperature hourly \
 						data for date range: {} to {}\n'.format(date_range[0],date_range[1]),\
 					'columnstring':'date,siteID,temperature,rh,pressure,wbtemp\n'}
@@ -202,7 +216,7 @@ if __name__ == '__main__':
 	print('extracting wind data for date range: {} to {}'.format(date_range[0],date_range[1]))
 	wind_dict = dict_base.copy()
 	wind_dict.update({'Source reference':'midas.wind_mean_ob.mean_wind_speed 1','Complex wind type': True})
-	wind_settings = {'fname':'{}met/wind_{}.csv'.format(outdir_prefix, outfile_suffix),\
+	wind_settings = {'fname':filename_wind,\
 					'headstring':'Wind speed and direction hourly data for date range: {} to {}\n'
 						.format(date_range[0],date_range[1]),\
 					'columnstring':'date,siteID,windspeed,winddir\n'}
