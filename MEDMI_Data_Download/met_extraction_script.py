@@ -174,17 +174,17 @@ if __name__ == '__main__':
 		print('Creating directory: {}'.format(os.path.dirname(filename_rain)))
 		create_directory(os.path.dirname(filename_rain))
 	except:
-		raise ValueError('Unable to create directory/file: {}.'.format(filename_rain))
+		raise ValueError('Unable to create directory/file: {}'.format(filename_rain))
 	try:
 		print('Creating directory: {}'.format(filename_temp_etc))
 		create_directory(os.path.dirname(os.path.dirname(filename_temp_etc)))
 	except:
-		raise ValueError('Unable to create directory/file: {}.'.format(filename_temp_etc))
+		raise ValueError('Unable to create directory/file: {}'.format(filename_temp_etc))
 	try:
 		print('Creating directory: {}'.format(os.path.dirname(filename_wind)))
 		create_directory(os.path.dirname(filename_wind))
 	except:
-		raise ValueError('Unable to create directory/file: {}.'.format(filename_wind))
+		raise ValueError('Unable to create directory/file: {}'.format(filename_wind))
 
 
 	### Prepare inputs and perform data extraction
