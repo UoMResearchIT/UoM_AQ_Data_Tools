@@ -166,22 +166,22 @@ if __name__ == '__main__':
 		print('No verbose flag provided, so using default: {}'.format(str(DEFAULT_VERBOSE)))
 		VERBOSE = DEFAULT_VERBOSE
 
-	# Check filenames valid
-	filename_rain = '{}met/temp_rh_press_wbulb_{}.csv'.format(outdir_prefix, outfile_suffix)
+	# Check directory names valid
+	filename_rain = '{}met/rain_{}.csv'.format(outdir_prefix, outfile_suffix)
 	filename_temp_etc = '{}met/temp_rh_press_wbulb_{}.csv'.format(outdir_prefix, outfile_suffix)
 	filename_wind = '{}met/wind_{}.csv'.format(outdir_prefix, outfile_suffix)
 	try:
-		print('Creating file: {}'.format(filename_rain))
+		print('Creating directory: {}'.format(os.path.dirname(filename_rain)))
 		create_directory(os.path.dirname(filename_rain))
 	except:
 		raise ValueError('Unable to create directory/file: {}.'.format(filename_rain))
 	try:
-		print('Creating file: {}'.format(filename_temp_etc))
-		create_directory(os.path.dirname(filename_temp_etc))
+		print('Creating directory: {}'.format(filename_temp_etc))
+		create_directory(os.path.dirname(os.path.dirname(filename_temp_etc)))
 	except:
 		raise ValueError('Unable to create directory/file: {}.'.format(filename_temp_etc))
 	try:
-		print('Creating file: {}'.format(filename_wind))
+		print('Creating directory: {}'.format(os.path.dirname(filename_wind)))
 		create_directory(os.path.dirname(filename_wind))
 	except:
 		raise ValueError('Unable to create directory/file: {}.'.format(filename_wind))
