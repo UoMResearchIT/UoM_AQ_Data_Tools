@@ -591,15 +591,17 @@ def test_preprocess_code(df_in,pt,spc_zero_process = ['O3','NO2','NOXasNO2'],min
 
 if __name__ == '__main__':
     global VERBOSE
+    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
+    DEFAULT_VERBOSE = 0
 
     # read arguments from the command line
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
     parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
-    parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData)")
+    parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData). \
+                                                           Default: {}".format(DEFAULT_METADATA_FILE))
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
-        in (and defaults to) {}".format(
-        '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']'))
+        in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']'))
     parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
     parser.add_argument("--useful_num_years", "-u", type=int, help="minimum number of years of data for any site that \
         we are going to use as a reference site later")
@@ -618,9 +620,9 @@ if __name__ == '__main__':
     parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
     parser.set_defaults(impute_values=True)
 
-
-
-    parser.add_argument("--verbose", "-v", type=int, help="Level of output for debugging (Default: 0 (=no verbose output))")
+    # Log verbose-ness
+    parser.add_argument("--verbose", "-v", type=int,
+            help="Level of output for debugging (Default: {} (0 = no verbose output))".format(str(DEFAULT_VERBOSE)))
 
     # read arguments from the command line
     args = parser.parse_args()
@@ -634,7 +636,7 @@ if __name__ == '__main__':
     if args.meta_data_filename:
         meta_data_filename = Path(args.meta_data_filename)
     else:
-        print('No meta_data_filename provided, so using default: "AURN_metadata.RData"')
+        print('No meta_data_filename provided, so using default:', DEFAULT_METADATA_FILE)
         meta_data_filename = Path('AURN_metadata.RData')
 
     if args.emep_filename:
@@ -657,7 +659,8 @@ if __name__ == '__main__':
         min_years = args.min_years
         print('Min years (minimum number of years of data that a site must have):', min_years)
     else:
-        print('No min_years provided, so using default: 0.4 * number of years')
+        print('No min_years provided, so using default: 0.4 * number of years: 0.4*{}={}'
+              .format(len(years), 0.4*len(years)))
         min_years = 0.4*len(years)
 
     if args.useful_num_years:
@@ -665,7 +668,8 @@ if __name__ == '__main__':
         print('Useful number of years (minimum number of years of data for any site that we are going to use as a \
             reference site later; this cannot be less than min_years):', useful_num_years)
     else:
-        print('No useful_num_years provided, so using default: 0.8 * number of years')
+        print('No useful_num_years provided, so using default: 0.8 * number of years: 0.8*{}={}'
+              .format(len(years), 0.8*len(years)))
         useful_num_years = max(0.8*len(years),min_years)
 
     if args.sites:
@@ -695,11 +699,11 @@ if __name__ == '__main__':
         impute_values = True
 
     if args.verbose:
-        VERBOSE = max(args.verbose,0)
+        VERBOSE = max(args.verbose, 0)
         print('verbose: ', VERBOSE)
     else:
-        print('No verbose flag provided, so using default: 0')
-        VERBOSE = 0
+        print('No verbose flag provided, so using default: {}'.format(str(DEFAULT_VERBOSE)))
+        VERBOSE = DEFAULT_VERBOSE
 
     # Does the metadatafile exist?
     if meta_data_filename.is_file():
