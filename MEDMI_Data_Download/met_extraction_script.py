@@ -166,31 +166,26 @@ if __name__ == '__main__':
 		print('No verbose flag provided, so using default: {}'.format(str(DEFAULT_VERBOSE)))
 		VERBOSE = DEFAULT_VERBOSE
 
-	# Check directory names valid
-	filename_rain = '{}met/rain_{}.csv'.format(outdir_prefix, outfile_suffix)
-	filename_temp_etc = '{}met/temp_rh_press_wbulb_{}.csv'.format(outdir_prefix, outfile_suffix)
-	filename_wind = '{}met/wind_{}.csv'.format(outdir_prefix, outfile_suffix)
+
+	# Check directory name is valid and create directory
+	new_dir = '{}met'.format(outdir_prefix)
 	try:
-		print('Creating directory: {}'.format(os.path.dirname(filename_rain)))
-		create_directory(os.path.dirname(filename_rain))
+		print('Creating directory: {}, unless it already exists.'.format(new_dir))
+		create_directory(new_dir)
 	except:
-		raise ValueError('Unable to create directory/file: {}'.format(filename_rain))
-	try:
-		print('Creating directory: {}'.format(filename_temp_etc))
-		create_directory(os.path.dirname(os.path.dirname(filename_temp_etc)))
-	except:
-		raise ValueError('Unable to create directory/file: {}'.format(filename_temp_etc))
-	try:
-		print('Creating directory: {}'.format(os.path.dirname(filename_wind)))
-		create_directory(os.path.dirname(filename_wind))
-	except:
-		raise ValueError('Unable to create directory/file: {}'.format(filename_wind))
+		raise ValueError('Unable to create directory/file: {}'.format(new_dir))
 
 
 	### Prepare inputs and perform data extraction
 
 	dict_base = {'Time range':date_range,'Latitude range': latitude_range, 'Longitude range': longitude_range}
-	
+
+	# Set file names
+	filename_rain = '{}/rain_{}.csv'.format(new_dir, outfile_suffix)
+	filename_temp_etc = '{}/temp_rh_press_wbulb_{}.csv'.format(new_dir, outfile_suffix)
+	filename_wind = '{}/wind_{}.csv'.format(new_dir, outfile_suffix)
+
+	# Rain
 	print('extracting rain data for date range: {} to {}'.format(date_range[0],date_range[1]))
 	rain_dict = dict_base.copy()
 	rain_dict.update({'Source reference':'midas.rain_drnl_ob.prcp_amt 1'})
@@ -199,7 +194,7 @@ if __name__ == '__main__':
 					'columnstring':'date,siteID,rain\n'}
 	extraction_function(rain_dict,rain_settings)
 
-
+	# Temperature, humiidty, pressure, wet bulp temp
 	print('extracting temperature, relative humidity, pressure, and wet bulb temperature data for date range: {} to {}'
 		  .format(date_range[0],date_range[1]))
 	temperature_dict = dict_base.copy()
@@ -211,8 +206,7 @@ if __name__ == '__main__':
 	extra_datasets = ['midas.weather_hrly_ob.rltv_hum','midas.weather_hrly_ob.stn_pres','midas.weather_hrly_ob.dewpoint']
 	extraction_add_data_function(temperature_dict,temperature_settings,extra_datasets)
 
-	
-
+	# Wind
 	print('extracting wind data for date range: {} to {}'.format(date_range[0],date_range[1]))
 	wind_dict = dict_base.copy()
 	wind_dict.update({'Source reference':'midas.wind_mean_ob.mean_wind_speed 1','Complex wind type': True})
