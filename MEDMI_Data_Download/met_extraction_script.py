@@ -13,29 +13,14 @@ def create_directory(dir_name):
 			raise
 
 
-def extraction_function(source_dict,settings_dict):
-	datadata = Dataset(source_dict)
-	datadata.default()
-
-	with open(settings_dict['fname'],'w') as dfile:
-		dfile.write(settings_dict['headstring'])
-		dfile.write(settings_dict['columnstring'])
-
-		for data in datadata.values():
-			d_date = data['Time']
-			d_siteid = data['Site identifier']
-			d_val = data['Value']
-			dfile.write('{}, {}, {}\n'.format(d_date,d_siteid,d_val))
-
-
-def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
+def extract_data(source_dict, settings_dict, extra_datasets=[]):
+	ADDITIONAL_VALS_KEY = 'Additional field values'
 	datadata = Dataset(source_dict)
 	datadata.default()
 	for ds in extra_datasets:
 		datadata.add(ds)
 	
 	with open(settings_dict['fname'],'w') as dfile:
-	
 		dfile.write(settings_dict['headstring'])
 		dfile.write(settings_dict['columnstring'])
 	
@@ -43,7 +28,11 @@ def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
 			d_date = data['Time']
 			d_siteid = data['Site identifier']	
 			d_val = data['Value']
-			d_extra = data['Additional field values']
+
+			if ADDITIONAL_VALS_KEY in data:
+				d_extra = data[ADDITIONAL_VALS_KEY]
+			else:
+				d_extra = []
 			
 			dfile.write('{}, {}, {}'.format(d_date,d_siteid,d_val))
 			for d_ev in d_extra:
@@ -51,7 +40,7 @@ def extraction_add_data_function(source_dict,settings_dict,extra_datasets):
 			dfile.write('\n')
 
 
-def extraction_wind_function(source_dict,settings_dict):
+def extract_data_wind(source_dict,settings_dict):
 	datadata = Dataset(source_dict)
 	datadata.default()
 	
@@ -184,6 +173,7 @@ if __name__ == '__main__':
 	filename_rain = '{}/rain_{}.csv'.format(new_dir, outfile_suffix)
 	filename_temp_etc = '{}/temp_rh_press_wbulb_{}.csv'.format(new_dir, outfile_suffix)
 	filename_wind = '{}/wind_{}.csv'.format(new_dir, outfile_suffix)
+	filename_pollen = '{}/pollen_{}_{}.csv'.format(new_dir, outfile_suffix, '{}')
 
 	# Rain
 	print('extracting rain data for date range: {} to {}'.format(date_range[0],date_range[1]))
@@ -192,7 +182,7 @@ if __name__ == '__main__':
 	rain_settings = {'fname':filename_rain,\
 					'headstring':'Rain gauge daily data for date range: {} to {}\n'.format(date_range[0],date_range[1]),\
 					'columnstring':'date,siteID,rain\n'}
-	extraction_function(rain_dict,rain_settings)
+	extract_data(rain_dict, rain_settings)
 
 	# Temperature, humiidty, pressure, wet bulp temp
 	print('extracting temperature, relative humidity, pressure, and wet bulb temperature data for date range: {} to {}'
@@ -204,7 +194,7 @@ if __name__ == '__main__':
 						data for date range: {} to {}\n'.format(date_range[0],date_range[1]),\
 					'columnstring':'date,siteID,temperature,rh,pressure,wbtemp\n'}
 	extra_datasets = ['midas.weather_hrly_ob.rltv_hum','midas.weather_hrly_ob.stn_pres','midas.weather_hrly_ob.dewpoint']
-	extraction_add_data_function(temperature_dict,temperature_settings,extra_datasets)
+	extract_data(temperature_dict, temperature_settings, extra_datasets)
 
 	# Wind
 	print('extracting wind data for date range: {} to {}'.format(date_range[0],date_range[1]))
@@ -214,8 +204,22 @@ if __name__ == '__main__':
 					'headstring':'Wind speed and direction hourly data for date range: {} to {}\n'
 						.format(date_range[0],date_range[1]),\
 					'columnstring':'date,siteID,windspeed,winddir\n'}
-	extraction_wind_function(wind_dict,wind_settings)
+	extract_data_wind(wind_dict, wind_settings)
+
+	# Pollen
+	dataset_base = 'midas.pollen_drnl_ob.{}'
+	pollen_species = ['alnus', 'ambrosia', 'artemisia', 'betula', 'corylus', 'fraxinus', 'platanus', 'poaceae',
+					  'quercus', 'salix', 'ulmus', 'urtica']
+
+	for pspc in pollen_species:
+		print('working on pollen species: {}'.format(pspc))
+		fname = filename_pollen.format(pspc)
+		pollen_dict = dict_base.copy()
+		pollen_dict['Source reference'] = dataset_base.format(pspc)
+		pollen_settings = {'fname': fname,
+						 'headstring': '{} pollen daily count for date range: {} to {}\n'.format(pspc, date_range[0], date_range[1]),
+						 'columnstring': 'date,siteID,{}\n'.format(pspc)}
+		extract_data(pollen_dict, pollen_settings)
 
 
-	print('all data extraction finished successfully')
 
