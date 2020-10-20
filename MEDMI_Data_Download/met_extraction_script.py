@@ -1,4 +1,3 @@
-#from abc import ABCMeta, abstractmethod
 from medmi_database import Dataset
 from cmath import polar
 import argparse
@@ -7,11 +6,9 @@ import os, errno
 
 
 class MetExtractor(object):
-    #__metaclass__ = ABCMeta
-
     VERBOSE = 0
     DEFAULT_OUT_DIR_PREFIX = 'data_'
-    DEFAULT_OUT_FILE_SUFFIX = '2016-2019'
+    DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_DATE_RANGE = ['2016-1-1 0', '2019-12-31 23']
     DEFAULT_LATITUDES = [48, 60]
     DEFAULT_LONGITUDES = [-11, 3]
@@ -54,8 +51,6 @@ class MetExtractor(object):
 
 
 class MetExtractorRain(MetExtractor):
-    aliases_lowercase = ['rain', 'rainfall', 'precipitation']
-
     def __init__(self, outfile_dir):
         super(MetExtractorRain, self).__init__(outfile_dir)
         self.source_reference = 'midas.rain_drnl_ob.prcp_amt 1'
@@ -74,8 +69,6 @@ class MetExtractorRain(MetExtractor):
 
 
 class MetExtractorTemp(MetExtractor):
-    aliases_lowercase = ['temp', 'temperature']
-
     def __init__(self, outfile_dir):
         super(MetExtractorTemp, self).__init__(outfile_dir)
         self.source_reference = 'midas.weather_hrly_ob.air_temperature'
