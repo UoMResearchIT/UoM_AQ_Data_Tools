@@ -22,8 +22,8 @@ pollen_sites['WIGHT']           = (50.71052,   -1.29944, 32.0)
 pollen_sites['WORCESTER']       = (52.19716, -2.24165, 40.0)
 pollen_sites['YORK']            = (53.94819,   -1.05194, 25.0)
 
-Dates = ['2016-1-1 0','2019-12-31 23']
-Dates_string = '2016-2019'
+Dates = ['2017-1-1 0','2017-1-1 23']
+Dates_string = '2017-2017'
 
 
 spatial_processing  = {'Method':'sp_idw_mean', 'Radius':50000}
@@ -41,7 +41,7 @@ temp = Dataset({'Source reference': 'midas.weather_hrly_ob.air_temperature'})
 temp.process(spatial_temperature_processing)
 temp.process(temporal_processing)
 
-wind = Dataset({'Source reference': 'midas.wind_mean_ob.mean_wind_speed 1', \
+wind = Dataset({'Source reference': 'midas.wind_mean_ob.mean_wind_speed 1',
 				'Complex wind type': True})
 wind.process(spatial_processing)
 wind.process(temporal_processing)
@@ -57,12 +57,12 @@ for pollen_key in pollen_sites:
 	print('working on site: {}'.format(pollen_key))
 	site_lat = pollen_sites[pollen_key][0]
 	site_lon = pollen_sites[pollen_key][1]
-	ts = Dataset({'Source reference': 'MEDMI TS',\
-				'Time range':Dates,\
-				'Period':1,\
-				'Latitude':site_lat,\
-				'Longitude':site_lon,\
-				'Altitude':pollen_sites[pollen_key][2]\
+	ts = Dataset({'Source reference': 'MEDMI TS',
+				'Time range':Dates,
+				'Period':1,
+				'Latitude':site_lat,
+				'Longitude':site_lon,
+				'Altitude':pollen_sites[pollen_key][2]
 				})
 				
 	ts.link(rh)
