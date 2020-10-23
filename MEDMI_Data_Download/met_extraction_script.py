@@ -7,7 +7,7 @@ import json
 import os, errno
 
 
-class MetExtractor(object):
+class MetExtractor:
     __metaclass__ = ABCMeta
     DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_OUT_DIR = 'met_extracted_data'
@@ -19,9 +19,8 @@ class MetExtractor(object):
     DEFAULT_PROCESS_TEMPORAL = 'tp_mean'
     DEFAULT_PROCESS_RADIUS = 50000
     DEFAULT_PROCESS_PERIOD = 1
-    DEFAULT_COLS_BASE = 'date,siteID,{}\n'
+    DEFAULT_COLS_BASE = ['date','siteID']
     ADDITIONAL_VALS_KEY = 'Additional field values'
-
 
 
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
@@ -34,22 +33,10 @@ class MetExtractor(object):
         self._longitude = None
         self._latitude = None
         self._date_range = MetExtractor.DEFAULT_DATE_RANGE
-        self._source_reference = None
         self._filename = None
         self._headstring = None
-        self._cols_specific = None
         self._verbose=verbose
 
-    def get_source_reference(self):
-        return self._source_reference
-
-    @abstractmethod
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix):
-        raise NotImplementedError("Must override extract_data")
-
-    @abstractmethod
-    def extract_data_from_dict(self, extraction_dict, settings, save_to_file):
-        raise NotImplementedError("Must override extract_data_from_dict")
 
     def _apply_spatial_process(self, dataset):
         dataset.process(self._spatial_process)
@@ -61,7 +48,7 @@ class MetExtractor(object):
         result = {
             'fname': self._filename,
             'headstring': self._head_string,
-            'columnstring': self._cols_base.format(self._cols_specific)
+            'columnstring': ','.join(self._cols_base + self._cols_specific)
         }
         return result
 
@@ -102,7 +89,7 @@ class MetExtractor(object):
     def _get_extraction_dict(self):
         result = {
             'Time range': self._date_range,
-            'Source reference': self.get_source_reference()
+            'Source reference': self.SOURCE_REFERENCE
         }
         if self._latitude is not None:
             result['Latitude'] = self._latitude
@@ -112,18 +99,46 @@ class MetExtractor(object):
             result['Longitude range'] = self._longitude_range
         return result
 
-    def extract_data_from_dict(self, extraction_dict, settings, save_to_file=True):
+
+    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extra_datasets=[]):
+
+        # Remove main measurement name from extra data list
+        try: extra_datasets.remove(self.measurement_name)
+        except ValueError: pass
+        except: raise
+
+        self.set_region(latitude_range, longitude_range)
+        self.set_date_range(date_range)
+
+        if len(extra_datasets) > 0:
+            str_extra_data = str(extra_datasets).replace('\'','').replace(' ', '').replace(',', '-')[1:-1]
+            filename = self._filename.format('_extras-{}'.format(str_extra_data), outfile_suffix)
+        else:
+            str_extra_data = '[]'
+            filename = self._filename.format('', outfile_suffix)
+
+        print('extracting {}'.format(self._head_string.format('and extra datasets: {}'.format(str_extra_data), date_range[0], date_range[1])))
+        extraction_dict = self._get_extraction_dict()
+
+        settings = {    'fname': filename,
+                        'headstring': self._head_string.format('and extra datasets: {}'.format(str_extra_data), date_range[0], date_range[1]),
+                        'columnstring': str(self._cols_base + self._cols_specific + extra_datasets)[1:-1] + '\n'}
+
+        return self._extract_data(extraction_dict, settings, extra_datasets=extra_datasets)
+
+    def extract_data_from_dict(self, extraction_dict, settings, save_to_file=False):
         return self._extract_data(extraction_dict, settings, save_to_file=save_to_file)
 
 
     def _extract_data(self, dict, settings, save_to_file=True, extra_datasets=[]):
         if self._verbose == 1:
-            print('extracting data')
+            print('extracting data for {}'.format(self.measurement_name))
         elif self._verbose > 1:
-            print('extracting data using dict: {}\n and settings: {}'.format(json.dumps(dict, default=str), format(json.dumps(settings))))
-
+            print('extracting data for {} using dict: {}\n and settings: {}'.format(
+                self.measurement_name, json.dumps(dict, default=str), json.dumps(settings)))
         datadata = self._perform_extraction(dict)
 
+        print('extracting extra-data: {}'.format(extra_datasets))
         for ds in extra_datasets:
             datadata.add(ds)
 
@@ -173,154 +188,92 @@ class MetExtractor(object):
 
 
 class MetExtractorRain(MetExtractor):
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorRain, self).__init__(outfile_dir, verbose)
-        self._source_reference = 'midas.rain_drnl_ob.prcp_amt 1'
-        self._head_string = 'Rain gauge daily data for date range: {} to {}\n'
-        self._cols_specific = 'rain'
-        self._filename = '{}/rain{}.csv'.format(self._out_dir, '{}')
+    SOURCE_REFERENCE = 'midas.rain_drnl_ob.prcp_amt 1'
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix):
-        super(MetExtractorRain, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorRain, self).set_date_range(date_range)
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorRain, self).__init__(out_dir, verbose)
+        self.measurement_name = 'rain'
+        self._head_string = 'Rain gauge daily data {} for date range: {} to {}\n'
+        self._cols_specific = [self.measurement_name]
+        self._filename = '{}/rain{}{}.csv'.format(self._out_dir, '{}', '{}')
 
-        print('extracting {}'.format(self._head_string.format(date_range[0], date_range[1])))
-        extraction_dict = super(MetExtractorRain, self)._get_extraction_dict()
-        settings = {'fname': self._filename.format(outfile_suffix),
-                    'headstring': self._head_string.format(date_range[0], date_range[1]),
-                    'columnstring': self._cols_base.format(self._cols_specific)}
-        return self._extract_data(extraction_dict, settings)
 
 
 class MetExtractorTemp(MetExtractor):
     DEFAULT_PROCESS_SPATIAL_TEMPERATURE = 'sp_altadj_idw_mean'
+    SOURCE_REFERENCE = 'midas.weather_hrly_ob.air_temperature'
 
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorTemp, self).__init__(outfile_dir, verbose)
-        self._source_reference = 'midas.weather_hrly_ob.air_temperature'
-        self._head_string = 'Temperature data for date range: {} to {}\n'
-        self._cols_specific = 'temperature'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorTemp, self).__init__(out_dir, verbose)
+        self.measurement_name = 'temp'
+        self._head_string = 'Temperature data {} for date range: {} to {}\n'
+        self._cols_specific = [self.measurement_name]
         self._spatial_process = None
-        self._filename = '{}/temp_rh_press_wbulb{}.csv'.format(self._out_dir, '{}')
+        self._filename = '{}/temp{}{}.csv'.format(self._out_dir, '{}', '{}')
+
 
     def set_spatial_process(self, method=DEFAULT_PROCESS_SPATIAL_TEMPERATURE,
                                         radius=MetExtractor.DEFAULT_PROCESS_RADIUS):
         self._spatial_process = {'Method': method, 'Period': radius}
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix=''):
-        super(MetExtractorTemp, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorTemp, self).set_date_range(date_range)
-        print('extracting {}'.format(self._head_string.format(date_range[0], date_range[1])))
-        extraction_dict = super(MetExtractorTemp, self)._get_extraction_dict()
-
-        settings = {'fname': self._filename.format(outfile_suffix),
-                    'headstring': self._head_string.format(date_range[0], date_range[1]),
-                    'columnstring': self._cols_base.format(self._cols_specific)}
-        return self._extract_data(extraction_dict, settings)
-
 
 class MetExtractorRelativeHumidity(MetExtractor):
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorRelativeHumidity, self).__init__(outfile_dir, verbose)
-        self._source_reference = 'midas.weather_hrly_ob.rltv_hum'
-        self._head_string = 'Relative Humidity  data for date range: {} to {}\n'
-        self._cols_specific = 'rh'
-        self._filename = '{}/rh{}.csv'.format(self._out_dir, '{}')
+    SOURCE_REFERENCE = 'midas.weather_hrly_ob.rltv_hum'
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix=''):
-        super(MetExtractorRelativeHumidity, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorRelativeHumidity, self).set_date_range(date_range)
-        print('extracting {}'.format(self._head_string.format(date_range[0], date_range[1])))
-        extraction_dict = super(MetExtractorRelativeHumidity, self)._get_extraction_dict()
-
-        settings = {'fname': self._filename.format(outfile_suffix),
-                    'headstring': self._head_string.format(date_range[0], date_range[1]),
-                    'columnstring': self._cols_base.format(self._cols_specific)}
-        return self._extract_data(extraction_dict, settings)
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorRelativeHumidity, self).__init__(out_dir, verbose)
+        self.measurement_name = 'rel_hum'
+        self._head_string = 'Relative Humidity {}  data for date range: {} to {}\n'
+        self._cols_specific = [self.measurement_name]
+        self._filename = '{}/rel_hum{}{}.csv'.format(self._out_dir, '{}', '{}')
 
 
 class MetExtractorStationPressure(MetExtractor):
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorStationPressure, self).__init__(outfile_dir, verbose)
-        self._source_reference = 'midas.weather_hrly_ob.stn_pres'
-        self._head_string = 'Station Pressure data for date range: {} to {}\n'
-        self._cols_specific = 'pressure'
-        self._filename = '{}/pressure{}.csv'.format(self._out_dir, '{}')
+    SOURCE_REFERENCE = 'midas.weather_hrly_ob.stn_pres'
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix=''):
-        super(MetExtractorStationPressure, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorStationPressure, self).set_date_range(date_range)
-        print('extracting {}'.format(self._head_string.format(date_range[0], date_range[1])))
-        extraction_dict = super(MetExtractorStationPressure, self)._get_extraction_dict()
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorStationPressure, self).__init__(out_dir, verbose)
+        self.measurement_name = 'pressure'
+        self._head_string = 'Station Pressure {} data for date range: {} to {}\n'
+        self._cols_specific = [self.measurement_name]
+        self._filename = '{}/pressure{}{}.csv'.format(self._out_dir, '{}', '{}')
 
-        settings = {'fname': self._filename.format(outfile_suffix),
-                    'headstring': self._head_string.format(date_range[0], date_range[1]),
-                    'columnstring': self._cols_base.format(self._cols_specific)}
-        return self._extract_data(extraction_dict, settings)
 
 
 class MetExtractorDewpoint(MetExtractor):
+    SOURCE_REFERENCE = 'midas.weather_hrly_ob.dewpoint'
+    MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorDewpoint, self).__init__(outfile_dir, verbose)
-        self._source_reference = 'midas.weather_hrly_ob.dewpoint'
-        self._head_string = 'Wet Bulb Temperature hourly data for date range: {} to {}\n'
-        self._cols_specific = 'wbtemp'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorDewpoint, self).__init__(out_dir, verbose)
+        self.measurement_name = 'dewpoint'
+        self._head_string = 'Dewpoint hourly data {} for date range: {} to {}\n'
+        self._cols_specific = [self.measurement_name]
         self._spatial_temperature_process = None
-        self._filename = '{}/wet_bulb{}.csv'.format(self._out_dir, '{}')
-
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix=''):
-        super(MetExtractorDewpoint, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorDewpoint, self).set_date_range(date_range)
-        print('extracting {}'.format(self._head_string.format(date_range[0], date_range[1])))
-        extraction_dict = super(MetExtractorDewpoint, self)._get_extraction_dict()
-
-        settings = {'fname': self._filename.format(outfile_suffix),
-                    'headstring': self._head_string.format(date_range[0], date_range[1]),
-                    'columnstring': self._cols_base.format(self._cols_specific)}
-        return self._extract_data(extraction_dict, settings)
+        self._filename = '{}/wet_bulb{}{}.csv'.format(self._out_dir, '{}', '{}')
 
 
 class MetExtractorWind(MetExtractor):
+    SOURCE_REFERENCE = 'midas.wind_mean_ob.mean_wind_speed 1'
 
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorWind, self).__init__(outfile_dir, verbose)
-        self._source_reference = 'midas.wind_mean_ob.mean_wind_speed 1'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorWind, self).__init__(out_dir, verbose)
+        self.measurement_name = 'wind'
         self._complex_wind_type = True
-        self._head_string = 'Wind speed and direction hourly data for date range: {} to {}\n'
-        self._cols_specific = 'windspeed,winddir'
-        self._filename = '{}/wind{}.csv'.format(outfile_dir, '{}')
+        self._head_string = 'Wind speed and direction hourly data {} for date range: {} to {}\n'
+        self._cols_specific = ['windspeed','winddir']
+        self._filename = '{}/wind{}{}.csv'.format(out_dir, '{}', '{}')
 
     def _get_extraction_dict(self):
         result = super(MetExtractorWind, self)._get_extraction_dict()
         result['Complex wind type'] = self._complex_wind_type
         return result
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix):
-        super(MetExtractorWind, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorWind, self).set_date_range(date_range)
-        extraction_dict = self._get_extraction_dict()
-        settings = {    'fname': self._filename.format(outfile_suffix),
-                        'headstring': self._head_string.format(date_range[0], date_range[1]),
-                        'columnstring': self._cols_base.format(self._cols_specific)}
-
-        return self._extract_data(extraction_dict, settings)
 
     def extract_data_from_dict(self, extraction_dict, settings, save_to_file=True):
         extraction_dict['Complex wind type'] = self._complex_wind_type
         return self._extract_data(extraction_dict, settings, save_to_file=save_to_file)
 
-    # Overrides base class method
-    def _extract_data(self, dict, settings, save_to_file=True):
-        if self._verbose == 1:
-            print('extracting data')
-        elif self._verbose > 1:
-            print('extracting data using dict: {}\n and settings: {}'.format(json.dumps(dict, default=str),
-                                                                             format(json.dumps(settings))))
-        datadata = self._perform_extraction(dict)
-        if save_to_file:
-            self.save_to_file(datadata, settings)
-        return datadata
 
     def save_to_file(self, datadata, settings):
         print('saving to file: {}'.format(settings['fname']))
@@ -354,49 +307,119 @@ class MetExtractorPollen(MetExtractor):
         'WIGHT': (50.71052, -1.29944, 32.0),
         'WORCESTER': (52.19716, -2.24165, 40.0),
         'YORK': (53.94819, -1.05194, 25.0)}
+
     pollen_species = ['alnus', 'ambrosia', 'artemisia', 'betula', 'corylus', 'fraxinus', 'platanus',
-                           'poaceae', 'quercus', 'salix', 'ulmus', 'urtica']
-
-    def __init__(self, outfile_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorPollen, self).__init__(outfile_dir, verbose)
-
-        self._source_reference = 'midas.pollen_drnl_ob.{}'
-        self._head_string = '{} pollen daily count for date range: {} to {}\n'
-        self._cols_specific = str(MetExtractorPollen.pollen_species)[1:-1]
-        self._filename = '{}/pollen_{}{}.csv'.format(self._out_dir, '{}', '{}')
+                      'poaceae', 'quercus', 'salix', 'ulmus', 'urtica']
 
 
-    def add_outfile_suffix(self, outfile_suffix):
-        return self._filename.format('{}', outfile_suffix)
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        super(MetExtractorPollen, self).__init__(out_dir, verbose)
+        self._head_string = '{} pollen daily count {} for date range: {} to {}\n'\
+            .format(self.measurement_name, '{}', '{}')
+        self._cols_specific = [self.measurement_name]
+        self._filename = '{}/pollen_{}{}{}.csv'.format(self._out_dir, self.measurement_name, '{}', '{}')
 
+class MetExtractorPollenAlnus(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.alnus'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'alnus'
+        super(MetExtractorPollenAlnus, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenAmbrosia(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.ambrosia'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'ambrosia'
+        super(MetExtractorPollenAmbrosia, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenArtemesia(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.artemisia'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'artemesia'
+        super(MetExtractorPollenArtemesia, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenBetula(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.betula'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'betula'
+        super(MetExtractorPollenBetula, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenCorylus(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.corylus'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'corylus'
+        super(MetExtractorPollenCorylus, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenFraxinus(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.fraxinus'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'fraxinus'
+        super(MetExtractorPollenFraxinus, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenPlatanus(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.platanus'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'platanus'
+        super(MetExtractorPollenPlatanus, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenPoacea(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.poaceae'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'poaceae'
+        super(MetExtractorPollenPoacea, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenQuercus(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.quercus'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'quercus'
+        super(MetExtractorPollenQuercus, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenSalix(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.salix'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'salix'
+        super(MetExtractorPollenSalix, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenUlmus(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.ulmus'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'ulnus'
+        super(MetExtractorPollenUlmus, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenUrtica(MetExtractorPollen):
+    SOURCE_REFERENCE = 'midas.pollen_drnl_ob.urtica'
+    def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
+        self.measurement_name = 'urtica'
+        super(MetExtractorPollenUrtica, self).__init__(out_dir, verbose)
+
+class MetExtractorPollenGroup(object):
+    DEFAULT_OUTDIR = 'Pollen_outputs'
+    DEFAULT_OUTFILE_SUFFIX = '_pollen'
+    DEFAULT_VERBOSE = 0
+
+    def __init__(self, out_dir=DEFAULT_OUTDIR, verbose=DEFAULT_VERBOSE):
+        self._extractors = [
+            MetExtractorPollenAlnus(out_dir, verbose),
+            MetExtractorPollenAmbrosia(out_dir, verbose),
+            MetExtractorPollenArtemesia(out_dir, verbose),
+            MetExtractorPollenBetula(out_dir, verbose),
+            MetExtractorPollenCorylus(out_dir, verbose),
+            MetExtractorPollenFraxinus(out_dir, verbose),
+            MetExtractorPollenPlatanus(out_dir, verbose),
+            MetExtractorPollenPoacea(out_dir, verbose),
+            MetExtractorPollenQuercus(out_dir, verbose),
+            MetExtractorPollenSalix(out_dir, verbose),
+            MetExtractorPollenUlmus(out_dir, verbose),
+            MetExtractorPollenUrtica(out_dir, verbose)
+        ]
+        self._out_dir = out_dir
+        self._verbose = verbose
 
     def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix):
         result = []
-        super(MetExtractorPollen, self).set_region(latitude_range, longitude_range)
-        super(MetExtractorPollen, self).set_date_range(date_range)
-        fname = self._filename.format('{}', outfile_suffix)
-        for pspc in MetExtractorPollen.pollen_species:
-            print('working on pollen species: {}'.format(pspc))
-            fname = fname.format(pspc)
-            extraction_dict = super(MetExtractorPollen, self)._get_extraction_dict()
-            extraction_dict['Source reference'] = self._source_reference.format(pspc)
-            settings = {'fname': fname,
-                        'headstring': self._head_string.format(pspc, self._date_range[0], self._date_range[1]),
-                        'columnstring': self._cols_base.format(pspc)}
-            result.append(super(MetExtractorPollen, self)._extract_data(extraction_dict, settings))
+        for pollen_extractor in self._extractors:
+            result.append(pollen_extractor.extract_data(date_range, latitude_range, longitude_range, outfile_suffix))
         return result
-
-    def extract_data_from_dict(self, extraction_dict, settings, save_to_file=True):
-        result = []
-        for pspc in MetExtractorPollen.pollen_species:
-            print('working on pollen species: {}'.format(pspc))
-            fname = settings['fname'].format(pspc)
-            extraction_dict['Source reference'] = self._source_reference_base.format(pspc)
-            settings = {'fname': fname,
-                        'headstring': settings['headstring'].format(pspc, self._date_range[0], self._date_range[1]),
-                        'columnstring': settings['columnstring'].format(pspc)}
-            result.append(super(MetExtractorPollen, self)._extract_data(extraction_dict, settings, save_to_file=save_to_file))
-        return result
+    
 
 class MetExtractorGroup(object):
     DEFAULT_OUTDIR = 'GROUP_DATA'
@@ -472,17 +495,11 @@ class MetExtractorGroup(object):
             # Extract time series data
             ts = Dataset(extraction_dict)
 
-            ts.link(datasets[1])
-            ts.save_csv(file_base.format(site_key, 'test', 'test'))
-            return
-
             # Link each dataset to the time series data
             for i, ds in enumerate(datasets):
                 if self._verbose > 0:
                     print('linking time series to dataset {}'.format(i))
                 ts.link(ds)
-
-
 
 
             with open(file_base.format(site_key, date_range[0], date_range[1]), 'w') as dfile:
@@ -524,13 +541,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="*** A script for automated downloading of MET data for a given date range. ***")
 
-    AVAILABLE_MEASUREMENTS = ['pollen', 'rain', 'temp',  'wind', 'rel_hum', 'pressure', 'dewpoint', 'site_list']
+    AVAILABLE_MEASUREMENTS = ['rain', 'temp', 'rel_hum', 'pressure', 'dewpoint', 'wind', 'pollen']
 
     ### parameters
 
-    # Measurement
+    # Measurements
     parser.add_argument("--measurements", "-m", metavar='M', type=str, nargs='+', help="measurements to be extracted. \
             Must be in (and defaults to) {}".format('[' + ", ".join([measure for measure in AVAILABLE_MEASUREMENTS]) + ']'))
+
+    parser.add_argument("--extra_measurements", "-x", metavar='X', type=str, nargs='+', help="extra measurements to be \
+        extracted along with each of the main measurements. Must be in {}. Default: None".format(
+        '[' + ", ".join([measure for measure in AVAILABLE_MEASUREMENTS]) + ']'))
 
     # output directory/file names
     parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
@@ -559,11 +580,24 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.measurements:
+        for measurement in args.measurements:
+            if measurement not in AVAILABLE_MEASUREMENTS:
+                raise ValueError('Unknown measurement: {}. Allowed measurements: {}'.format(measurement, AVAILABLE_MEASUREMENTS))
         measurements = args.measurements
         print('Using measurements: {}'.format(measurements))
     else:
         print('No measurements provided, so using default: ', '[' + ", ".join([measure for measure in AVAILABLE_MEASUREMENTS]) + ']')
         measurements = AVAILABLE_MEASUREMENTS
+
+    if args.extra_measurements:
+        for measurement in args.extra_measurements:
+            if measurement not in AVAILABLE_MEASUREMENTS:
+                raise ValueError('Unknown measurement: {}. Allowed extra measurements: {}'.format(measurement, AVAILABLE_MEASUREMENTS))
+        extra_measurements = args.extra_measurements
+        print('Using extra measurements: {}'.format(extra_measurements))
+    else:
+        print('No extra measurements provided, so using none')
+        extra_measurements = []
 
     if args.outdir_name:
         outdir_name = args.outdir_name
@@ -583,8 +617,7 @@ if __name__ == '__main__':
         if len(args.date_range) >= 2:
             date_range = args.date_range[0:2]
         else:
-            raise ValueError(
-                'Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
+            raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
         print('Using date range: {}'.format(str(date_range)[1:-1].replace(',','')))
     else:
         print('No date_range provided, so using default: {}'.format(str(MetExtractor.DEFAULT_DATE_RANGE)[1:-1].replace(',','')))
@@ -629,46 +662,31 @@ if __name__ == '__main__':
     ### Prepare inputs and perform data extraction
 
     # Create necessary extractors
-    if 'site_list' in measurements:
-        extractors = []
 
-        if 'pollen' in measurements:
-            extractors.append(MetExtractorPollen(outdir_name, verbose))
-        if 'rel_hum' in measurements:
-            extractors.append(MetExtractorRelativeHumidity(outdir_name, verbose))
-        if 'temp' in measurements:
-            extractors.append(MetExtractorTemp(outdir_name, verbose))
-        if 'wind' in measurements:
-            extractors.append(MetExtractorWind(outdir_name, verbose))
-        if 'rain' in measurements:
-            extractors.append(MetExtractorRain(outdir_name, verbose))
-        if 'pressure' in measurements:
-            extractors.append(MetExtractorStationPressure(outdir_name, verbose))
-        if 'dewpoint' in measurements:
-            extractors.append(MetExtractorDewpoint(outdir_name, verbose))
-        met_extractor_group = MetExtractorGroup(extractors, outdir_name, verbose=verbose)
-        met_extractor_group.set_all_date_ranges(date_range)
-        met_extractor_group.set_all_regions(latitude_range, longitude_range)
-        met_extractor_group.extract_timeseries_for_sites(MetExtractorPollen.pollen_sites, outfile_suffix)
-    else:
-        if 'rain' in measurements:
-            met_extractor_rain = MetExtractorRain(outdir_name)
-            met_extractor_rain.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
-        if 'temp' in measurements:
-            met_extractor_temp = MetExtractorTemp(outdir_name)
-            met_extractor_temp.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
-        if 'rel_hum' in measurements:
-            met_extractor_relhum = MetExtractorRelativeHumidity(outdir_name)
-            met_extractor_relhum.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
-        if 'pressure' in measurements:
-            met_extractor_press = MetExtractorStationPressure(outdir_name)
-            met_extractor_press.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
-        if 'dewpoint' in measurements:
-            met_extractor_dewpoint = MetExtractorDewpoint(outdir_name)
-            met_extractor_dewpoint.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
-        if 'wind' in measurements:
-            met_extractor_wind = MetExtractorWind(outdir_name)
-            met_extractor_wind.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
-        if 'pollen' in measurements:
-            met_extractor_pollen = MetExtractorPollen(outdir_name)
-            met_extractor_pollen.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
+    if 'rain' in measurements:
+        met_extractor_rain = MetExtractorRain(outdir_name, verbose)
+        met_extractor_rain.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extra_datasets=extra_measurements)
+    if 'temp' in measurements:
+        met_extractor_temp = MetExtractorTemp(outdir_name, verbose)
+        met_extractor_temp.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extra_datasets=extra_measurements)
+    if 'rel_hum' in measurements:
+        met_extractor_relhum = MetExtractorRelativeHumidity(outdir_name, verbose)
+        met_extractor_relhum.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extra_datasets=extra_measurements)
+    if 'pressure' in measurements:
+        met_extractor_press = MetExtractorStationPressure(outdir_name, verbose)
+        met_extractor_press.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extra_datasets=extra_measurements)
+    if 'dewpoint' in measurements:
+        met_extractor_dewpoint = MetExtractorDewpoint(outdir_name, verbose)
+        met_extractor_dewpoint.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extra_datasets=extra_measurements)
+    if 'wind' in measurements:
+        met_extractor_wind = MetExtractorWind(outdir_name, verbose)
+        met_extractor_wind.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extra_datasets=extra_measurements)
+    if 'pollen' in measurements:
+        met_extractor_pollen = MetExtractorPollenGroup(outdir_name, verbose)
+        met_extractor_pollen.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
