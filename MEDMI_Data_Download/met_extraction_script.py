@@ -15,23 +15,15 @@ class MetExtractor:
     UK_LATITUDES = [48, 60]
     UK_LONGITUDES = [-11, 3]
     DEFAULT_VERBOSE = 0
-    DEFAULT_PROCESS_SPATIAL = 'sp_idw_mean'
-    DEFAULT_PROCESS_TEMPORAL = 'tp_mean'
-    DEFAULT_PROCESS_RADIUS = 50000
-    DEFAULT_PROCESS_PERIOD = 1
     DEFAULT_COLS_BASE = ['date','siteID']
     ADDITIONAL_VALS_KEY = 'Additional field values'
 
 
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
         self._out_dir = dir_name
-        self._spatial_process = None
-        self._temporal_process = None
         self._cols_base = MetExtractor.DEFAULT_COLS_BASE
         self._latitude_range = MetExtractor.UK_LATITUDES
         self._longitude_range = MetExtractor.UK_LONGITUDES
-        self._longitude = None
-        self._latitude = None
         self._date_range = MetExtractor.DEFAULT_DATE_RANGE
         self._filename = None
         self._headstring = None
@@ -50,9 +42,6 @@ class MetExtractor:
             [s for c in cls.__subclasses__() for s in MetExtractor.all_subclasses(c)])
 
 
-    def _apply_spatial_process(self, dataset):
-        dataset.process(self._spatial_process)
-
     def add_outfile_suffix(self, outfile_suffix):
         return self._filename.format(outfile_suffix)
 
@@ -63,15 +52,6 @@ class MetExtractor:
             'columnstring': ','.join(self._cols_base + self._cols_specific)
         }
         return result
-
-    def _apply_temporal_process(self, dataset):
-        dataset.process(self._temporal_process)
-
-    def set_spatial_process(self, method=DEFAULT_PROCESS_SPATIAL, radius=DEFAULT_PROCESS_RADIUS):
-        self._spatial_process = {'Method': method, 'Radius': radius}
-
-    def set_temporal_process(self, method=DEFAULT_PROCESS_TEMPORAL, period=DEFAULT_PROCESS_PERIOD):
-        self._temporal_process = {'Method': method, 'Period': period}
 
     def set_date_range(self, date_range):
         self._date_range = date_range
@@ -187,18 +167,7 @@ class MetExtractor:
 
     def _perform_extraction(self, dict):
         datadata = Dataset(dict)
-        if self._spatial_process is not None:
-            if self._verbose > 0:
-                print('applying spatial processing: {}'.format(self._spatial_process))
-            self._apply_spatial_process(datadata)
-        if self._temporal_process is not None:
-            if self._verbose > 0:
-                print('applying temporal processing: {}'.format(self._temporal_process))
-            self._apply_temporal_process(datadata)
-        if self._temporal_process is None and self._spatial_process is None:
-            if self._verbose > 0:
-                print('applying default')
-            datadata.default()
+        datadata.default()
         return datadata
 
 
@@ -224,13 +193,7 @@ class MetExtractorTemp(MetExtractor):
         super(MetExtractorTemp, self).__init__(out_dir, verbose)
         self._head_string = 'Temperature data {} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorTemp.MEASUREMENT_NAME]
-        self._spatial_process = None
         self._filename = '{}/temp{}{}.csv'.format(self._out_dir, '{}', '{}')
-
-
-    def set_spatial_process(self, method=DEFAULT_PROCESS_SPATIAL_TEMPERATURE,
-                                        radius=MetExtractor.DEFAULT_PROCESS_RADIUS):
-        self._spatial_process = {'Method': method, 'Period': radius}
 
 
 class MetExtractorRelativeHumidity(MetExtractor):
@@ -264,7 +227,6 @@ class MetExtractorDewpoint(MetExtractor):
         super(MetExtractorDewpoint, self).__init__(out_dir, verbose)
         self._head_string = 'Dewpoint hourly data {} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorDewpoint.MEASUREMENT_NAME]
-        self._spatial_temperature_process = None
         self._filename = '{}/wet_bulb{}{}.csv'.format(self._out_dir, '{}', '{}')
 
 
@@ -283,11 +245,6 @@ class MetExtractorWind(MetExtractor):
         result = super(MetExtractorWind, self)._get_extraction_dict()
         result['Complex wind type'] = self._complex_wind_type
         return result
-
-
-    def extract_data_from_dict(self, extraction_dict, settings, save_to_file=True):
-        extraction_dict['Complex wind type'] = self._complex_wind_type
-        return self._extract_data(extraction_dict, settings, save_to_file=save_to_file)
 
 
     def save_to_file(self, datadata, settings):
@@ -437,112 +394,7 @@ class MetExtractorPollenGroup(object):
             result.append(pollen_extractor.extract_data(
                 date_range, latitude_range, longitude_range, outfile_suffix, extra_datasets))
         return result
-    
 
-class MetExtractorGroup(object):
-    DEFAULT_OUTDIR = 'GROUP_DATA'
-    DEFAULT_OUTFILE_SUFFIX = '_site_group'
-    DEFAULT_VERBOSE = 0
-    DEFAULT_TIMESERIES_METHOD = 'MEDMI TS'
-    DEFAULT_TIMESERIES_PERIOD = 1
-    DEFAULT_TIMESERIES_WRITE_ALL_OUTFILES = False
-
-    def __init__(self, extractors, out_dir=DEFAULT_OUTDIR, verbose=DEFAULT_VERBOSE):
-        self._extractors = extractors
-        self._cols_base = 'date{}'
-        self._out_dir = out_dir
-        self._verbose = verbose
-
-    def get_date_range(self):
-        try:
-            return self._extractors[0].get_date_range()
-        except:
-            return None
-
-    def set_all_date_ranges(self, date_range):
-        for extractor in self._extractors:
-            extractor.set_date_range(date_range)
-
-    def set_all_regions(self, latitude_range, longitude_range):
-        for extractor in self._extractors:
-            extractor.set_region(latitude_range, longitude_range)
-
-    def set_all_sites(self, latitude, longitude):
-        for extractor in self._extractors:
-            extractor.set_site(latitude, longitude)
-
-    def extract_timeseries_for_sites(self, sites, outfile_suffix=DEFAULT_OUTFILE_SUFFIX,
-                                     write_all_outfiles=DEFAULT_TIMESERIES_WRITE_ALL_OUTFILES):
-        print('extracting averaged daily met time-series for site list')
-
-        file_base = '{}/site_{}_{}-{}{}.txt'.format(self._out_dir, '{}', '{}', '{}', outfile_suffix)
-
-        datasets = []
-        for extractor in self._extractors:
-            settings = extractor.get_settings()
-            settings['fname'] = extractor.add_outfile_suffix(outfile_suffix)
-            extractor.set_spatial_process()
-            extractor.set_temporal_process()
-            dataset = extractor.extract_data_from_dict({'Source reference': extractor.get_source_reference()},
-                                                       settings, write_all_outfiles)
-            if isinstance(dataset, list):
-                # E.G. Pollen outputs a list of datasets
-                datasets.extend(dataset)
-                if self._verbose > 0:
-                    print('dataset output as list: {}'.format(extractor.get_source_reference()))
-            else:
-                # E.G. Rain, temp, wind output a single dataset
-                datasets.append(dataset)
-                if self._verbose > 0:
-                    print('dateset output as single: {}'.format(extractor.get_source_reference()))
-
-        for site_key in sites:
-            print('working on site: {}'.format(site_key))
-            site_lat = sites[site_key][0]
-            site_lon = sites[site_key][1]
-            extraction_dict = {'Source reference': MetExtractorGroup.DEFAULT_TIMESERIES_METHOD,
-                               'Time range': self.get_date_range(),
-                               'Period': MetExtractorGroup.DEFAULT_TIMESERIES_PERIOD,
-                               'Latitude': site_lat,
-                               'Longitude': site_lon,
-                               'Altitude': sites[site_key][2]
-                               }
-            if self._verbose > 0:
-                print('extraction dict: {}'.format(json.dumps(extraction_dict)))
-
-            # Extract time series data
-            ts = Dataset(extraction_dict)
-
-            # Link each dataset to the time series data
-            for i, ds in enumerate(datasets):
-                if self._verbose > 0:
-                    print('linking time series to dataset {}'.format(i))
-                ts.link(ds)
-
-
-            with open(file_base.format(site_key, date_range[0], date_range[1]), 'w') as dfile:
-
-                dfile.write('{}, Latitude: {}, Longitude: {}\n'.format(site_key, site_lat, site_lon))
-
-                cols_specific = ''
-                for extractor in self._extractors:
-                    cols_specific = ','.join((cols_specific, extractor._cols_specific))
-                dfile.write(self._cols_base.format(cols_specific))
-
-
-                for data in ts.values():
-                    print('hello')
-                    d_date = data['Linked data'][0][0]['Time']
-                    d_rh = data['Linked data'][0][0]['Value']
-                    d_temp = data['Linked data'][1][0]['Value']
-                    (d_wspd, d_wdir) = polar(data['Linked data'][2][0]['Value'])
-                    d_wdir = d_wdir * 57.29577951308232
-                    if d_wdir < 0: d_wdir = d_wdir + 360.
-                    d_rain = data['Linked data'][3][0]['Value']
-                    #print('{}, {}, {}, {}, {}, {}\n'.format(d_date, d_rh, d_temp, d_wspd, d_wdir, d_rain))
-                    dfile.write('{}, {}, {}, {}, {}, {}\n'.format(d_date, d_rh, d_temp, d_wspd, d_wdir, d_rain))
-
-        print('finished extracting met data for pollen stations')
 
 
 def create_directory(dir_name):
