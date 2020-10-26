@@ -21,13 +21,14 @@ class MetExtractor:
 
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
         self._out_dir = dir_name
+        self._verbose = verbose
         self._cols_base = MetExtractor.DEFAULT_COLS_BASE
         self._latitude_range = MetExtractor.UK_LATITUDES
         self._longitude_range = MetExtractor.UK_LONGITUDES
         self._date_range = MetExtractor.DEFAULT_DATE_RANGE
         self._filename = None
         self._headstring = None
-        self._verbose=verbose
+
 
     @staticmethod
     def get_source_ref_from_name(name):
@@ -500,6 +501,8 @@ if __name__ == '__main__':
 
     if args.latitude_range:
         if len(args.latitude_range) >= 2:
+            if len(args.latitude_range) > 2:
+                print('Warning: You have input more than 2 latitudes, only the first 2 will be used.')
             latitude_range = args.latitude_range[0:2]
         else:
             raise ValueError('Unable to obtain 2 values from input --latitude_range: {}'.format(str(args.latitude_range)))
@@ -510,6 +513,8 @@ if __name__ == '__main__':
 
     if args.longitude_range:
         if len(args.longitude_range) >= 2:
+            if len(args.longitude_range) > 2:
+                print('Warning: You have input more than 2 longitudes, only the first 2 will be used.')
             longitude_range = args.longitude_range[0:2]
         else:
             raise ValueError('Unable to obtain 2 values from input --longitude_range: {}'.format(str(args.longitude_range)))

@@ -60,14 +60,12 @@ This data file contains the combined daily mean, max, and data count for all AUR
 
 ## Obtaining MEDMI Meteorological and Pollen Data
 
-All scripts for obtaining Met and Pollen data are in the `MEDMI_Data_Download` directory.
-The scripts are:
-- `met_extraction_script.py`
-- `pollen_extraction_script.py`
-- `pollen_site_met_calculations.py`
+(All scripts for obtaining Met and Pollen data are in the `MEDMI_Data_Download` directory)
+
+`met_extraction_script.py`
 
 
-To use these scripts, it is neccessary to log onto the MEDMI ssh server. Details of how to do 
+To use these script(s), it is neccessary to log onto the MEDMI ssh server. Details of how to do 
 this can be obtained from the MED-MI website:
 https://www.data-mashup.org.uk/contact-us/
 and  following the instructions for:  ***connect to the server using an SSH client***.
@@ -76,14 +74,17 @@ Alternatively, email: *health at metoffice dot gov dot uk*
 Copy the scripts to the ssh server. Then run each in turn (simply `python [script name] [params/options]`) 
 using python and use the --help command to get the full set of parameters/options.
 
-The scripts will create these directories for the extracted data : `data_met`, `data_rain`, and `data_pollen`
-(To change the directory name prefixes from the default ('data_') use the --outdir_prefix (-o) parameter.)
-
-The `pollen_site_met_calculations.py` script will take longest to run, as this interpolates
-met data to the pollen measurement site locations - it is computationally intensive and,
-depending on the time period you've chosen, could take several hours to complete.
+The scripts will create the default directory 'met_extracted_data' for the extracted data.
+(To change the directory name from the default use the "--outdir_name" (-o) parameter.)
 
 Once all scripts have finished running you can copy the data back to your local computer.
+
+#### Using extra data
+With some measurements, extra data can be requested. (Not all measurements can be extra datasets of others.
+For example the stations which measure pollen don't measure meteorological parameters (and vice versa).)
+ 
+*EDIT REQUEST: Further explanation here of above, once we've confirmed implementation *
+
 
 ## Processing MEDMI Data
 
