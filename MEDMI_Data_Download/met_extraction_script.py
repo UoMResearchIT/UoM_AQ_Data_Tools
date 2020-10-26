@@ -257,20 +257,20 @@ class MetExtractorPollen(MetExtractor):
     MEASUREMENT_GROUP_NAME = 'pollen'
     ALLOWED_EXTRA_DATASETS = []
 
-    @staticmethod
-    def get_pollen_species():
-        result = []
-        sub_classes = MetExtractorPollen.all_subclasses(MetExtractor)
-        for sub_class in sub_classes:
-            result.append(sub_class.MEASUREMENT_NAME)
-        return result
-
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorPollen, self).__init__(out_dir, verbose)
         self._head_string = '{} pollen daily count{} for date range: {} to {}\n'\
             .format(self.MEASUREMENT_NAME, '{}', '{}', '{}')
         self._cols_specific = [self.MEASUREMENT_NAME]
         self._filename = '{}/pollen_{}{}{}.csv'.format(self._out_dir, self.MEASUREMENT_NAME, '{}', '{}')
+
+    @staticmethod
+    def get_pollen_species():
+        result = []
+        sub_classes = MetExtractorPollen.all_subclasses(MetExtractorPollen)
+        for sub_class in sub_classes:
+            result.append(sub_class.MEASUREMENT_NAME)
+        return result
 
 
 class MetExtractorPollenAlnus(MetExtractorPollen):
