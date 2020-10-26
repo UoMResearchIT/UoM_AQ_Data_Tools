@@ -34,10 +34,13 @@ class MetExtractor:
 
     @staticmethod
     def get_source_ref_from_name(name):
-        sub_classes = MetExtractor.all_subclasses(MetExtractor)
-        for sub_class in sub_classes:
+        for sub_class in MetExtractor.all_subclasses(MetExtractor):
             if hasattr(sub_class, 'MEASUREMENT_NAME') and sub_class.MEASUREMENT_NAME == name:
                 return sub_class.SOURCE_REFERENCE
+
+    @staticmethod
+    def get_top_level_measurements():
+        return [s.MEASUREMENT_NAME for s in MetExtractor.__subclasses__()]
 
     @staticmethod
     def all_subclasses(cls):
@@ -98,19 +101,19 @@ class MetExtractor:
         if extract_extra_datasets:
             self._extra_datasets = self.ALLOWED_EXTRA_DATASETS
         else:
-            self._extra_datasets = []
-
-        print('extracting {}'.format(self._head_string.format('and ' + json.dumps(self._extra_datasets), date_range[0], date_range[1])))
+            self._extra_datasets = []\
 
         extraction_dict = self._get_extraction_dict()
         settings = self._get_settings(outfile_suffix)
+        print('extracting {}'.format(settings['headstring'], date_range[0], date_range[1]))
         return self._extract_data(extraction_dict, settings)
 
 
     def _extract_data(self, extraction_dict, settings, save_to_file=True):
         if self._verbose >= 1:
             print('extracting data for {}'.format(self.MEASUREMENT_NAME))
-        elif self._verbose > 1:
+        if self._verbose > 1:
+            print('using extraction dict: {}'.format(json.dumps(extraction_dict)))
             print('using settings: {}'.format( json.dumps(settings)))
         datadata = self._perform_extraction(extraction_dict)
         if save_to_file:
@@ -151,7 +154,8 @@ class MetExtractor:
                 for d_ev in d_extra:
                     dfile.write(', {}'.format(d_ev))
                 dfile.write('\n')
-        print('saved')
+        if self._verbose > 0:
+            print('saved')
 
 
 
@@ -237,7 +241,7 @@ class MetExtractorWind(MetExtractor):
         return result
 
 
-    def save_to_file(self, datadata, settings):
+    def _save_to_file(self, datadata, settings):
         print('saving to file: {}'.format(settings['fname']))
         with open(settings['fname'], 'w') as dfile:
             dfile.write(settings['headstring'])
@@ -250,11 +254,12 @@ class MetExtractorWind(MetExtractor):
                 d_wdir = d_wdir * 57.29577951308232
                 if d_wdir < 0: d_wdir = d_wdir + 360.
                 dfile.write('{}, {}, {}, {}\n'.format(d_date, d_siteid, d_wspd, d_wdir))
-        print('saved')
+        if self._verbose > 0:
+            print('saved')
 
 
 class MetExtractorPollen(MetExtractor):
-    MEASUREMENT_GROUP_NAME = 'pollen'
+    MEASUREMENT_NAME = 'pollen'
     ALLOWED_EXTRA_DATASETS = []
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
@@ -266,11 +271,7 @@ class MetExtractorPollen(MetExtractor):
 
     @staticmethod
     def get_pollen_species():
-        result = []
-        sub_classes = MetExtractorPollen.all_subclasses(MetExtractorPollen)
-        for sub_class in sub_classes:
-            result.append(sub_class.MEASUREMENT_NAME)
-        return result
+        return [s.MEASUREMENT_NAME for s in MetExtractor.all_subclasses(MetExtractorPollen)]
 
 
 class MetExtractorPollenAlnus(MetExtractorPollen):
@@ -415,7 +416,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="*** A script for automated downloading of MET data for a given region and date range. ***")
 
-    AVAILABLE_MEASUREMENTS = ['rain', 'temp', 'rel_hum', 'pressure', 'dewpoint', 'wind', 'pollen']
+    AVAILABLE_MEASUREMENTS = MetExtractor.get_top_level_measurements() + MetExtractorPollen.get_pollen_species()
 
 
     ### parameters
@@ -538,6 +539,9 @@ if __name__ == '__main__':
 
     # Create necessary extractors
 
+    # Todo - there should be a factory class for MetExtractor so the classes just get created based on the
+    #   measurement input strings.
+
     if 'rain' in measurements:
         met_extractor_rain = MetExtractorRain(outdir_name, verbose)
         met_extractor_rain.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
@@ -564,4 +568,8 @@ if __name__ == '__main__':
                                           extract_extra_datasets=extra_measurements)
     if 'pollen' in measurements:
         met_extractor_pollen = MetExtractorPollenGroup(outdir_name, verbose)
-        met_extractor_pollen.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
+        met_extractor_pollen.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
+                                          extract_extra_datasets=extra_measurements)
+    if 'urtica' in measurements:
+        met_extractor_urtica = MetExtractorPollenUrtica(outdir_name, verbose)
+        met_extractor_urtica.extract_data(date_range, latitude_range, longitude_range, outfile_suffix)
