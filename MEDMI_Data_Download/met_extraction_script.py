@@ -76,11 +76,11 @@ class MetExtractor:
         str_extra_datasets = str(self._extra_datasets).replace('\'','').replace(' ', '').replace(',', '-')[1:-1]
         if len(self._extra_datasets) > 0:
             filename = self._filename.format('_extras-{}'.format(str_extra_datasets), outfile_suffix)
-            headstring = self._head_string.format('and extra datasets: {}'.format(str(str_extra_datasets)),
+            headstring = self._head_string.format(' and extra datasets: {}'.format(str(str_extra_datasets)),
                                                    date_range[0], date_range[1])
         else:
             filename = self._filename.format('', outfile_suffix)
-            headstring = self._head_string.format(date_range[0], date_range[1])
+            headstring = self._head_string.format('', date_range[0], date_range[1])
 
         result = {
             'fname': filename,
@@ -100,9 +100,7 @@ class MetExtractor:
         else:
             self._extra_datasets = []
 
-        print('extracting {}'.format(self._head_string.format(date_range[0], date_range[1])))
-        if extract_extra_datasets:
-            print('... and extra datasets: {}'.format(json.dumps(self._extra_datasets)))
+        print('extracting {}'.format(self._head_string.format('and ' + json.dumps(self._extra_datasets), date_range[0], date_range[1])))
 
         extraction_dict = self._get_extraction_dict()
         settings = self._get_settings(outfile_suffix)
@@ -166,7 +164,7 @@ class MetExtractorRain(MetExtractor):
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorRain, self).__init__(out_dir, verbose)
-        self._head_string = 'Rain gauge daily data for date range: {} to {}\n'
+        self._head_string = 'Rain gauge daily data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorRain.MEASUREMENT_NAME]
         self._filename = '{}/rain{}{}.csv'.format(self._out_dir, '{}', '{}')
 
@@ -179,7 +177,7 @@ class MetExtractorTemp(MetExtractor):
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorTemp, self).__init__(out_dir, verbose)
-        self._head_string = 'Temperature data for date range: {} to {}\n'
+        self._head_string = 'Temperature data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorTemp.MEASUREMENT_NAME]
         self._filename = '{}/temp{}{}.csv'.format(self._out_dir, '{}', '{}')
 
@@ -191,7 +189,7 @@ class MetExtractorRelativeHumidity(MetExtractor):
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorRelativeHumidity, self).__init__(out_dir, verbose)
-        self._head_string = 'Relative Humidity data for date range: {} to {}\n'
+        self._head_string = 'Relative Humidity data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorRelativeHumidity.MEASUREMENT_NAME]
         self._filename = '{}/rel_hum{}{}.csv'.format(self._out_dir, '{}', '{}')
 
@@ -203,7 +201,7 @@ class MetExtractorStationPressure(MetExtractor):
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorStationPressure, self).__init__(out_dir, verbose)
-        self._head_string = 'Station Pressure data for date range: {} to {}\n'
+        self._head_string = 'Station Pressure data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorStationPressure.MEASUREMENT_NAME]
         self._filename = '{}/pressure{}{}.csv'.format(self._out_dir, '{}', '{}')
 
@@ -216,7 +214,7 @@ class MetExtractorDewpoint(MetExtractor):
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorDewpoint, self).__init__(out_dir, verbose)
-        self._head_string = 'Dewpoint hourly data for date range: {} to {}\n'
+        self._head_string = 'Dewpoint hourly data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorDewpoint.MEASUREMENT_NAME]
         self._filename = '{}/dewpoint{}{}.csv'.format(self._out_dir, '{}', '{}')
 
@@ -229,7 +227,7 @@ class MetExtractorWind(MetExtractor):
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorWind, self).__init__(out_dir, verbose)
         self._complex_wind_type = True
-        self._head_string = 'Wind speed and direction hourly data for date range: {} to {}\n'
+        self._head_string = 'Wind speed/direction hourly data{} for date range: {} to {}\n'
         self._cols_specific = ['windspeed','winddir']
         self._filename = '{}/wind{}{}.csv'.format(out_dir, '{}', '{}')
 
@@ -269,7 +267,7 @@ class MetExtractorPollen(MetExtractor):
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorPollen, self).__init__(out_dir, verbose)
-        self._head_string = '{} pollen daily count for date range: {} to {}\n'\
+        self._head_string = '{} pollen daily count{} for date range: {} to {}\n'\
             .format(self.MEASUREMENT_NAME, '{}', '{}', '{}')
         self._cols_specific = [self.MEASUREMENT_NAME]
         self._filename = '{}/pollen_{}{}{}.csv'.format(self._out_dir, self.MEASUREMENT_NAME, '{}', '{}')
