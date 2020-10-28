@@ -337,26 +337,15 @@ class MetExtractorPollenUrtica(MetExtractorPollen):
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
-class MetExtractorPollenGroup():
+class MetExtractorPollenGroup(object):
     DEFAULT_OUTDIR = 'Pollen_outputs'
     DEFAULT_OUTFILE_SUFFIX = '_pollen'
     DEFAULT_VERBOSE = 0
 
     def __init__(self, out_dir=DEFAULT_OUTDIR, verbose=DEFAULT_VERBOSE):
-        self._extractors = [
-            MetExtractorPollenAlnus(out_dir, verbose),
-            MetExtractorPollenAmbrosia(out_dir, verbose),
-            MetExtractorPollenArtemesia(out_dir, verbose),
-            MetExtractorPollenBetula(out_dir, verbose),
-            MetExtractorPollenCorylus(out_dir, verbose),
-            MetExtractorPollenFraxinus(out_dir, verbose),
-            MetExtractorPollenPlatanus(out_dir, verbose),
-            MetExtractorPollenPoacea(out_dir, verbose),
-            MetExtractorPollenQuercus(out_dir, verbose),
-            MetExtractorPollenSalix(out_dir, verbose),
-            MetExtractorPollenUlmus(out_dir, verbose),
-            MetExtractorPollenUrtica(out_dir, verbose)
-        ]
+        self._extractors = []
+        for species in MetExtractorPollen.get_pollen_species():
+            self._extractors.append(MetExtractor.get_class_from_measurement_name(species)(out_dir, verbose))
         self._out_dir = out_dir
         self._verbose = verbose
 
@@ -501,7 +490,7 @@ if __name__ == '__main__':
 
     ### Perform data extraction
 
-    # Remove duplicate measurement name.
+    # Remove duplicate measurement names.
     measurements = set(measurements)
     # Perform extractions
     for measurement in measurements:
