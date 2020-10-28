@@ -393,11 +393,11 @@ class MetExtractorPollenGroup(object):
         self._out_dir = out_dir
         self._verbose = verbose
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extra_datasets=[]):
+    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets=[]):
         result = []
         for pollen_extractor in self._extractors:
             result.append(pollen_extractor.extract_data(
-                date_range, latitude_range, longitude_range, outfile_suffix, extra_datasets))
+                date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets))
         return result
 
 
