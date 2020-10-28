@@ -76,7 +76,7 @@ class MetExtractor:
         return result
 
     def _get_settings(self, outfile_suffix=DEFAULT_OUT_FILE_SUFFIX):
-        str_extra_datasets = str(self._extra_datasets).replace('\'','').replace(' ', '').replace(',', '-')[1:-1]
+        str_extra_datasets = '-'.join(self._extra_datasets).replace(' ', '-')
         if len(self._extra_datasets) > 0:
             filename = self._filename.format('_extras-{}'.format(str_extra_datasets), outfile_suffix)
             headstring = self._head_string.format(' and extra datasets: {}'.format(str(str_extra_datasets)),
@@ -88,7 +88,7 @@ class MetExtractor:
         result = {
             'fname': filename,
             'headstring': headstring,
-            'columnstring': str(self._cols_base + self._cols_specific + self._extra_datasets)[1:-1] + '\n'
+            'columnstring': ','.join(self._cols_base + self._cols_specific + self._extra_datasets) + '\n'
         }
         return result
 
@@ -466,9 +466,9 @@ if __name__ == '__main__':
 
     if args.extra_measurements is True:
         extra_measurements = True
-        print('Using extra measurements')
+        print('Including extra measurements')
     else:
-        print('Not using extra measurements')
+        print('Not including extra measurements')
         extra_measurements = False
 
     if args.outdir_name:
