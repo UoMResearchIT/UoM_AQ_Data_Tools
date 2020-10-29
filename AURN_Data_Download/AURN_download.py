@@ -64,15 +64,15 @@ AVAILABLE_YEARS = [2016,2017,2018,2019]
 #%%
 
 # functions for station indentifying
-
+#Todo Remove, once we've made this module into a class - it's already in post_processor
 def calc_station_distances(stations_in,stat_location):
-    
+
     station_distances = pd.DataFrame(index=stations_in.index)
     station_distances['Distance'] = np.nan
-    
+
     for index, row in stations_in.iterrows():
         new_location = (row['Latitude'],row['Longitude'])
-        
+
         station_distances.loc[index]['Distance'] = distance.distance(stat_location,new_location).km
 
     return(station_distances)
