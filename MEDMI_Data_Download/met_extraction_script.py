@@ -116,8 +116,11 @@ class MetExtractor:
             dir_name = str(dir_name)
         except ValueError as err:
             raise err
-        if not os.access(dir_name, os.W_OK):
-            raise ValueError("Directory name {} cannot be written.".format(dir_name))
+        try:
+            os.makedirs(dir_name)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise ValueError("Directory name {} cannot be created.".format(dir_name))
         self.__out_dir = dir_name
 
     @property
@@ -212,6 +215,7 @@ class MetExtractor:
 
     def _save_to_file(self, data_result, settings):
         print('saving to file: {}'.format(settings['fname']))
+
         with open(settings['fname'], 'w') as dfile:
             dfile.write(settings['headstring'])
             dfile.write(settings['columnstring'])
@@ -432,14 +436,6 @@ class MetExtractorPollenGroup(object):
         return result
 
 
-def create_directory(dir_name):
-    try:
-        os.makedirs(dir_name)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-
 if __name__ == '__main__':
 
     ### general help text
@@ -554,13 +550,6 @@ if __name__ == '__main__':
     else:
         print('No verbose flag provided, so using default: {}'.format(str(MetExtractor.DEFAULT_VERBOSE)))
         verbose = MetExtractor.DEFAULT_VERBOSE
-
-    # Check directory name is valid and create directory
-    try:
-        print('Creating directory: {}, unless it already exists.'.format(outdir_name))
-        create_directory(outdir_name)
-    except:
-        raise ValueError('Unable to create directory: {}'.format(outdir_name))
 
     ### Perform data extraction
 
