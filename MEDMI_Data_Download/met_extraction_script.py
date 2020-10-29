@@ -17,8 +17,9 @@ class MetExtractor:
     DEFAULT_COLS_BASE = ['date','siteID']
     ADDITIONAL_VALS_KEY = 'Additional field values'
     DEFAULT_ADD_EXTRA_MEASUREMENTS = False
-    LONGITUDE_RANGE = [-180., 180.]
+    LONGITUDE_RANGE = [-180., 360.]
     LATITUDE_RANGE = [-90., 90.]
+    DATE_STRING_FORMAT = '%Y-%m-%d %H'
 
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
         self.out_dir = dir_name
@@ -37,12 +38,14 @@ class MetExtractor:
         for sub_class in MetExtractor.all_subclasses(MetExtractor):
             if hasattr(sub_class, 'MEASUREMENT_NAME') and sub_class.MEASUREMENT_NAME == name:
                 return sub_class.SOURCE_REFERENCE
+        raise ValueError('Measurement does not exist: {}'.format(name))
 
     @staticmethod
     def get_class_from_measurement_name(name):
         for sub_class in MetExtractor.all_subclasses(MetExtractor):
             if hasattr(sub_class, 'MEASUREMENT_NAME') and sub_class.MEASUREMENT_NAME == name:
                 return sub_class
+        raise ValueError('Measurement does not exist: {}'. format(name))
 
     @staticmethod
     def get_available_measurements():
@@ -60,15 +63,14 @@ class MetExtractor:
     @date_range.setter
     def date_range(self, range):
         # Example input: ['2017-1-1 0', '2017-06-30 23']
-        strptime_format = '%Y-%m-%d %H'
         try:
-            datetime_1 = datetime.strptime(range[0], strptime_format)
-            datetime_2 = datetime.strptime(range[1], strptime_format)
+            datetime_1 = datetime.strptime(range[0], MetExtractor.DATE_STRING_FORMAT)
+            datetime_2 = datetime.strptime(range[1], MetExtractor.DATE_STRING_FORMAT)
         except ValueError as err:
             raise err
         if datetime_1 >= datetime_2:
             raise ValueError('Start date is not earlier than end date.')
-        self.__date_range = [datetime_1, datetime_2]
+        self.__date_range = [range[0], range[1]]
 
     @property
     def latitude_range(self):
@@ -117,6 +119,18 @@ class MetExtractor:
         if not os.access(dir_name, os.W_OK):
             raise ValueError("Directory name {} cannot be written.".format(dir_name))
         self.__out_dir = dir_name
+
+    @property
+    def verbose(self):
+        return self.__verbose
+
+    @verbose.setter
+    def verbose(self, verbose):
+        try:
+            verbose = int(verbose)
+        except ValueError as err:
+            raise err
+        self.__verbose = max(0, verbose)
 
     @property
     def filename(self):
@@ -176,7 +190,7 @@ class MetExtractor:
             print('extracting data for {}'.format(self.MEASUREMENT_NAME))
         if self.verbose > 1:
             print('using extraction dict: {}'.format(json.dumps(extraction_dict)))
-            print('using settings: {}'.format( json.dumps(settings)))
+            print('using settings: {}'.format(json.dumps(settings)))
         datadata = self._perform_extraction(extraction_dict)
         if save_to_file:
             self._save_to_file(datadata, settings)
