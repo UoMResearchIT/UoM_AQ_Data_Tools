@@ -4,27 +4,30 @@ from cmath import polar
 import argparse
 import json
 import os, errno
+from datetime import datetime
 
 class MetExtractor:
     __metaclass__ = ABCMeta
     DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_OUT_DIR = 'met_extracted_data'
     DEFAULT_DATE_RANGE = ['2016-1-1 0', '2019-12-31 23']
-    UK_LATITUDES = [48, 60]
-    UK_LONGITUDES = [-11, 3]
+    UK_LATITUDES = [48., 60.]
+    UK_LONGITUDES = [-11., 3.]
     DEFAULT_VERBOSE = 0
     DEFAULT_COLS_BASE = ['date','siteID']
     ADDITIONAL_VALS_KEY = 'Additional field values'
     DEFAULT_ADD_EXTRA_MEASUREMENTS = False
+    LONGITUDE_RANGE = [-180., 180.]
+    LATITUDE_RANGE = [-90., 90.]
 
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
-        self._out_dir = dir_name
-        self._verbose = verbose
-        self._cols_base = MetExtractor.DEFAULT_COLS_BASE
-        self._latitude_range = MetExtractor.UK_LATITUDES
-        self._longitude_range = MetExtractor.UK_LONGITUDES
-        self._date_range = MetExtractor.DEFAULT_DATE_RANGE
+        self.out_dir = dir_name
+        self.verbose = verbose
+        self.latitude_range = MetExtractor.UK_LATITUDES
+        self.longitude_range = MetExtractor.UK_LONGITUDES
+        self.date_range = MetExtractor.DEFAULT_DATE_RANGE
         self._filename = None
+        self._cols_base = MetExtractor.DEFAULT_COLS_BASE
         self._headstring = None
         self._extra_datasets = []
 
@@ -42,37 +45,95 @@ class MetExtractor:
                 return sub_class
 
     @staticmethod
-    def get_top_level_measurements():
-        return [s.MEASUREMENT_NAME for s in MetExtractor.__subclasses__()]
+    def get_available_measurements():
+        return [s.MEASUREMENT_NAME for s in MetExtractor.all_subclasses(MetExtractor)]
 
     @staticmethod
     def all_subclasses(cls):
         return set(cls.__subclasses__()).union(
             [s for c in cls.__subclasses__() for s in MetExtractor.all_subclasses(c)])
 
-    def add_outfile_suffix(self, outfile_suffix):
-        return self._filename.format(outfile_suffix)
+    @property
+    def date_range(self):
+        return self.__date_range
 
-    def set_date_range(self, date_range):
-        self._date_range = date_range
+    @date_range.setter
+    def date_range(self, range):
+        # Example input: ['2017-1-1 0', '2017-06-30 23']
+        strptime_format = '%Y-%m-%d %H'
+        try:
+            datetime_1 = datetime.strptime(range[0], strptime_format)
+            datetime_2 = datetime.strptime(range[1], strptime_format)
+        except ValueError as err:
+            raise err
+        if datetime_1 >= datetime_2:
+            raise ValueError('Start date is not earlier than end date.')
+        self.__date_range = [datetime_1, datetime_2]
 
-    def get_date_range(self):
-        return self._date_range
+    @property
+    def latitude_range(self):
+        return self.__latitude_range
 
-    def get_out_dir(self):
-        return self._out_dir
+    @latitude_range.setter
+    def latitude_range(self, range):
+        try:
+            val_1 = float(range[0])
+            val_2 = float(range[1])
+        except ValueError as err:
+            raise err
+        if not ((MetExtractor.LATITUDE_RANGE[0] <= val_1) and (val_1 <= MetExtractor.LATITUDE_RANGE[1])):
+            raise ValueError('Latitude first value falls outside global range')
+        if not ((MetExtractor.LATITUDE_RANGE[0] <= val_2) and (val_2 <= MetExtractor.LATITUDE_RANGE[1])):
+            raise ValueError('Latitude last value falls outside global range')
+        self.__latitude_range = [val_1, val_2]
+
+    @property
+    def longitude_range(self):
+        return self.__longitude_range
+
+    @longitude_range.setter
+    def longitude_range(self, range):
+        try:
+            val_1 = float(range[0])
+            val_2 = float(range[1])
+        except ValueError as err:
+            raise err
+        if not (MetExtractor.LONGITUDE_RANGE[0] <= val_1 <= MetExtractor.LONGITUDE_RANGE[1]):
+            raise ValueError('Longitude first value falls outside global range')
+        if not (MetExtractor.LONGITUDE_RANGE[0] <= val_2 <= MetExtractor.LONGITUDE_RANGE[1]):
+            raise ValueError('Longitude last value falls outside global range')
+        self.__longitude_range = [val_1, val_2]
+
+    @property
+    def out_dir(self):
+        return self.__out_dir
+
+    @out_dir.setter
+    def out_dir(self, dir_name):
+        try:
+            dir_name = str(dir_name)
+        except ValueError as err:
+            raise err
+        if not os.access(dir_name, os.W_OK):
+            raise ValueError("Directory name {} cannot be written.".format(dir_name))
+        self.__out_dir = dir_name
+
+    @property
+    def filename(self):
+        return self._filename
+
 
     def set_region(self, latitude_range, longitude_range):
-        self._latitude_range = latitude_range
-        self._longitude_range = longitude_range
+        self.latitude_range = latitude_range
+        self.longitude_range = longitude_range
 
 
     def _get_extraction_dict(self):
         result = {
-            'Time range': self._date_range,
+            'Time range': self.date_range,
             'Source reference': self.SOURCE_REFERENCE,
-            'Latitude range': self._latitude_range,
-            'Longitude range': self._longitude_range
+            'Latitude range': self.latitude_range,
+            'Longitude range': self.longitude_range
         }
 
         return result
@@ -97,12 +158,12 @@ class MetExtractor:
 
     def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets=False):
         self.set_region(latitude_range, longitude_range)
-        self.set_date_range(date_range)
+        self.date_range = date_range
 
         if extract_extra_datasets:
             self._extra_datasets = self.ALLOWED_EXTRA_DATASETS
         else:
-            self._extra_datasets = []\
+            self._extra_datasets = []
 
         extraction_dict = self._get_extraction_dict()
         settings = self._get_settings(outfile_suffix)
@@ -111,9 +172,9 @@ class MetExtractor:
 
 
     def _extract_data(self, extraction_dict, settings, save_to_file=True):
-        if self._verbose >= 1:
+        if self.verbose >= 1:
             print('extracting data for {}'.format(self.MEASUREMENT_NAME))
-        if self._verbose > 1:
+        if self.verbose > 1:
             print('using extraction dict: {}'.format(json.dumps(extraction_dict)))
             print('using settings: {}'.format( json.dumps(settings)))
         datadata = self._perform_extraction(extraction_dict)
@@ -155,7 +216,7 @@ class MetExtractor:
                 for d_ev in d_extra:
                     dfile.write(', {}'.format(d_ev))
                 dfile.write('\n')
-        if self._verbose > 0:
+        if self.verbose > 0:
             print('saved')
 
 
@@ -168,7 +229,7 @@ class MetExtractorRain(MetExtractor):
         super(MetExtractorRain, self).__init__(out_dir, verbose)
         self._head_string = 'Rain gauge daily data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorRain.MEASUREMENT_NAME]
-        self._filename = '{}/rain{}{}.csv'.format(self._out_dir, '{}', '{}')
+        self._filename = '{}/rain{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
 class MetExtractorTemp(MetExtractor):
@@ -180,7 +241,7 @@ class MetExtractorTemp(MetExtractor):
         super(MetExtractorTemp, self).__init__(out_dir, verbose)
         self._head_string = 'Temperature data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorTemp.MEASUREMENT_NAME]
-        self._filename = '{}/temp{}{}.csv'.format(self._out_dir, '{}', '{}')
+        self._filename = '{}/temp{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
 class MetExtractorRelativeHumidity(MetExtractor):
@@ -192,7 +253,7 @@ class MetExtractorRelativeHumidity(MetExtractor):
         super(MetExtractorRelativeHumidity, self).__init__(out_dir, verbose)
         self._head_string = 'Relative Humidity data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorRelativeHumidity.MEASUREMENT_NAME]
-        self._filename = '{}/rel_hum{}{}.csv'.format(self._out_dir, '{}', '{}')
+        self._filename = '{}/rel_hum{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
 class MetExtractorStationPressure(MetExtractor):
@@ -204,7 +265,7 @@ class MetExtractorStationPressure(MetExtractor):
         super(MetExtractorStationPressure, self).__init__(out_dir, verbose)
         self._head_string = 'Station Pressure data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorStationPressure.MEASUREMENT_NAME]
-        self._filename = '{}/pressure{}{}.csv'.format(self._out_dir, '{}', '{}')
+        self._filename = '{}/pressure{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
 class MetExtractorDewpoint(MetExtractor):
@@ -216,7 +277,7 @@ class MetExtractorDewpoint(MetExtractor):
         super(MetExtractorDewpoint, self).__init__(out_dir, verbose)
         self._head_string = 'Dewpoint hourly data{} for date range: {} to {}\n'
         self._cols_specific = [MetExtractorDewpoint.MEASUREMENT_NAME]
-        self._filename = '{}/dewpoint{}{}.csv'.format(self._out_dir, '{}', '{}')
+        self._filename = '{}/dewpoint{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
 class MetExtractorWind(MetExtractor):
@@ -250,7 +311,7 @@ class MetExtractorWind(MetExtractor):
                 d_wdir = d_wdir * 57.29577951308232
                 if d_wdir < 0: d_wdir = d_wdir + 360.
                 dfile.write('{}, {}, {}, {}\n'.format(d_date, d_siteid, d_wspd, d_wdir))
-        if self._verbose > 0:
+        if self.verbose > 0:
             print('saved')
 
 
@@ -263,7 +324,7 @@ class MetExtractorPollen(MetExtractor):
         self._head_string = '{} pollen daily count{} for date range: {} to {}\n'\
             .format(self.MEASUREMENT_NAME, '{}', '{}', '{}')
         self._cols_specific = [self.MEASUREMENT_NAME]
-        self._filename = '{}/pollen_{}{}{}.csv'.format(self._out_dir, self.MEASUREMENT_NAME, '{}', '{}')
+        self._filename = '{}/pollen_{}{}{}.csv'.format(self.out_dir, self.MEASUREMENT_NAME, '{}', '{}')
         if self.MEASUREMENT_NAME == 'pollen':
             self._extractor = MetExtractorPollenGroup(out_dir, verbose)
         else:
@@ -346,8 +407,8 @@ class MetExtractorPollenGroup(object):
         self._extractors = []
         for species in MetExtractorPollen.get_pollen_species():
             self._extractors.append(MetExtractor.get_class_from_measurement_name(species)(out_dir, verbose))
-        self._out_dir = out_dir
-        self._verbose = verbose
+        self.out_dir = out_dir
+        self.verbose = verbose
 
     def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets=[]):
         result = []
@@ -371,8 +432,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="*** A script for automated downloading of MET data for a given region and date range. ***")
 
-    AVAILABLE_MEASUREMENTS = MetExtractor.get_top_level_measurements() + MetExtractorPollen.get_pollen_species()
-
+    AVAILABLE_MEASUREMENTS = MetExtractor.get_available_measurements()
 
     ### parameters
 
@@ -395,10 +455,10 @@ if __name__ == '__main__':
 
 
     # Latitude / longitude
-    parser.add_argument("--latitude_range", "-t", dest="latitude_range", type=int, nargs='+',
+    parser.add_argument("--latitude_range", "-t", dest="latitude_range", type=float, nargs='+',
                         help="start and end latitude range (array - first two values only). \
                             Default: {}".format(str(MetExtractor.UK_LATITUDES)[1:-1].replace(',','')))
-    parser.add_argument("--longitude_range", "-n", dest="longitude_range", type=int, nargs='+',
+    parser.add_argument("--longitude_range", "-n", dest="longitude_range", type=float, nargs='+',
                         help="start and end longitude range (array - first two values only). \
                             Default: {}".format(str(MetExtractor.UK_LONGITUDES)[1:-1].replace(',','')))
 
