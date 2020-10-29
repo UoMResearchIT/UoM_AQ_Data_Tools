@@ -9,8 +9,8 @@ VERBOSE = 0
 
 
 # EXAMPLE 1
-ARGUMENTS_1=" --outdir_prefix ${OUTDIR_PREFIX} --outfile_suffix ${OUTFILE_SUFFIX} --date_range ${DATE_RANGE} --latitude_range ${LATITUDES} --longitude_range ${LONGITUDES}"
-
+ARGUMENTS_1 = " --outdir_prefix ${OUTDIR_PREFIX} --outfile_suffix ${OUTFILE_SUFFIX} --date_range ${DATE_RANGE} --latitude_range ${LATITUDES} --longitude_range ${LONGITUDES}"
+ARGUMENTS_2 = " --outdir_prefix -x ${OUTDIR_PREFIX} --outfile_suffix ${OUTFILE_SUFFIX} --date_range ${DATE_RANGE} --latitude_range ${LATITUDES} --longitude_range ${LONGITUDES}"
 
 python met_extraction_script.py ${ARGUMENTS_1}
 
