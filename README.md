@@ -71,8 +71,8 @@ https://www.data-mashup.org.uk/contact-us/
 and  following the instructions for:  ***connect to the server using an SSH client***.
 Alternatively, email: *health at metoffice dot gov dot uk*
 
-Copy the script(s) to the ssh server. Then run each one (simply `python [script name] [params/options]`) 
-using python and use the --help command to get the full set of parameters/options.
+Copy the script to the ssh server. Then run it using python (simply `python [script name] [params/options]`) 
+and use the --help command to get the full set of parameters/options.
 
 The scripts will create a default directory 'met_extracted_data' for the extracted data.
 (To change the directory name from the default use the "--outdir_name" (-o) parameter.)
@@ -81,17 +81,18 @@ Once all scripts have finished running you can copy the data back to your local 
 
 #### Using extra data
 With certain measurements, extra datasets can be requested and added to the outputs. To do this set the 
---extra_measurements (-x) parameter to True (default is false). 
+--extra_measurements (-x) parameter to True (default is False). 
 (Note that not all measurements can be extra datasets of others, for example the stations which measure pollen 
 don't measure meteorological parameters (and vice versa).)
-Therefore, in this tool, the only datasets that can have the extra measurements added are:
+Therefore, in this tool, the only datasets that can have extra measurements added are:
 - temp
 - pressure
 - dewpoint
 - rel_hum
 
-and if --extra_measurements is set to True the extra datasets added will be the above same measurements. 
+If --extra_measurements is set to True then all allowed extra datasets added will be the above measurements. 
 For example temp would have added: pressure, dewpoint and rel_hum
+
 
 
 ## Processing MEDMI Data
