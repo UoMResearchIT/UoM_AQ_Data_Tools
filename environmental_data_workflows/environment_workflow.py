@@ -14,17 +14,22 @@ class EnvironmentWorkflow:
     UK_LATITUDES = [48., 60.]
     UK_LONGITUDES = [-11., 3.]
     DEFAULT_VERBOSE = 0
+    DEFAULT_DATE_RANGE_FORMAT = '%Y-%m-%d %H'
     LONGITUDE_RANGE = [-180., 360.]
     LATITUDE_RANGE = [-90., 90.]
-    DATE_STRING_FORMAT = '%Y-%m-%d %H'
+    DEFAULT_COLS_BASE = ['date', 'siteID']
+
 
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
         self.out_dir = dir_name
         self.verbose = verbose
         self.latitude_range = EnvironmentWorkflow.UK_LATITUDES
         self.longitude_range = EnvironmentWorkflow.UK_LONGITUDES
+        self._date_range_format = EnvironmentWorkflow.DEFAULT_DATE_RANGE_FORMAT
         self.date_range = EnvironmentWorkflow.DEFAULT_DATE_RANGE
         self._file_out = None
+        self._cols_base = EnvironmentWorkflow.DEFAULT_COLS_BASE
+        self._cols_specific = []
 
 
     @staticmethod
@@ -40,8 +45,8 @@ class EnvironmentWorkflow:
     def date_range(self, range):
         # Example input: ['2017-1-1 0', '2017-06-30 23']
         try:
-            datetime_1 = datetime.strptime(range[0], EnvironmentWorkflow.DATE_STRING_FORMAT)
-            datetime_2 = datetime.strptime(range[1], EnvironmentWorkflow.DATE_STRING_FORMAT)
+            datetime_1 = datetime.strptime(range[0], self._date_range_format)
+            datetime_2 = datetime.strptime(range[1], self._date_range_format)
         except ValueError as err:
             raise err
         if datetime_1 >= datetime_2:
@@ -118,3 +123,6 @@ class EnvironmentWorkflow:
     def set_region(self, latitude_range, longitude_range):
         self.latitude_range = latitude_range
         self.longitude_range = longitude_range
+
+    def get_all_cols(self):
+        return self._cols_base + self._cols_specific

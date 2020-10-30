@@ -1,24 +1,24 @@
 from abc import ABCMeta, abstractmethod
-from medmi_database import Dataset
+try:
+    from medmi_database import Dataset
+except:
+    print('Warning: Unable to load medmi_database. Expected, (and not a problem) if not running on Medmi server.')
 from cmath import polar
-import argparse
 import json
-import os, errno
-from datetime import datetime
 
 from .environment_workflow import EnvironmentWorkflow
 
 
 class MetExtractor(EnvironmentWorkflow):
     __metaclass__ = ABCMeta
-    DEFAULT_COLS_BASE = ['date','siteID']
     ADDITIONAL_VALS_KEY = 'Additional field values'
     DEFAULT_ADD_EXTRA_MEASUREMENTS = False
 
+
     def __init__(self, out_dir=EnvironmentWorkflow.DEFAULT_OUT_DIR, verbose=EnvironmentWorkflow.DEFAULT_VERBOSE):
         super(MetExtractor, self).__init__(out_dir, verbose)
-        self._cols_base = MetExtractor.DEFAULT_COLS_BASE
         self._headstring = None
+        self._cols_specific = []
         self._extra_datasets = []
 
     @staticmethod
@@ -63,9 +63,12 @@ class MetExtractor(EnvironmentWorkflow):
         result = {
             'fname': filename,
             'headstring': headstring,
-            'columnstring': ','.join(self._cols_base + self._cols_specific + self._extra_datasets) + '\n'
+            'columnstring': ','.join(self.get_all_cols()) + '\n'
         }
         return result
+
+    def get_all_cols(self):
+        return super(MetExtractor, self).get_all_cols() + self._extra_datasets
 
 
     def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets=False):
@@ -145,22 +148,22 @@ class MetExtractorRain(MetExtractor):
         self._file_out = '{}/rain{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
-class MetExtractorTemp(MetExtractor):
+class MetExtractorTemperature(MetExtractor):
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.air_temperature'
-    MEASUREMENT_NAME = 'temp'
+    MEASUREMENT_NAME = 'temperature'
     ALLOWED_EXTRA_DATASETS = ['rel_hum', 'pressure', 'dewpoint']
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
-        super(MetExtractorTemp, self).__init__(out_dir, verbose)
+        super(MetExtractorTemperature, self).__init__(out_dir, verbose)
         self._head_string = 'Temperature data{} for date range: {} to {}\n'
-        self._cols_specific = [MetExtractorTemp.MEASUREMENT_NAME]
+        self._cols_specific = [MetExtractorTemperature.MEASUREMENT_NAME]
         self._file_out = '{}/temp{}{}.csv'.format(self.out_dir, '{}', '{}')
 
 
 class MetExtractorRelativeHumidity(MetExtractor):
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.rltv_hum'
     MEASUREMENT_NAME = 'rel_hum'
-    ALLOWED_EXTRA_DATASETS = ['temp', 'pressure', 'dewpoint']
+    ALLOWED_EXTRA_DATASETS = ['temperature', 'pressure', 'dewpoint']
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorRelativeHumidity, self).__init__(out_dir, verbose)
@@ -172,7 +175,7 @@ class MetExtractorRelativeHumidity(MetExtractor):
 class MetExtractorStationPressure(MetExtractor):
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.stn_pres'
     MEASUREMENT_NAME = 'pressure'
-    ALLOWED_EXTRA_DATASETS = ['rel_hum', 'temp', 'dewpoint']
+    ALLOWED_EXTRA_DATASETS = ['rel_hum', 'temperature', 'dewpoint']
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorStationPressure, self).__init__(out_dir, verbose)
@@ -184,7 +187,7 @@ class MetExtractorStationPressure(MetExtractor):
 class MetExtractorDewpoint(MetExtractor):
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.dewpoint'
     MEASUREMENT_NAME = 'dewpoint'
-    ALLOWED_EXTRA_DATASETS = ['rel_hum', 'pressure', 'temp']
+    ALLOWED_EXTRA_DATASETS = ['rel_hum', 'pressure', 'temperature']
 
     def __init__(self, out_dir=MetExtractor.DEFAULT_OUT_DIR, verbose=MetExtractor.DEFAULT_VERBOSE):
         super(MetExtractorDewpoint, self).__init__(out_dir, verbose)
