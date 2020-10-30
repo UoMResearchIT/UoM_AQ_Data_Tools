@@ -33,6 +33,7 @@ from sklearn import preprocessing
 from abc import ABCMeta, abstractmethod
 import sys
 sys.path.append("..")
+import os
 
 from environmental_data_workflows import EnvironmentWorkflow
 
@@ -181,7 +182,7 @@ class MetPostProcessor(PostProcessor):
         met_data_hourly = self.combine_and_organise_mean_max(met_data_temp, met_data_pres, met_data_rh)
 
         # write data to file
-        met_data_hourly.to_csv(file_out, index=True, header=True, float_format='%.2f')
+        met_data_hourly.to_csv(os.path.join(self.out_dir,file_out), index=True, header=True, float_format='%.2f')
 
 
 
@@ -373,19 +374,19 @@ class MetPostProcessor(PostProcessor):
 
         # create output data frame
         met_data_out = pd.DataFrame(index=met_data_all.index)
-        met_data_out['rh'] = mpcalc.relative_humidity_from_dewpoint(met_data_all['temperature'].values * units.degC, \
+        met_data_out['rel_hum'] = mpcalc.relative_humidity_from_dewpoint(met_data_all['temperature'].values * units.degC, \
                                       met_data_all['dewpoint'].values * units.degC) * 100.0
 
 
-        met_data_out['rh.flag'] = met_data_all[['temperature.flag','dewpoint.flag']].values.max(1)
+        met_data_out['rel_hum.flag'] = met_data_all[['temperature.flag','dewpoint.flag']].values.max(1)
 
         # plot the distribution of the calculated RH difference from measured RH
         if print_stats:
             met_data_internal = self._met_data.set_index(['Date','siteID'])
 
-            met_data_internal['rh2'] = met_data_out['rh']
+            met_data_internal['rh2'] = met_data_out['rel_hum']
 
-            met_data_internal['rhdiff'] = met_data_internal['rh2'] - met_data_internal['rh']
+            met_data_internal['rhdiff'] = met_data_internal['rh2'] - met_data_internal['rel_hum']
 
             ax = met_data_internal['rhdiff'].hist(bins=100)
             ax.semilogy()
@@ -497,9 +498,6 @@ class MetPostProcessor(PostProcessor):
                 # if we didn't impute anything, add zero value flags
                 ts['{}.flag'.format(var_string)] = 0
 
-            # now extract the daily max and mean data
-            #out_data = extract_mean_max(ts,data_template,site,var_in_string,var_out_string)
-
             # add the site ID, and reindex
             ts['siteID'] = site
             ts = ts.reset_index().set_index(['Date','siteID'])
@@ -512,7 +510,8 @@ class MetPostProcessor(PostProcessor):
 
     def organise_data_imputation(self, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint):
 
-        date_index = pd.date_range(start=self._date_range[0], end=self._date_range[1], freq='1H', name='Date')
+        date_index = pd.date_range(start=np.datetime64(self._date_range[0]), end=np.datetime64(self._date_range[1]),
+                                   freq='1H', name='Date')
 
         station_list = [ 'station{}'.format(x+1) for x in range(0, self._reference_station_number) ]
 
@@ -528,10 +527,10 @@ class MetPostProcessor(PostProcessor):
         return(met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint)
 
 
-    def sort_datasets(self, orig_data_in,req_sites_list,date_index,var_string):
+    def sort_datasets(self, req_sites_list, date_index, var_string):
 
         # add the Date index
-        indexed_orig_data = orig_data_in.set_index('Date')
+        indexed_orig_data = self._met_data.set_index('Date')
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -563,13 +562,14 @@ class MetPostProcessor(PostProcessor):
 
 
     def organise_data(self, req_sites_temp, req_sites_pres, req_sites_dewpoint):
-        date_index = pd.date_range(start=self._date_range[0], end=self._date_range[1], freq='1H', name='Date')
+        date_index = pd.date_range(start=np.datetime64(self._date_range[0]), end=np.datetime64(self._date_range[1]),
+                                   freq='1H', name='Date')
         print('sorting temperature data')
-        met_data_out_temp = self.sort_datasets(self._met_data, req_sites_temp, date_index, 'temperature')
+        met_data_out_temp = self.sort_datasets(req_sites_temp, date_index, 'temperature')
         print('sorting pressure data')
-        met_data_out_pressure = self.sort_datasets(self._met_data, req_sites_pres, date_index, 'pressure')
+        met_data_out_pressure = self.sort_datasets(req_sites_pres, date_index, 'pressure')
         print('sorting dew point temperature')
-        met_data_out_dewpoint = self.sort_datasets(self._met_data, req_sites_dewpoint, date_index, 'dewpoint')
+        met_data_out_dewpoint = self.sort_datasets(req_sites_dewpoint, date_index, 'dewpoint')
 
         return(met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint)
 
@@ -603,9 +603,9 @@ class MetPostProcessor(PostProcessor):
 
     def combine_and_organise_mean_max(self, met_data_temp,met_data_pres,met_data_rh):
 
-        met_groups_rh   = extract_mean_max(met_data_rh,'rh','RelativeHumidity')
-        met_groups_temp = extract_mean_max(met_data_temp,'temperature','Temperature')
-        met_groups_pres = extract_mean_max(met_data_pres,'pressure','Pressure')
+        met_groups_rh   = self.extract_mean_max(met_data_rh,'rel_hum','RelativeHumidity')
+        met_groups_temp = self.extract_mean_max(met_data_temp,'temperature','Temperature')
+        met_groups_pres = self.extract_mean_max(met_data_pres,'pressure','Pressure')
 
         combined_data = met_groups_temp.merge(met_groups_rh,how='outer',left_index=True,right_index=True)
         combined_data = combined_data.merge(met_groups_pres,how='outer',left_index=True,right_index=True)
@@ -625,12 +625,12 @@ if __name__ == '__main__':
 
     impute_data = True
     print_stats = True
-    file_in = 'inputs/temp_extras-rel_hum-pressure-dewpoint_midlands.csv'
+    file_in = 'inputs/temp_extras-rel_hum-pressure-dewpoint_June2017.csv'
     out_dir = 'met_postprocessing'
     file_out = 'daily_mean_max_temp_RH_pres.csv'
     station_drop_list = [117]
     min_temperature = -20
-    date_range = ['2016-01-01 00', '2019-12-31 23']
+    date_range = ['2017-06-01 00', '2017-06-30 23']
     reference_station_number = 5
     verbose = 2
     min_years = 0.04 #1
