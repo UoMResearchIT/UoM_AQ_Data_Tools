@@ -24,7 +24,4 @@
 #-------------------------
 
 AURN_metadata.RData
-/MEDMI_Data_*/*.csv
-
-
-
+*.csv
