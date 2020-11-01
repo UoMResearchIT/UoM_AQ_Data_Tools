@@ -23,15 +23,18 @@ Unified production script for MEDMI data processing. This will:
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import metpy.calc as mpcalc
-from metpy.units import units
-import geopy.distance as distance
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from sklearn.linear_model import BayesianRidge
-from sklearn import preprocessing
 from abc import ABCMeta, abstractmethod
 import os
+try:
+    import metpy.calc as mpcalc
+    from metpy.units import units
+    import geopy.distance as distance
+    from sklearn.experimental import enable_iterative_imputer
+    from sklearn.impute import IterativeImputer
+    from sklearn.linear_model import BayesianRidge
+    from sklearn import preprocessing
+except ImportError as err:
+    print('Warning: Unable to load library: {}'.format(err))
 
 from environmental_data_workflows import EnvironmentWorkflow
 
@@ -95,7 +98,7 @@ class MetPostProcessor(PostProcessor):
     DEFAULT_IMPUTER_ADD_INDICATOR = True
     DEFAULT_IMPUTER_INITIAL_STRATEGY = 'mean'
     DEFAULT_IMPUTER_MAX_ITER = 300
-    DEFAULT_IMPUTER_ESTIMATOR = BayesianRidge()
+    DEFAULT_IMPUTER_ESTIMATOR = None
 
     DEFAULT_QT_OUTPUT_DISTRIBUTION = 'normal'
     DEFAULT_QT_RANDOM_STATE = 0
