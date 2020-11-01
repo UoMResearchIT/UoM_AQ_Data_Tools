@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 try:
     from medmi_database import Dataset
 except:
-    print('Warning: Unable to load medmi_database. Expected, (and not a problem) if not running on Medmi server.')
+    print('Warning: Unable to load medmi_database. Not a problem if not downloading MEDMI data.')
 from cmath import polar
 import json
 
@@ -13,7 +13,6 @@ class MetExtractor(EnvironmentWorkflow):
     __metaclass__ = ABCMeta
     ADDITIONAL_VALS_KEY = 'Additional field values'
     DEFAULT_ADD_EXTRA_MEASUREMENTS = False
-
 
     def __init__(self, out_dir=EnvironmentWorkflow.DEFAULT_OUT_DIR, verbose=EnvironmentWorkflow.DEFAULT_VERBOSE):
         super(MetExtractor, self).__init__(out_dir, verbose)
@@ -68,6 +67,7 @@ class MetExtractor(EnvironmentWorkflow):
         return result
 
     def get_all_cols(self):
+        # Met extractor has extra_datasets columns, in addition to the usual (base and specific) columns.
         return super(MetExtractor, self).get_all_cols() + self._extra_datasets
 
 
