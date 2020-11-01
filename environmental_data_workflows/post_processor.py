@@ -67,8 +67,8 @@ class PostProcessor(EnvironmentWorkflow):
 
             station_distances.loc[index]['Distance'] = distance.distance(stat_location,new_location).km
 
-        return(station_distances)
-        return(station_distances)
+        return station_distances
+        return station_distances
 
 
     # %% function for creating date objects
@@ -346,7 +346,7 @@ class MetPostProcessor(PostProcessor):
             if(measurement_num > self._reference_num_years*365*24):
                 reference_site_list.append(site)
 
-        return(required_site_list,reference_site_list)
+        return required_site_list,reference_site_list
 
 
     def list_required_and_reference_sites(self):
@@ -394,7 +394,7 @@ class MetPostProcessor(PostProcessor):
             ax.set_xlabel('RH_new - RH')
 
 
-        return(met_data_out)
+        return met_data_out
 
 
     #%% station geographic routines
@@ -410,7 +410,7 @@ class MetPostProcessor(PostProcessor):
         station_distances[station_distances.Distance==0]=np.nan
         station_distances = station_distances.dropna()
 
-        return(station_distances)
+        return station_distances
 
 
 
@@ -452,8 +452,7 @@ class MetPostProcessor(PostProcessor):
             pos_out = list(cols).index(col)
             df_out.iloc[:,pos_out] = np_inv[:,pos]
 
-        return(df_out)
-
+        return df_out
 
 
     def get_full_datasets(self, req_sites_list, useful_sites_list, station_list_string, var_string):
@@ -510,7 +509,7 @@ class MetPostProcessor(PostProcessor):
             # copy data to new array
             full_data_out = full_data_out.append(ts)
 
-        return(full_data_out)
+        return full_data_out
 
 
     def organise_data_imputation(self, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint):
@@ -526,7 +525,7 @@ class MetPostProcessor(PostProcessor):
         print('imputing dew point temperature')
         met_data_out_dewpoint = self.get_full_datasets(req_sites_dewpoint, reference_sites, station_list, 'dewpoint')
 
-        return(met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint)
+        return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
 
     def sort_datasets(self, req_sites_list, var_string):
@@ -568,7 +567,7 @@ class MetPostProcessor(PostProcessor):
             # copy data to new array
             full_data_out = full_data_out.append(ts)
 
-        return(full_data_out)
+        return full_data_out
 
 
     def organise_data(self, req_sites_temp, req_sites_pres, req_sites_dewpoint):
@@ -579,7 +578,7 @@ class MetPostProcessor(PostProcessor):
         print('sorting dew point temperature')
         met_data_out_dewpoint = self.sort_datasets(req_sites_dewpoint, 'dewpoint')
 
-        return(met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint)
+        return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
 
     def remove_low_temperature_data(self, min_temperature):
@@ -604,7 +603,7 @@ class MetPostProcessor(PostProcessor):
         out_data['{}.mean'.format(var_out_string)] = tempgroups.mean()[var_in_string]
         out_data['{}.flag'.format(var_out_string)] = tempgroups.mean()['{}.flag'.format(var_in_string)]
 
-        return(out_data)
+        return out_data
 
 
     def combine_and_organise_mean_max(self, met_data_temp,met_data_pres,met_data_rh):
@@ -620,4 +619,4 @@ class MetPostProcessor(PostProcessor):
         combined_data.index = combined_data.index.set_levels(['{} [WEATHER]'.format(x) for x in combined_data.index.levels[1]], level=1)
         combined_data.index.rename(['time_stamp','sensor_name'],inplace=True)
 
-        return(combined_data)
+        return combined_data
