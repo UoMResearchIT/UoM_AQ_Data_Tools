@@ -129,7 +129,7 @@ class MetPostProcessor(PostProcessor):
                      max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
                      output_distribution=DEFAULT_QT_OUTPUT_DISTRIBUTION):
 
-        self._date_range = date_range
+        self.date_range = date_range
         self._reference_station_number = reference_station_number
         self._min_years = min_years
         self._reference_num_years = reference_num_years
@@ -187,8 +187,14 @@ class MetPostProcessor(PostProcessor):
 
     def load_met_data(self, file_in):
         print('    load data file')
-        met_data = pd.read_csv(file_in, usecols=self.get_all_cols(), skiprows=self._skip_input_rows,
-                               engine='python', sep=',\s*', na_values='None')
+
+        try:
+            met_data = pd.read_csv(file_in, usecols=self.get_all_cols(), skiprows=self._skip_input_rows,
+                                   engine='python', sep=',\s*', na_values='None')
+        except:
+            raise ValueError('Error reading specified file: {}'.format(file_in))
+        if len(met_data.index) < 1:
+            raise ValueError('Input file ({}) is empty'.format(file_in))
         print('    correct date string')
         met_data['date'] = met_data['date'].apply(self.parse_date)
 
@@ -254,7 +260,7 @@ class MetPostProcessor(PostProcessor):
 
     def drop_single_daily_measurement_stations(self, print_stats):
         # group the data by date, and count the readings per day
-        tempgroups = self._met_data.groupby(['siteID',pd.Grouper(key='date', freq='1D')])
+        tempgroups = self._met_data.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
         data_counts = tempgroups.count()
 
         # some diagnostic output, if required
@@ -450,7 +456,9 @@ class MetPostProcessor(PostProcessor):
 
 
 
-    def get_full_datasets(self, req_sites_list, useful_sites_list, date_index, station_list_string, var_string):
+    def get_full_datasets(self, req_sites_list, useful_sites_list, station_list_string, var_string):
+        date_index = pd.date_range(start=self.date_range[0], end=self.date_range[1],
+                                   freq='1H', name='date')
 
         # add the Date index
         indexed_orig_data = self._met_data.set_index('date')
@@ -507,24 +515,29 @@ class MetPostProcessor(PostProcessor):
 
     def organise_data_imputation(self, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint):
 
-        date_index = pd.date_range(start=np.datetime64(self._date_range[0]), end=np.datetime64(self._date_range[1]),
-                                   freq='1H', name='date')
-
         station_list = [ 'station{}'.format(x+1) for x in range(0, self._reference_station_number) ]
 
         print('imputing temperature data')
-        met_data_out_temp = self.get_full_datasets(req_sites_temp, reference_sites, date_index, station_list, 'temperature')
+        met_data_out_temp = self.get_full_datasets(req_sites_temp, reference_sites, station_list, 'temperature')
 
         print('imputing pressure data')
-        met_data_out_pressure = self.get_full_datasets(req_sites_pres, reference_sites, date_index, station_list, 'pressure')
+        met_data_out_pressure = self.get_full_datasets(req_sites_pres, reference_sites, station_list, 'pressure')
 
         print('imputing dew point temperature')
-        met_data_out_dewpoint = self.get_full_datasets(req_sites_dewpoint, reference_sites, date_index, station_list, 'dewpoint')
+        met_data_out_dewpoint = self.get_full_datasets(req_sites_dewpoint, reference_sites, station_list, 'dewpoint')
 
         return(met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint)
 
 
-    def sort_datasets(self, req_sites_list, date_index, var_string):
+    def sort_datasets(self, req_sites_list, var_string):
+        # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
+        # AG: Todo Doug: check OK.
+        start_date = max(self._met_data['date'].min(), self.date_range[0])
+        end_date = min(self._met_data['date'].max(), self.date_range[1])
+
+        if self.verbose > 1: print('Using date range in sort_datasets: {} to {}'.format(str(start_date, end_date)))
+
+        date_index = pd.date_range(start=start_date, end=end_date, freq='1H', name='date')
 
         # add the Date index
         indexed_orig_data = self._met_data.set_index('date')
@@ -559,14 +572,12 @@ class MetPostProcessor(PostProcessor):
 
 
     def organise_data(self, req_sites_temp, req_sites_pres, req_sites_dewpoint):
-        date_index = pd.date_range(start=np.datetime64(self._date_range[0]), end=np.datetime64(self._date_range[1]),
-                                   freq='1H', name='date')
         print('sorting temperature data')
-        met_data_out_temp = self.sort_datasets(req_sites_temp, date_index, 'temperature')
+        met_data_out_temp = self.sort_datasets(req_sites_temp, 'temperature')
         print('sorting pressure data')
-        met_data_out_pressure = self.sort_datasets(req_sites_pres, date_index, 'pressure')
+        met_data_out_pressure = self.sort_datasets(req_sites_pres, 'pressure')
         print('sorting dew point temperature')
-        met_data_out_dewpoint = self.sort_datasets(req_sites_dewpoint, date_index, 'dewpoint')
+        met_data_out_dewpoint = self.sort_datasets(req_sites_dewpoint, 'dewpoint')
 
         return(met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint)
 

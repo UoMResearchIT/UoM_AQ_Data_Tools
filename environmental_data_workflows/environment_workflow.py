@@ -10,7 +10,7 @@ class EnvironmentWorkflow:
     __metaclass__ = ABCMeta
     DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_OUT_DIR = 'met_extracted_data'
-    DEFAULT_DATE_RANGE = ['2016-1-1 0', '2019-12-31 23']
+    DEFAULT_DATE_RANGE = ['2016-01-01 00', '2019-12-31 23']
     UK_LATITUDES = [48., 60.]
     UK_LONGITUDES = [-11., 3.]
     DEFAULT_VERBOSE = 0
@@ -51,7 +51,7 @@ class EnvironmentWorkflow:
             raise err
         if datetime_1 >= datetime_2:
             raise ValueError('Start date is not earlier than end date.')
-        self.__date_range = [range[0], range[1]]
+        self.__date_range = [datetime_1, datetime_2]
 
     @property
     def latitude_range(self):

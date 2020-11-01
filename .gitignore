@@ -26,3 +26,9 @@
 AURN_metadata.RData
 *.csv
 /MEDMI_Data_Preprocessing/met_postprocessing/
+
+
+#------------------------
+# Python cache files
+#------------------------
+*.pyc
