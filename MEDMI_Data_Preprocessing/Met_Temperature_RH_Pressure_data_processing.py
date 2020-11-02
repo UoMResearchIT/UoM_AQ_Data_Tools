@@ -140,6 +140,7 @@ if __name__ == '__main__':
 
     if args.exclude_sites:
         exclude_site_list = args.exclude_sites
+        print('Excluding sites: [{}]'.format(','.join(exclude_site_list)))
     else:
         print('No exclude_sites provided, so using all')
         exclude_site_list = []
