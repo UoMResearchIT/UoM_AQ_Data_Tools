@@ -44,7 +44,7 @@ class PostProcessor(EnvironmentWorkflow):
     DEFAULT_IMPUTE_DATA = True
     DEFAULT_PRINT_STATS = True
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
-    DEFAULT_FILE_OUT = '{}/daily_mean_max_temp_RH_pres{}.csv'
+    BASE_FILE_OUT = '{}/daily_mean_max_temp_RH_pres{}.csv'
     DEFAULT_SKIP_INPUT_ROWS = 1
 
 
@@ -54,8 +54,6 @@ class PostProcessor(EnvironmentWorkflow):
         self.impute_data = PostProcessor.DEFAULT_IMPUTE_DATA
         self.print_stats = PostProcessor.DEFAULT_PRINT_STATS
         self.file_in = PostProcessor.DEFAULT_FILE_IN
-        self._file_out = PostProcessor.DEFAULT_FILE_OUT.format(out_dir, '{}')
-        self._date_calcs_format = None
         self._skip_input_rows = MetPostProcessor.DEFAULT_SKIP_INPUT_ROWS
 
 
@@ -75,7 +73,7 @@ class PostProcessor(EnvironmentWorkflow):
 
 
     # %% function for creating date objects
-    def parse_date(self, date_in):
+    def parse_calcs_date(self, date_in):
         return datetime.strptime(date_in, self._date_calcs_format)
 
     def calc_nanmean(self, data_in):
@@ -145,6 +143,7 @@ class MetPostProcessor(PostProcessor):
         self._reference_num_stations = reference_num_stations
         self._min_years = min_years
         self._reference_num_years = reference_num_years
+        self.file_out = MetPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
 
         self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
                                    initial_strategy=inital_strategy, max_iter=max_iter, verbose=self.verbose,
@@ -154,7 +153,7 @@ class MetPostProcessor(PostProcessor):
         self.quantile_transformer = preprocessing.QuantileTransformer(
             output_distribution=output_distribution, random_state=random_state)
 
-        print('loading met data file')
+        print('checking validity of and loading met data file')
         self._met_data = self.load_met_data(file_in)
 
         if self.verbose > 1: print('Metadata before dropping/filtering: {}'.format(self._met_data))
@@ -195,8 +194,7 @@ class MetPostProcessor(PostProcessor):
 
         # write data to file
         if self.verbose > 1: print('Writing to file: {}'.format(self.file_out.format(outfile_suffix)))
-        met_data_hourly.to_csv(self.file_out.format(outfile_suffix),
-                               index=True, header=True, float_format='%.2f')
+        met_data_hourly.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
 
     def load_met_data(self, file_in):
@@ -210,7 +208,7 @@ class MetPostProcessor(PostProcessor):
         if len(met_data.index) < 1:
             raise ValueError('Input file ({}) is empty'.format(file_in))
         print('    correct date string')
-        met_data['date'] = met_data['date'].apply(self.parse_date)
+        met_data['date'] = met_data['date'].apply(self.parse_calcs_date)
 
         return met_data
 

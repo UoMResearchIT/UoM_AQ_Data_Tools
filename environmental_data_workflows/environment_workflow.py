@@ -23,7 +23,6 @@ class EnvironmentWorkflow:
         self.latitude_range = EnvironmentWorkflow.UK_LATITUDES
         self.longitude_range = EnvironmentWorkflow.UK_LONGITUDES
         self._date_range_format = EnvironmentWorkflow.DEFAULT_DATE_RANGE_FORMAT
-        #self.date_range = EnvironmentWorkflow.DEFAULT_DATE_RANGE
         self._file_out = None
         self._cols_base = EnvironmentWorkflow.DEFAULT_COLS_BASE
         self._cols_specific = []
@@ -116,6 +115,15 @@ class EnvironmentWorkflow:
     @property
     def file_out(self):
         return self._file_out
+
+    @file_out.setter
+    def file_out(self, filename):
+        try:
+            filename = str(filename)
+        except ValueError as err:
+            raise err
+        #Todo check if filename is createable
+        self._file_out = filename
 
     def set_region(self, latitude_range, longitude_range):
         self.latitude_range = latitude_range
