@@ -7,11 +7,11 @@ class EnvironmentWorkflow:
     __metaclass__ = ABCMeta
     DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_OUT_DIR = 'met_extracted_data'
-    DEFAULT_DATE_RANGE = ['2016-01-01 00', '2019-12-31 23']
+    DEFAULT_DATE_RANGE = ['2016-01-01_00', '2019-12-31_23']
     UK_LATITUDES = [48., 60.]
     UK_LONGITUDES = [-11., 3.]
     DEFAULT_VERBOSE = 0
-    DEFAULT_DATE_RANGE_FORMAT = '%Y-%m-%d %H'
+    DEFAULT_DATE_RANGE_FORMAT = '%Y-%m-%d_%H'
     LONGITUDE_RANGE = [-180., 360.]
     LATITUDE_RANGE = [-90., 90.]
     DEFAULT_COLS_BASE = ['date', 'siteID']
@@ -23,7 +23,7 @@ class EnvironmentWorkflow:
         self.latitude_range = EnvironmentWorkflow.UK_LATITUDES
         self.longitude_range = EnvironmentWorkflow.UK_LONGITUDES
         self._date_range_format = EnvironmentWorkflow.DEFAULT_DATE_RANGE_FORMAT
-        self.date_range = EnvironmentWorkflow.DEFAULT_DATE_RANGE
+        #self.date_range = EnvironmentWorkflow.DEFAULT_DATE_RANGE
         self._file_out = None
         self._cols_base = EnvironmentWorkflow.DEFAULT_COLS_BASE
         self._cols_specific = []
@@ -40,7 +40,7 @@ class EnvironmentWorkflow:
 
     @date_range.setter
     def date_range(self, range):
-        # Example input: ['2017-1-1 0', '2017-06-30 23']
+        # Example input: ['2017-1-1_0', '2017-06-30_23']
         try:
             datetime_1 = datetime.strptime(range[0], self._date_range_format)
             datetime_2 = datetime.strptime(range[1], self._date_range_format)

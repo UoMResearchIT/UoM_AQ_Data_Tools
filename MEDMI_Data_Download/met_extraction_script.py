@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',  help="start and end dates \
-                        (array - first two values only). Default: {}".format(str(MetExtractor.DEFAULT_DATE_RANGE)[1:-1].replace(',','')))
+                        (array - first two values only). Default: [{}]".format(','.join(MetExtractor.DEFAULT_DATE_RANGE)))
 
 
     # Latitude / longitude
@@ -50,7 +50,8 @@ if __name__ == '__main__':
         for measurement in args.measurements:
             if measurement not in AVAILABLE_MEASUREMENTS:
                 raise ValueError('Unknown measurement: {}. Allowed measurements: {}'.format(measurement, AVAILABLE_MEASUREMENTS))
-        measurements = args.measurements
+        # Remove duplicate measurement names.
+        measurements = set(args.measurements)
         print('Using measurements: {}'.format(measurements))
     else:
         print('No measurements provided, so using default: ', '[' + ", ".join([measure for measure in AVAILABLE_MEASUREMENTS]) + ']')
@@ -78,13 +79,16 @@ if __name__ == '__main__':
         outfile_suffix = MetExtractor.DEFAULT_OUT_FILE_SUFFIX
 
     if args.date_range:
+        #'2017-01-01_00 2019-06-30_23'
         if len(args.date_range) >= 2:
+            if len(args.date_range) > 2:
+                print('Warning: You have input more than 2 dates, only the first 2 will be used.')
             date_range = args.date_range[0:2]
         else:
             raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
-        print('Using date range: {}'.format(str(date_range)[1:-1].replace(',','')))
+        print('Using date range: [{}]'.format(','.join(date_range)))
     else:
-        print('No date_range provided, so using default: {}'.format(str(MetExtractor.DEFAULT_DATE_RANGE)[1:-1].replace(',','')))
+        print('No date_range provided, so using default: [{}]'.format(','.join(MetExtractor.DEFAULT_DATE_RANGE)))
         date_range = MetExtractor.DEFAULT_DATE_RANGE
 
     if args.latitude_range:
@@ -120,8 +124,6 @@ if __name__ == '__main__':
 
     ### Perform data extraction
 
-    # Remove duplicate measurement names.
-    measurements = set(measurements)
     # Perform extractions
     for measurement in measurements:
         class_ = MetExtractor.get_class_from_measurement_name(measurement)

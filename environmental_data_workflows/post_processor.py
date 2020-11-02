@@ -44,7 +44,7 @@ class PostProcessor(EnvironmentWorkflow):
     DEFAULT_IMPUTE_DATA = True
     DEFAULT_PRINT_STATS = True
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
-    DEFAULT_FILE_OUT = 'daily_mean_max_temp_RH_pres.csv'
+    DEFAULT_FILE_OUT = '{}/daily_mean_max_temp_RH_pres{}.csv'
     DEFAULT_SKIP_INPUT_ROWS = 1
 
 
@@ -54,7 +54,7 @@ class PostProcessor(EnvironmentWorkflow):
         self.impute_data = PostProcessor.DEFAULT_IMPUTE_DATA
         self.print_stats = PostProcessor.DEFAULT_PRINT_STATS
         self.file_in = PostProcessor.DEFAULT_FILE_IN
-        self._file_out = PostProcessor.DEFAULT_FILE_OUT
+        self._file_out = PostProcessor.DEFAULT_FILE_OUT.format(out_dir, '{}')
         self._date_calcs_format = None
         self._skip_input_rows = MetPostProcessor.DEFAULT_SKIP_INPUT_ROWS
 
@@ -85,10 +85,10 @@ class PostProcessor(EnvironmentWorkflow):
 class MetPostProcessor(PostProcessor):
 
     DEFAULT_COLS_SPECIFIC_LIST = ['temperature', 'rel_hum', 'pressure', 'dewpoint']
-    DEFAULT_STATION_DROP_LIST = [117]
+    DEFAULT_EXCLUDE_STATION_LIST = [117]
     DEFAULT_MIN_TEMPERATURE = -20
     DEFAULT_STATIONS_FILENAME = "../station_data/station_data_clean.csv"
-    DEFAULT_REFERENCE_STATION_NUMBER = 5
+    DEFAULT_REFERENCE_NUMBER_STATIONS = 5
     DEFAULT_REFERENCE_NUM_YEARS = 0.0625 #3.5
     DEFAULT_MIN_YEARS = 0.04 #1
 
@@ -103,14 +103,22 @@ class MetPostProcessor(PostProcessor):
     DEFAULT_QT_OUTPUT_DISTRIBUTION = 'normal'
     DEFAULT_QT_RANDOM_STATE = 0
 
-    def __init__(self, out_dir=PostProcessor.DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
+    def __init__(self, out_dir=PostProcessor.DEFAULT_OUT_DIR, stations_filename=DEFAULT_STATIONS_FILENAME,
+                 verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
+        try:
+            self._stations = pd.read_csv(stations_filename)
+        except Exception as err:
+            raise ValueError('Error loading stations file {}. {}'.format(stations_filename, err))
+        else:
+            try:
+                self._stations = self._stations.set_index('Station')
+            except:
+                raise ValueError('Stations file has no column header: Station')
 
         self._date_calcs_format = MetPostProcessor.DEFAULT_DATE_CALCS_FORMAT
         self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
-        self._stations = pd.read_csv(MetPostProcessor.DEFAULT_STATIONS_FILENAME)
-        self._stations = self._stations.set_index('Station')
-        self._reference_station_number = MetPostProcessor.DEFAULT_REFERENCE_STATION_NUMBER
+        self._reference_num_stations = MetPostProcessor.DEFAULT_REFERENCE_NUMBER_STATIONS
         self._reference_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
         self._min_years = MetPostProcessor.DEFAULT_MIN_YEARS
         self._cols_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
@@ -122,9 +130,10 @@ class MetPostProcessor(PostProcessor):
     def stations(self):
         return self._stations
 
-    def post_process(self, file_in, date_range=EnvironmentWorkflow.DEFAULT_DATE_RANGE,
-                     file_out=PostProcessor.DEFAULT_FILE_OUT, station_drop_list=DEFAULT_STATION_DROP_LIST,
-                     min_temperature=DEFAULT_MIN_TEMPERATURE, reference_station_number=DEFAULT_REFERENCE_STATION_NUMBER,
+    def post_process(self, file_in, outfile_suffix='',
+                     date_range=EnvironmentWorkflow.DEFAULT_DATE_RANGE,
+                     exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
+                     min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
                      min_years=DEFAULT_MIN_YEARS, reference_num_years=DEFAULT_REFERENCE_NUM_YEARS,
                      impute_data=PostProcessor.DEFAULT_IMPUTE_DATA, print_stats=PostProcessor.DEFAULT_PRINT_STATS,
                      random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
@@ -133,7 +142,7 @@ class MetPostProcessor(PostProcessor):
                      output_distribution=DEFAULT_QT_OUTPUT_DISTRIBUTION):
 
         self.date_range = date_range
-        self._reference_station_number = reference_station_number
+        self._reference_num_stations = reference_num_stations
         self._min_years = min_years
         self._reference_num_years = reference_num_years
 
@@ -151,7 +160,7 @@ class MetPostProcessor(PostProcessor):
         if self.verbose > 1: print('Metadata before dropping/filtering: {}'.format(self._met_data))
 
         print('dropping duplicate values and unwanted stations')
-        self.find_and_drop_duplicates_and_unwanted_stations(station_drop_list)
+        self.find_and_drop_duplicates_and_unwanted_stations(exclude_site_list)
 
         print('dropping single daily measurement stations')
         self.drop_single_daily_measurement_stations(print_stats)
@@ -185,7 +194,9 @@ class MetPostProcessor(PostProcessor):
         met_data_hourly = self.combine_and_organise_mean_max(met_data_temp, met_data_pres, met_data_rh)
 
         # write data to file
-        met_data_hourly.to_csv(os.path.join(self.out_dir,file_out), index=True, header=True, float_format='%.2f')
+        if self.verbose > 1: print('Writing to file: {}'.format(self.file_out.format(outfile_suffix)))
+        met_data_hourly.to_csv(self.file_out.format(outfile_suffix),
+                               index=True, header=True, float_format='%.2f')
 
 
     def load_met_data(self, file_in):
@@ -221,7 +232,7 @@ class MetPostProcessor(PostProcessor):
 
     #%% functions for finding and removing unwanted data
 
-    def find_and_drop_duplicates_and_unwanted_stations(self, station_list):
+    def find_and_drop_duplicates_and_unwanted_stations(self, exlude_stations):
         # Pull out all duplicated values
         met_duplicates = self._met_data[self._met_data.duplicated(subset=['date','siteID'], keep=False)]
 
@@ -250,7 +261,7 @@ class MetPostProcessor(PostProcessor):
 
 
         # Append to this list the indexes of all station data that we are dropping completely
-        for station in station_list:
+        for station in exlude_stations:
             station_drop_indexes = self._met_data[self._met_data['siteID']==station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
@@ -486,8 +497,8 @@ class MetPostProcessor(PostProcessor):
                 print('  site is missing {} data points, filling these in'.format(len(ts)-len(work_data)))
 
                 station_distances = self.get_station_distances(site, useful_sites_list)
-                # get data for the 5 closest stations:
-                for ii in range(0, self._reference_station_number):
+                # get data for the [reference_station_number] closest stations:
+                for ii in range(0, self._reference_num_stations):
                     ts[station_list_string[ii]] = \
                         indexed_orig_data[indexed_orig_data.siteID==station_distances.index[ii]][var_string]
 
@@ -517,7 +528,7 @@ class MetPostProcessor(PostProcessor):
 
     def organise_data_imputation(self, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint):
 
-        station_list = [ 'station{}'.format(x+1) for x in range(0, self._reference_station_number) ]
+        station_list = [ 'station{}'.format(x+1) for x in range(0, self._reference_num_stations) ]
 
         print('imputing temperature data')
         met_data_out_temp = self.get_full_datasets(req_sites_temp, reference_sites, station_list, 'temperature')
