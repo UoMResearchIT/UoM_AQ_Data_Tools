@@ -9,7 +9,7 @@ from environmental_data_modules import MetPostProcessor
 if __name__ == '__main__':
 
     ### read arguments from the command line
-    help_string = "***Unified production script for MEDMI data processing. ***\
+    help_string = """***Unified production script for MEDMI data processing. ***\
         Loads and cleans the dataset by:\
         a) find duplicated readings \
             i)  filtering out the METAR data by lack of pressure reading\
@@ -17,7 +17,7 @@ if __name__ == '__main__':
         b) removing stations identified as unwanted\
             i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,\
                     and as it is unlikely to be useful comparison with participant data, we will remove it\
-        c) find and remove the synoptic spot readings"
+        c) find and remove the synoptic spot readings"""
 
     parser = argparse.ArgumentParser(description=help_string)
 

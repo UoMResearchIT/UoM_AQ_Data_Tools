@@ -83,6 +83,7 @@ class EnvironmentModule:
             raise ValueError('Longitude last value falls outside global range')
         self.__longitude_range = [val_1, val_2]
 
+
     @property
     def out_dir(self):
         return self.__out_dir
@@ -100,6 +101,7 @@ class EnvironmentModule:
                 raise ValueError("Directory name {} cannot be created.".format(dir_name))
         self.__out_dir = dir_name
 
+
     @property
     def verbose(self):
         return self.__verbose
@@ -111,6 +113,7 @@ class EnvironmentModule:
         except ValueError as err:
             raise err
         self.__verbose = max(0, verbose)
+
 
     @property
     def file_out(self):
@@ -131,3 +134,4 @@ class EnvironmentModule:
 
     def get_all_cols(self):
         return self._cols_base + self._cols_specific
+    
