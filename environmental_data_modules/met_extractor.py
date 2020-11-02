@@ -6,15 +6,15 @@ except:
 from cmath import polar
 import json
 
-from .environment_workflow import EnvironmentWorkflow
+from .environment_module import EnvironmentModule
 
 
-class MetExtractor(EnvironmentWorkflow):
+class MetExtractor(EnvironmentModule):
     __metaclass__ = ABCMeta
     ADDITIONAL_VALS_KEY = 'Additional field values'
     DEFAULT_ADD_EXTRA_MEASUREMENTS = False
 
-    def __init__(self, out_dir=EnvironmentWorkflow.DEFAULT_OUT_DIR, verbose=EnvironmentWorkflow.DEFAULT_VERBOSE):
+    def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(MetExtractor, self).__init__(out_dir, verbose)
         self._headstring = None
         self._cols_specific = []
@@ -49,7 +49,7 @@ class MetExtractor(EnvironmentWorkflow):
 
         return result
 
-    def _get_settings(self, outfile_suffix=EnvironmentWorkflow.DEFAULT_OUT_FILE_SUFFIX):
+    def _get_settings(self, outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX):
         str_extra_datasets = '-'.join(self._extra_datasets).replace(' ', '-')
         if len(self._extra_datasets) > 0:
             filename = self._file_out.format('_extras-{}'.format(str_extra_datasets), outfile_suffix)
@@ -90,7 +90,7 @@ class MetExtractor(EnvironmentWorkflow):
         if self.verbose >= 1:
             print('extracting data for {}'.format(self.MEASUREMENT_NAME))
         if self.verbose > 1:
-            print('using extraction dict: {}'.format(json.dumps(extraction_dict)))
+            print('using extraction dict: {}'.format(json.dumps(extraction_dict, default=str)))
             print('using settings: {}'.format(json.dumps(settings)))
         datadata = self._perform_extraction(extraction_dict)
         if save_to_file:

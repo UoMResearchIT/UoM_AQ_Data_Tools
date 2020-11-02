@@ -1,7 +1,7 @@
 import argparse
 import sys
 sys.path.append("..")
-from environmental_data_workflows import MetExtractor
+from environmental_data_modules import MetExtractor
 
 if __name__ == '__main__':
 

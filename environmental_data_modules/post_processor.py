@@ -36,9 +36,9 @@ try:
 except ImportError as err:
     print('Warning: Unable to load library: {}'.format(err))
 
-from environmental_data_workflows import EnvironmentWorkflow
+from environmental_data_modules import EnvironmentModule
 
-class PostProcessor(EnvironmentWorkflow):
+class PostProcessor(EnvironmentModule):
     __metaclass__ = ABCMeta
 
     DEFAULT_IMPUTE_DATA = True
@@ -48,7 +48,7 @@ class PostProcessor(EnvironmentWorkflow):
     DEFAULT_SKIP_INPUT_ROWS = 1
 
 
-    def __init__(self, out_dir=EnvironmentWorkflow.DEFAULT_OUT_DIR, verbose=EnvironmentWorkflow.DEFAULT_VERBOSE):
+    def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(PostProcessor, self).__init__(out_dir, verbose)
 
         self.impute_data = PostProcessor.DEFAULT_IMPUTE_DATA
@@ -68,7 +68,6 @@ class PostProcessor(EnvironmentWorkflow):
 
             station_distances.loc[index]['Distance'] = distance.distance(stat_location,new_location).km
 
-        return station_distances
         return station_distances
 
 
@@ -129,7 +128,7 @@ class MetPostProcessor(PostProcessor):
         return self._stations
 
     def post_process(self, file_in, outfile_suffix='',
-                     date_range=EnvironmentWorkflow.DEFAULT_DATE_RANGE,
+                     date_range=EnvironmentModule.DEFAULT_DATE_RANGE,
                      exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
                      min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
                      min_years=DEFAULT_MIN_YEARS, reference_num_years=DEFAULT_REFERENCE_NUM_YEARS,

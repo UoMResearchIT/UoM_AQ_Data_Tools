@@ -65,7 +65,7 @@ AVAILABLE_YEARS = [2016,2017,2018,2019]
 
 # functions for station indentifying
 #Todo Remove, once we've made this module into a class - it's already in post_processor
-def calc_station_distances(stations_in,stat_location):
+def calc_station_distances(stations_in, stat_location):
 
     station_distances = pd.DataFrame(index=stations_in.index)
     station_distances['Distance'] = np.nan
@@ -86,7 +86,7 @@ def return_closest_station(station_distances):
     return(station_data.name,station_data[0])
 
 
-def get_closest_station_data(stations_centre,station_distances,station_id,station_number):
+def get_closest_station_data(stations_centre, station_distances, station_id, station_number):
         
     for ii in range(0,station_number):
         stat_string='Station'+str(ii+1)

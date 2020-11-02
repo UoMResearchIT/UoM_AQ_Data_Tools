@@ -3,7 +3,7 @@ import sys
 sys.path.append("..")
 from pathlib import Path
 
-from environmental_data_workflows import MetPostProcessor
+from environmental_data_modules import MetPostProcessor
 
 
 if __name__ == '__main__':

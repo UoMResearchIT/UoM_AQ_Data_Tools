@@ -6,7 +6,7 @@ OUT_DIR='met_postprocessing'
 OUTFILE_SUFFIX='_midlands'
 STATIONS_FILENAME="../station_data/station_data_clean.csv"
 
-DATE_RANGE='2017-01-01_00 2017-12-31_23'
+DATE_RANGE="2017-01-01_00 2017-12-31_23"
 MIN_YEARS=0.04  # 1
 MIN_TEMP=-20
 REFERENCE_NUM_YEARS=0.0625  # 3.5

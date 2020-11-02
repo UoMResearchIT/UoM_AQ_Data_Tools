@@ -3,7 +3,7 @@ import os, errno
 from datetime import datetime
 
 
-class EnvironmentWorkflow:
+class EnvironmentModule:
     __metaclass__ = ABCMeta
     DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_OUT_DIR = 'met_extracted_data'
@@ -20,18 +20,18 @@ class EnvironmentWorkflow:
     def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
         self.out_dir = dir_name
         self.verbose = verbose
-        self.latitude_range = EnvironmentWorkflow.UK_LATITUDES
-        self.longitude_range = EnvironmentWorkflow.UK_LONGITUDES
-        self._date_range_format = EnvironmentWorkflow.DEFAULT_DATE_RANGE_FORMAT
+        self.latitude_range = EnvironmentModule.UK_LATITUDES
+        self.longitude_range = EnvironmentModule.UK_LONGITUDES
+        self._date_range_format = EnvironmentModule.DEFAULT_DATE_RANGE_FORMAT
         self._file_out = None
-        self._cols_base = EnvironmentWorkflow.DEFAULT_COLS_BASE
+        self._cols_base = EnvironmentModule.DEFAULT_COLS_BASE
         self._cols_specific = []
 
 
     @staticmethod
     def all_subclasses(cls):
         return set(cls.__subclasses__()).union(
-            [s for c in cls.__subclasses__() for s in EnvironmentWorkflow.all_subclasses(c)])
+            [s for c in cls.__subclasses__() for s in EnvironmentModule.all_subclasses(c)])
 
     @property
     def date_range(self):
@@ -60,9 +60,9 @@ class EnvironmentWorkflow:
             val_2 = float(range[1])
         except ValueError as err:
             raise err
-        if not ((EnvironmentWorkflow.LATITUDE_RANGE[0] <= val_1) and (val_1 <= EnvironmentWorkflow.LATITUDE_RANGE[1])):
+        if not ((EnvironmentModule.LATITUDE_RANGE[0] <= val_1) and (val_1 <= EnvironmentModule.LATITUDE_RANGE[1])):
             raise ValueError('Latitude first value falls outside global range')
-        if not ((EnvironmentWorkflow.LATITUDE_RANGE[0] <= val_2) and (val_2 <= EnvironmentWorkflow.LATITUDE_RANGE[1])):
+        if not ((EnvironmentModule.LATITUDE_RANGE[0] <= val_2) and (val_2 <= EnvironmentModule.LATITUDE_RANGE[1])):
             raise ValueError('Latitude last value falls outside global range')
         self.__latitude_range = [val_1, val_2]
 
@@ -77,9 +77,9 @@ class EnvironmentWorkflow:
             val_2 = float(range[1])
         except ValueError as err:
             raise err
-        if not (EnvironmentWorkflow.LONGITUDE_RANGE[0] <= val_1 <= EnvironmentWorkflow.LONGITUDE_RANGE[1]):
+        if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_1 <= EnvironmentModule.LONGITUDE_RANGE[1]):
             raise ValueError('Longitude first value falls outside global range')
-        if not (EnvironmentWorkflow.LONGITUDE_RANGE[0] <= val_2 <= EnvironmentWorkflow.LONGITUDE_RANGE[1]):
+        if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_2 <= EnvironmentModule.LONGITUDE_RANGE[1]):
             raise ValueError('Longitude last value falls outside global range')
         self.__longitude_range = [val_1, val_2]
 
