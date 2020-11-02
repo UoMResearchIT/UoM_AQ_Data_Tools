@@ -134,4 +134,3 @@ class EnvironmentModule:
 
     def get_all_cols(self):
         return self._cols_base + self._cols_specific
-    

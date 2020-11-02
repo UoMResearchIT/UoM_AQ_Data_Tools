@@ -27,8 +27,11 @@ if __name__ == '__main__':
                         help="suffix to be appended to output file name. Default: {}".format(MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
 
     # Dates
-    parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',  help="start and end dates \
-                        (array - first two values only). Default: [{}]".format(','.join(MetExtractor.DEFAULT_DATE_RANGE)))
+    parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
+                        help="start and end dates. (array - first two values only). \
+                            Expected date format: {} \n Default: {}".format(
+                            MetExtractor.DEFAULT_DATE_RANGE_FORMAT.replace('%', ''),
+                            ' '.join(MetExtractor.DEFAULT_DATE_RANGE)))
 
 
     # Latitude / longitude
