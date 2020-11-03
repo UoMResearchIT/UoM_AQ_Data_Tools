@@ -82,7 +82,7 @@ class EnvironmentModule:
         if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_2 <= EnvironmentModule.LONGITUDE_RANGE[1]):
             raise ValueError('Longitude last value falls outside global range')
         self.__longitude_range = [val_1, val_2]
-
+        
 
     @property
     def out_dir(self):
@@ -100,7 +100,7 @@ class EnvironmentModule:
             if e.errno != errno.EEXIST:
                 raise ValueError("Directory name {} cannot be created.".format(dir_name))
         self.__out_dir = dir_name
-
+        
 
     @property
     def verbose(self):
@@ -113,7 +113,7 @@ class EnvironmentModule:
         except ValueError as err:
             raise err
         self.__verbose = max(0, verbose)
-
+        
 
     @property
     def file_out(self):
