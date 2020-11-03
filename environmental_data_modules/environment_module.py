@@ -6,7 +6,6 @@ from datetime import datetime
 class EnvironmentModule:
     __metaclass__ = ABCMeta
     DEFAULT_OUT_FILE_SUFFIX = ''
-    DEFAULT_OUT_DIR = 'met_extracted_data'
     DEFAULT_DATE_RANGE = ['2016-01-01_00', '2019-12-31_23']
     UK_LATITUDES = [48., 60.]
     UK_LONGITUDES = [-11., 3.]
