@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 try:
     from medmi_database import Dataset
 except:
-    print('Warning: Unable to load medmi_database. Not a problem if not downloading MEDMI data.')
+    pass
 from cmath import polar
 import json
 

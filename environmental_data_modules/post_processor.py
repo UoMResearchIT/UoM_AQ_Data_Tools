@@ -34,7 +34,7 @@ try:
     from sklearn.linear_model import BayesianRidge
     from sklearn import preprocessing
 except ImportError as err:
-    print('Warning: Unable to load library: {}'.format(err))
+    pass #print('Warning: Unable to load library: {}'.format(err))
 
 from environmental_data_modules import EnvironmentModule
 
