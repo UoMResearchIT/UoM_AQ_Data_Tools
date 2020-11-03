@@ -62,29 +62,29 @@ class MetPostProcessor(PostProcessor):
     def __init__(self, out_dir=DEFAULT_OUT_DIR, stations_filename=DEFAULT_STATIONS_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
+
+
+        self._date_calcs_format = MetPostProcessor.DEFAULT_DATE_CALCS_FORMAT
+        self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
+        self._reference_num_stations = MetPostProcessor.DEFAULT_REFERENCE_NUMBER_STATIONS
+        self._reference_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
+        self._cols_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
+        self._met_data = None
+        self.imputer = None
+        self.quantile_transformer = None
+
+    @PostProcessor.stations.setter
+    def stations(self, filename):
         try:
-            self._stations = pd.read_csv(stations_filename)
+            self._stations = pd.read_csv(filename)
         except Exception as err:
-            raise ValueError('Error loading stations file {}. {}'.format(stations_filename, err))
+            raise ValueError('Error loading stations file {}. {}'.format(filename, err))
         else:
             try:
                 self._stations = self._stations.set_index('Station')
             except:
                 raise ValueError('Stations file has no column header: Station')
 
-        self._date_calcs_format = MetPostProcessor.DEFAULT_DATE_CALCS_FORMAT
-        self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
-        self._reference_num_stations = MetPostProcessor.DEFAULT_REFERENCE_NUMBER_STATIONS
-        self._reference_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
-        self._min_years = MetPostProcessor.DEFAULT_MIN_YEARS
-        self._cols_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
-        self._met_data = None
-        self.imputer = None
-        self.quantile_transformer = None
-
-    @property
-    def stations(self):
-        return self._stations
 
     def post_process(self, file_in, outfile_suffix='',
                      date_range=PostProcessor.DEFAULT_DATE_RANGE,
@@ -120,7 +120,7 @@ class MetPostProcessor(PostProcessor):
         self.find_and_drop_duplicates_and_unwanted_stations(exclude_site_list)
 
         print('dropping single daily measurement stations')
-        self.drop_single_daily_measurement_stations(print_stats)
+        self.drop_single_daily_measurement_stations()
 
         print('filtering to remove unrealistically low temperatures')
         self.remove_low_temperature_data(min_temperature)
@@ -135,7 +135,7 @@ class MetPostProcessor(PostProcessor):
             print('Exiting post-processing: Metadata is empty after initial filtering processes')
             return
 
-        if impute_data:
+        if self._impute_data:
             print('imputation of data, returning hourly data')
             met_data_temp, met_data_pres, met_data_dewpoint = self.organise_data_imputation(
                 reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint)
@@ -145,7 +145,7 @@ class MetPostProcessor(PostProcessor):
                 req_sites_temp, req_sites_pres, req_sites_dewpoint)
 
         print('calculation of relative humidity from temperature and dew point temperature')
-        met_data_rh = self.rh_calculations(met_data_temp, met_data_dewpoint, print_stats)
+        met_data_rh = self.rh_calculations(met_data_temp, met_data_dewpoint)
 
         # calculate the daily max and mean for each station
         met_data_hourly = self.combine_and_organise_mean_max(met_data_temp, met_data_pres, met_data_rh)
@@ -228,13 +228,13 @@ class MetPostProcessor(PostProcessor):
         self._met_data = met_data_reduced
 
 
-    def drop_single_daily_measurement_stations(self, print_stats):
+    def drop_single_daily_measurement_stations(self):
         # group the data by date, and count the readings per day
         tempgroups = self._met_data.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
         data_counts = tempgroups.count()
 
         # some diagnostic output, if required
-        if print_stats:
+        if self._print_stats:
             self.print_data_count_stats(data_counts)
 
         # find the stations and days with single temperature measurements for that day
@@ -253,7 +253,7 @@ class MetPostProcessor(PostProcessor):
         #         this where the data sets are too sparse to be used.
         station_single_list = [x for x in station1_list if x not in station24_list]
 
-        if print_stats:
+        if self._print_stats:
             print('single daily measurement stations to drop')
             print(station_single_list)
 
@@ -267,7 +267,7 @@ class MetPostProcessor(PostProcessor):
         met_data_reduced = self._met_data.drop(index=indexes_to_drop)
 
         # print diag output for new dataset
-        if print_stats:
+        if self._print_stats:
             print('new stats for the reduced data:')
             tempgroups = met_data_reduced.groupby(['siteID',pd.Grouper(key='date', freq='1D')])
             data_counts = tempgroups.count()
@@ -338,7 +338,7 @@ class MetPostProcessor(PostProcessor):
 
     #%% functions for calculating RH from temperature and dew point temperature data
 
-    def rh_calculations(self, met_data_temp, met_data_dewpoint, print_stats):
+    def rh_calculations(self, met_data_temp, met_data_dewpoint):
         # merge the two input datasets, dropping indexes which are not in both
         met_data_all = met_data_temp.merge(met_data_dewpoint, how='inner', left_index=True, right_index=True)
         if self.verbose > 1: print('Met data in: {}'.format(met_data_all))
@@ -352,7 +352,7 @@ class MetPostProcessor(PostProcessor):
         met_data_out['rel_hum.flag'] = met_data_all[['temperature.flag','dewpoint.flag']].values.max(1)
 
         # plot the distribution of the calculated RH difference from measured RH
-        if print_stats:
+        if self._print_stats:
             met_data_internal = self._met_data.set_index(['date','siteID'])
 
             met_data_internal['rh2'] = met_data_out['rel_hum']
@@ -369,10 +369,10 @@ class MetPostProcessor(PostProcessor):
 
     #%% station geographic routines
 
-    def get_station_distances(self, site_in,useful_sites_in):
+    def get_station_distances(self, site_in, useful_sites_in):
 
-        station_location = (self._stations.loc[site_in]['Latitude'], self._stations.loc[site_in]['Longitude'])
-        station_distances = self.calc_station_distances(stations_in=self._stations.loc[useful_sites_in], \
+        station_location = (self.stations.loc[site_in]['Latitude'], self.stations.loc[site_in]['Longitude'])
+        station_distances = self.calc_station_distances(stations_in=self.stations.loc[useful_sites_in], \
                                                    stat_location=station_location)
 
         # sort by distance, then drop any station which is the same location as our site of interest
