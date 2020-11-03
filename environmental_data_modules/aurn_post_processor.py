@@ -84,7 +84,7 @@ class AurnPostProcessor(PostProcessor):
         stat_info = station_distances.idxmin(axis=0)
         station_data = station_distances.loc[stat_info[0]]
 
-        return (station_data.name, station_data[0])
+        return station_data.name, station_data[0]
 
     def get_closest_station_data(self, stations_centre, station_distances, station_id, station_number):
 
@@ -102,7 +102,7 @@ class AurnPostProcessor(PostProcessor):
 
             station_distances = station_distances.drop(index=new_info[0])
 
-        return (stations_centre)
+        return stations_centre
 
     def proc_all_stations(self, stations_centre, stations_input, station_number):
 
@@ -121,7 +121,7 @@ class AurnPostProcessor(PostProcessor):
                                                        station_id=index, \
                                                        station_number=station_number)
 
-        return (stations_centre)
+        return stations_centre
 
     def station_listing(self, grouped_data_in, min_years=1, useful_num_years=3.5):
         '''
@@ -160,7 +160,7 @@ class AurnPostProcessor(PostProcessor):
             if (date_num > useful_num_years * 365):
                 useful_site_list.append(site)
 
-        return (required_site_list, useful_site_list)
+        return required_site_list, useful_site_list
 
     def get_station_distances(self, stations_in, site_in, useful_sites_in):
 
@@ -173,7 +173,7 @@ class AurnPostProcessor(PostProcessor):
         station_distances[station_distances.Distance == 0] = np.nan
         station_distances = station_distances.dropna()
 
-        return (station_distances)
+        return station_distances
 
     # %%
 
@@ -204,7 +204,7 @@ class AurnPostProcessor(PostProcessor):
             if (year <= latest_year and year >= earliest_year):
                 years_process.append(year)
 
-        return (years_process)
+        return years_process
 
     def download_and_open_datafiles(self, subset_df, site, station_name, years, data_path):
 
@@ -233,7 +233,7 @@ class AurnPostProcessor(PostProcessor):
             except:
                 print("\t\tCouldn't download and extract data from {} for {}".format(year, station_name))
 
-        return (downloaded_site_data)
+        return downloaded_site_data
 
     def load_sort_data(self, downloaded_site_data):
 
@@ -243,7 +243,7 @@ class AurnPostProcessor(PostProcessor):
         final_dataframe = final_dataframe.sort_values(by='datetime', ascending=True)
         # final_dataframe=final_dataframe.set_index('datetime')
 
-        return (final_dataframe)
+        return final_dataframe
 
     def tidy_hourly_data(self, hourly_dataframe, site):
 
@@ -262,7 +262,7 @@ class AurnPostProcessor(PostProcessor):
 
         working_dataframe['siteID'] = site_name
 
-        return (working_dataframe)
+        return working_dataframe
 
     def postprocess_data(self, input_dataframe, site):
 
@@ -291,7 +291,7 @@ class AurnPostProcessor(PostProcessor):
         data_out['SiteID'] = site_name
         data_out = data_out.reset_index(drop=False).set_index(['Date', 'SiteID'])
 
-        return (data_out)
+        return data_out
 
     # %%
 
@@ -334,7 +334,7 @@ class AurnPostProcessor(PostProcessor):
             pos_out = list(cols).index(col)
             df_out.iloc[:, pos_out] = np_inv[:, pos]
 
-        return (df_out)
+        return df_out
 
     def postprocess_organisation(self, hourly_dataframe, emep_dataframe, stations, site_list, impute_values, useful_num_years,
                                  min_years):
@@ -464,7 +464,7 @@ class AurnPostProcessor(PostProcessor):
                 temp_dataframe = temp_dataframe.rename_axis('time_stamp', axis=0).set_index('sensor_name', append=True)
                 final_dataframe = final_dataframe.append(temp_dataframe)
 
-        return (final_dataframe)
+        return final_dataframe
 
     # %%
     def extract_site_data(self, site_list, metadata, years, data_path, save_to_csv):
@@ -511,7 +511,7 @@ class AurnPostProcessor(PostProcessor):
             if save_to_csv is True:
                 full_hourly_dataframe.to_csv(data_path.joinpath(site + '.csv'), index=False, header=True)
 
-        return (final_dataframe)
+        return final_dataframe
 
     # %%  testing the reshaping code
 
@@ -553,4 +553,4 @@ class AurnPostProcessor(PostProcessor):
             pos_out = list(cols).index(col)
             df_out.iloc[:, pos_out] = np_out[:, pos]
 
-        return (pt, df_out)
+        return pt, df_out
