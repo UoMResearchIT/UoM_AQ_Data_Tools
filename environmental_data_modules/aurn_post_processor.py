@@ -179,7 +179,7 @@ class AurnPostProcessor(PostProcessor):
 
         # Read the RData file into a Pandas dataframe
         try:
-            return pyreadr.read_r(filename)
+            return pyreadr.read_r(filename.name)
         except Exception as err:
             raise ValueError('Error reading into dataframe from R file: {}'.format(filename))
 
