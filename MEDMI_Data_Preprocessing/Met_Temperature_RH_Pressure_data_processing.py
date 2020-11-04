@@ -16,7 +16,7 @@ if __name__ == '__main__':
             ii) retaining the first value where there's no difference in presence of pressure reading
         b) removing stations identified as unwanted
             i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,
-                    and as it is unlikely to be useful comparison with participant data, we will remove itls
+                    and as it is unlikely to be useful comparison with participant data, we will remove it
         c) find and remove the synoptic spot readings"""
 
     parser = argparse.ArgumentParser(description=help_string)
