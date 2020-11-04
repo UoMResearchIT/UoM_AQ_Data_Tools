@@ -8,11 +8,11 @@ SITES="ABD ABD7 ABD8 ARM6 AH"
 
 # EXAMPLE 1
 YEARS="2016 2017"
-ARGUMENTS_1=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES}"
+ARGUMENTS_1=" --metadata_url ${META_DATA_URL} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES}"
 
 # EXAMPLE 2
 YEARS="2017"
-ARGUMENTS_2=" --meta_data_url ${META_DATA_URL} --meta_data_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} --verbose 0"
+ARGUMENTS_2=" --metadata_url ${META_DATA_URL} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} --verbose 0"
 
 
 python AURN_download.py ${ARGUMENTS_2}

@@ -39,6 +39,7 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 (note, the NaN count will include sites that we will not be imputing with data)
 
 """
+import os.path
 
 try:
     import wget
@@ -64,7 +65,7 @@ class AurnPostProcessor(PostProcessor):
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
     BASE_FILE_OUT = '{}/aurn_prcessed{}.csv'
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"
-    DEFAULT_METADATA_URL = ''
+    DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
     DEFAULT_EMEP_FILENAME = None
 
     DEFAULT_SITE_LIST = None
@@ -100,7 +101,7 @@ class AurnPostProcessor(PostProcessor):
                 raise ValueError('Stations file has no column header: Station')
 
 
-    def process(self, metadata, metadata_url=DEFAULT_METADATA_URL, outfile_suffix='', years=AVAILABLE_YEARS,
+    def process(self, metadata_filename, metadata_url=DEFAULT_METADATA_URL, outfile_suffix='', years=AVAILABLE_YEARS,
                 site_list=DEFAULT_SITE_LIST, exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
@@ -109,7 +110,7 @@ class AurnPostProcessor(PostProcessor):
         self._years = years
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
 
-        self._metadata = self.load_metadata(metadata, metadata_url)
+        self._metadata = self.load_metadata(metadata_filename, metadata_url)
         self._emep_data = self.load_emep_data(emep_filename)
 
         self._save_to_csv = save_to_csv
@@ -162,16 +163,25 @@ class AurnPostProcessor(PostProcessor):
         daily_dataframe.to_csv(self.out_dir.joinpath('pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
                                index=True, header=True, float_format='%.2f')
 
-    def load_metadata(self, file_in, alt_url=None):
+    def load_metadata(self, filename, alt_url=None):
         # Does the file exist?
-        if file_in.is_file():
-            print("Data file already exists in this directory, will use this")
+        if os.path.isfile(filename):
+            print("Metadata file {} already exists so will use this".format(filename))
+        elif alt_url:
+            print("Downloading data file using url {}".format(alt_url))
+            try:
+                wget.download(alt_url)
+                print('\nMetadata file loaded from url')
+            except Exception as err:
+                raise ValueError('Error obtaining metadata file from {}. {}'.format(alt_url, err))
         else:
-            print("Downloading data file")
-            wget.download(alt_url)
+            raise ValueError('Metadata filename does not exist and no url alternative provided')
 
         # Read the RData file into a Pandas dataframe
-        return pyreadr.read_r(file_in.name)
+        try:
+            return pyreadr.read_r(filename)
+        except Exception as err:
+            raise ValueError('Error reading into dataframe from R file: {}'.format(filename))
 
     def load_emep_data(self, filename):
         # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)

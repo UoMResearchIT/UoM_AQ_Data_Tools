@@ -50,6 +50,7 @@ if __name__ == '__main__':
     parser.add_argument("--exclude_sites", "-x", metavar='X', dest="exclude_sites", type=str, nargs='+',
                         help="the measurement sites to be excluded. Default is zero sites.")
 
+    # Imput values
     parser.add_argument("--impute_values", "-i", dest="impute_values", action='store_true',
                         help="impute missing values (default).")
     parser.add_argument("--no_impute_values", dest="impute_values", action='store_false',
@@ -146,7 +147,7 @@ if __name__ == '__main__':
         exclude_site_list = []
 
     print('Impute values: {}'.format(args.impute_values))
-    print('Print stats: {}'.format(args.impute_values))
+    print('Print stats: {}'.format(args.print_stats))
 
     if args.verbose:
         verbose = max(args.verbose, 0)

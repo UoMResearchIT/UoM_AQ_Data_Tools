@@ -14,9 +14,11 @@ if __name__ == '__main__':
 
     # read arguments from the command line
     parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
-    parser.add_argument("--meta_data_url", "-m", help="url of the AURN metadata")
-    parser.add_argument("--meta_data_filename", "-f", help="filename of the AURN metadata in RData format (.RData). \
-                                                           Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
+    parser.add_argument("--metadata_url", "-m",
+                        help="url of the AURN metadata. Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_URL))
+    parser.add_argument("--metadata_filename", "-f",
+                        help="filename of the AURN metadata in RData format (.RData). " \
+                             "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
         in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnPostProcessor.AVAILABLE_YEARS]) + ']'))
@@ -30,32 +32,32 @@ if __name__ == '__main__':
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.set_defaults(save_to_csv=True)
 
-    parser.add_argument("--load_from_csv",dest="load_from_csv",action='store_true',help="load input from CSV file.")
-    parser.add_argument("--no_load_from_csv",dest="load_from_csv",action='store_false',help="don't load input from csv file (default).")
-    parser.set_defaults(load_from_csv=False)
-
     parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values (default).")
     parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
     parser.set_defaults(impute_values=True)
 
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
-            help="Level of output for debugging (Default: {} (0 = no verbose output))".format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
+            help="Level of output for debugging (Default: {} (0 = no verbose output))".format(
+                AurnPostProcessor.DEFAULT_VERBOSE))
 
     # read arguments from the command line
     args = parser.parse_args()
 
-    if args.meta_data_url:
-        meta_data_url = args.meta_data_url
+    if args.metadata_url:
+        metadata_url = args.metadata_url
+        print('Metadata url: {}'.format(metadata_url))
     else:
-        print('No meta-data_url given, so will look in local folder for meta_data_filename')
-        meta_data_url = None
+        print('No metadata_url given, so will use {}, if no metadata filename provided.'.format(
+            AurnPostProcessor.DEFAULT_METADATA_URL))
+        metadata_url = None
 
-    if args.meta_data_filename:
-        meta_data_filename = Path(args.meta_data_filename)
+    if args.metadata_filename:
+        metadata_filename = Path(args.metadata_filename)
+        print('Metadata filename: {}'.format(metadata_filename))
     else:
-        print('No meta_data_filename provided, so using default:', DEFAULT_METADATA_FILE)
-        meta_data_filename = Path('AURN_metadata.RData')
+        print('No metadata_filename provided, so using default:', AurnPostProcessor.DEFAULT_METADATA_FILE)
+        metadata_filename = Path('AURN_metadata.RData')
 
     if args.emep_filename:
         emep_filename = Path(args.emep_filename)
@@ -97,26 +99,18 @@ if __name__ == '__main__':
         print('No sites provided, so using all available sites in metadata file')
         site_list = None
 
-
-
     # process control flags
     if args.save_to_csv:
         save_to_csv = args.save_to_csv
     else:
-        print('No save_to_csv provided, so using default: True')
         save_to_csv = True
-
-    if args.load_from_csv:
-        load_from_csv = args.load_from_csv
-    else:
-        print('No load_from_csv provided, so using default: False')
-        load_from_csv = False
+    print('Save to csv: {}'.format(save_to_csv))
 
     if args.impute_values:
         impute_values = args.impute_values
     else:
-        print('No impute_values provided, so using default: True')
         impute_values = True
+    print('Impute values: {}'.format(impute_values))
 
     if args.verbose:
         VERBOSE = max(args.verbose, 0)
@@ -125,14 +119,9 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
         VERBOSE = AurnPostProcessor.DEFAULT_VERBOSE
 
-    # If a single year is passed then convert to a list with a single value
-    if type(years) is int:
-        years = [years]
-    print('Years:', years)
-
-    processor = AurnPostProcessor(meta_data_url=meta_data_url,
-                                  out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, site_list=site_list)
-    processor.process(file_in=meta_data_filename, outfile_suffix='_test1', years=years,
+    processor = AurnPostProcessor(out_dir=AurnPostProcessor.DEFAULT_OUT_DIR)
+    processor.process(metadata_filename=metadata_filename, metadata_url=metadata_url, outfile_suffix='_test1',
+                      years=years, site_list=site_list,
                       exclude_site_list=AurnPostProcessor.DEFAULT_EXCLUDE_STATION_LIST,
                       emep_filename=emep_filename,
                       useful_num_years=useful_num_years,

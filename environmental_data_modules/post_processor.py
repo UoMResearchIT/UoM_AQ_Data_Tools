@@ -29,7 +29,7 @@ class PostProcessor(EnvironmentModule):
         self._print_stats = PostProcessor.DEFAULT_PRINT_STATS
         self._file_in = file_in
         self._skip_input_rows = PostProcessor.DEFAULT_SKIP_INPUT_ROWS
-        self._min_years = MetPostProcessor.DEFAULT_MIN_YEARS
+        self._min_years = PostProcessor.DEFAULT_MIN_YEARS
 
 
     @property
