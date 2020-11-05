@@ -32,7 +32,7 @@ try:
 except:
     pass  # print('Warning: Unable to load library: {}'.format(err))
 
-from .post_processor import PostProcessor
+from environmental_data_modules import PostProcessor
 
 
 class MetPostProcessor(PostProcessor):

@@ -3,7 +3,6 @@
 
 import sys
 sys.path.append("..")
-from pathlib import Path
 import argparse
 
 
@@ -16,7 +15,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
     parser.add_argument("--metadata_url", "-m",
                         help="url of the AURN metadata. Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_URL))
-    parser.add_argument("--metadata_filename", "-f",
+    parser.add_argument("--metadata_filename", "-f", type=str,
                         help="filename of the AURN metadata in RData format (.RData). " \
                              "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
@@ -53,14 +52,14 @@ if __name__ == '__main__':
         metadata_url = None
 
     if args.metadata_filename:
-        metadata_filename = Path(args.metadata_filename)
+        metadata_filename = args.metadata_filename
         print('Metadata filename: {}'.format(metadata_filename))
     else:
         print('No metadata_filename provided, so using default:', AurnPostProcessor.DEFAULT_METADATA_FILE)
-        metadata_filename = Path('AURN_metadata.RData')
+        metadata_filename = AurnPostProcessor.DEFAULT_METADATA_FILE
 
     if args.emep_filename:
-        emep_filename = Path(args.emep_filename)
+        emep_filename = args.emep_filename
         if not emep_filename.is_file():
             print('{} does not exist, so not using emep data'.format(emep_filename))
             emep_filename = None

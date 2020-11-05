@@ -56,7 +56,7 @@ try:
 except:
     pass
 
-from .post_processor import PostProcessor
+from environmental_data_modules import PostProcessor
 
 
 class AurnPostProcessor(PostProcessor):
@@ -111,6 +111,7 @@ class AurnPostProcessor(PostProcessor):
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
 
         self._metadata = self.load_metadata(metadata_filename, metadata_url)
+        print('Loaded metadata')
         self._emep_data = self.load_emep_data(emep_filename)
 
         self._save_to_csv = save_to_csv
@@ -165,29 +166,34 @@ class AurnPostProcessor(PostProcessor):
 
     def load_metadata(self, filename, alt_url=None):
         # Does the file exist?
-        if os.path.isfile(filename):
+        filename = Path(filename)
+        if filename.is_file():
             print("Metadata file {} already exists so will use this".format(filename))
         elif alt_url:
+            # Does the URL alternative exist and does it work
             print("Downloading data file using url {}".format(alt_url))
             try:
-                wget.download(alt_url)
+                filename = Path(wget.download(alt_url))
                 print('\nMetadata file loaded from url')
             except Exception as err:
                 raise ValueError('Error obtaining metadata file from {}. {}'.format(alt_url, err))
         else:
+            # Neither works
             raise ValueError('Metadata filename does not exist and no url alternative provided')
 
         # Read the RData file into a Pandas dataframe
         try:
-            return pyreadr.read_r(filename)
+            print('Reading filename {} into dataframe.'.format(filename.name))
+            return pyreadr.read_r(filename.name)
         except Exception as err:
-            raise ValueError('Error reading into dataframe from R file: {}'.format(filename))
+            raise ValueError('Error reading into dataframe from R file: {} . {}'.format(filename, err))
 
     def load_emep_data(self, filename):
         # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
+        filename = Path(filename)
         if filename:
             print('reading emep file')
-            emep_dataframe = pd.read_csv(filename)
+            emep_dataframe = pd.read_csv(filename.name)
             return emep_dataframe.rename(columns={'NOx': 'NOXasNO2'})
         else:
             return pd.DataFrame()
