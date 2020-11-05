@@ -22,14 +22,15 @@ class PostProcessor(EnvironmentModule):
     DEFAULT_MIN_YEARS = 1
 
 
-    def __init__(self, file_in, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
+    def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(PostProcessor, self).__init__(out_dir, verbose)
 
         self._impute_data = PostProcessor.DEFAULT_IMPUTE_DATA
         self._print_stats = PostProcessor.DEFAULT_PRINT_STATS
-        self._file_in = file_in
+        self._file_in = None
         self._skip_input_rows = PostProcessor.DEFAULT_SKIP_INPUT_ROWS
         self._min_years = PostProcessor.DEFAULT_MIN_YEARS
+        self._stations = None
 
 
     @property

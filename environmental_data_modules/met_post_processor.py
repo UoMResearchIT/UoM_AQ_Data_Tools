@@ -62,6 +62,7 @@ class MetPostProcessor(PostProcessor):
     def __init__(self, out_dir=DEFAULT_OUT_DIR, stations_filename=DEFAULT_STATIONS_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
+        self.stations = stations_filename
 
 
         self._date_calcs_format = MetPostProcessor.DEFAULT_DATE_CALCS_FORMAT
@@ -102,6 +103,8 @@ class MetPostProcessor(PostProcessor):
         self._min_years = min_years
         self._reference_num_years = reference_num_years
         self.file_out = MetPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
+        self._impute_data = impute_data
+        self._print_stats = print_stats
 
         self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
                                    initial_strategy=inital_strategy, max_iter=max_iter, verbose=self.verbose,

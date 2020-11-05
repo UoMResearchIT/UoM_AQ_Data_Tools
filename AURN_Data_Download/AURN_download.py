@@ -23,7 +23,7 @@ if __name__ == '__main__':
         in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnPostProcessor.AVAILABLE_YEARS]) + ']'))
     parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
     parser.add_argument("--useful_num_years", "-u", type=int, help="minimum number of years of data for any site that \
-        we are going to use as a reference site later")
+        we are going to use as a reference site later. (this cannot be less than min_years)")
     parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
 
@@ -84,12 +84,12 @@ if __name__ == '__main__':
 
     if args.useful_num_years:
         useful_num_years = max(args.useful_num_years,min_years)
-        print('Useful number of years (minimum number of years of data for any site that we are going to use as a \
-            reference site later; this cannot be less than min_years):', useful_num_years)
+        print('Useful number of years:', useful_num_years)
     else:
-        print('No useful_num_years provided, so using default: max of min_years and 0.8 * number of years: 0.8*{}={})'
-              .format(min_years, 0.8*len(years)))
-        useful_num_years = max(0.8*len(years), min_years)
+        useful_num_years = max(min_years, 0.8 * len(years))
+        print('No useful_num_years provided, so using default: max(min_years, 0.8*number of years): \
+         Max({}, 0.8*{}={})'.format(min_years, len(years), max(min_years, 0.8*len(years))))
+
 
     if args.sites:
         site_list = args.sites
@@ -112,16 +112,19 @@ if __name__ == '__main__':
     print('Impute values: {}'.format(impute_values))
 
     if args.verbose:
-        VERBOSE = max(args.verbose, 0)
-        print('verbose: ', VERBOSE)
+        verbose = max(args.verbose, 0)
+        print('verbose: ', verbose)
     else:
         print('No verbose flag provided, so using default: {}'.format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
-        VERBOSE = AurnPostProcessor.DEFAULT_VERBOSE
+        verbose = AurnPostProcessor.DEFAULT_VERBOSE
 
-    processor = AurnPostProcessor(out_dir=AurnPostProcessor.DEFAULT_OUT_DIR)
-    processor.process(metadata_filename=metadata_filename, metadata_url=metadata_url, outfile_suffix='_test1',
-                      years=years, site_list=site_list,
-                      exclude_site_list=AurnPostProcessor.DEFAULT_EXCLUDE_STATION_LIST,
+
+    processor = AurnPostProcessor(out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=verbose)
+    processor.process(metadata_filename=metadata_filename,
+                      metadata_url=metadata_url,
+                      outfile_suffix='_test1',
+                      years=years,
+                      site_list=site_list,
                       emep_filename=emep_filename,
                       useful_num_years=useful_num_years,
                       save_to_csv=AurnPostProcessor.DEFAULT_SAVE_TO_CSV)

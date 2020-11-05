@@ -22,6 +22,9 @@ theses, preparing model inputs, and performing the simulations.
 The MEDMI dataset are accessed using the python2 installation on their system, no more
 packages require installing to run the scripts for this.
 
+We recommend using conda to import the required python libraries. Using standalone pip is
+untested. 
+
 The processing scripts for extracting the EMEP data are written in python3. To
 install the packages needed for these (using conda and pip) use this script:
 `conda env create -f env_emep.yml`

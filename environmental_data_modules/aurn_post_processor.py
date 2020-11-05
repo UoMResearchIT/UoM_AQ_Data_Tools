@@ -70,7 +70,6 @@ class AurnPostProcessor(PostProcessor):
 
     DEFAULT_SITE_LIST = None
     DEFAULT_COLS_SPECIFIC_LIST = []
-    DEFAULT_EXCLUDE_STATION_LIST = []
     AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
     DEFAULT_SAVE_TO_CSV = True
     DEFAULT_USEFUL_NUM_YEARS = None
@@ -86,42 +85,41 @@ class AurnPostProcessor(PostProcessor):
         self._useful_num_years = AurnPostProcessor.DEFAULT_USEFUL_NUM_YEARS
         self._min_years = AurnPostProcessor.DEFAULT_MIN_YEARS
         self._impute_data = AurnPostProcessor.DEFAULT_IMPUTE_DATA
-
+        self._site_list = AurnPostProcessor.DEFAULT_SITE_LIST
 
     @PostProcessor.stations.setter
-    def stations(self, filename):
-        try:
-            self._stations = pd.read_csv(filename)
-        except Exception as err:
-            raise ValueError('Error loading stations file {}. {}'.format(filename, err))
-        else:
-            try:
-                self._stations = self._stations.set_index('Station')
-            except:
-                raise ValueError('Stations file has no column header: Station')
+    def stations(self, raw_data):
+        if self.verbose > 0:
+            print('Loading stations data metadata')
 
+        try:
+            stations = raw_data.drop_duplicates()
+            stations = stations.rename(columns={"site_id": "SiteID", "latitude": "Latitude", "longitude": "Longitude"})
+            stations = stations.set_index('SiteID')
+        except Exception as err:
+            raise ValueError('Unable to get correct site data from Metadata input file. Check metadata file content.')
+
+        self._stations = stations
 
     def process(self, metadata_filename, metadata_url=DEFAULT_METADATA_URL, outfile_suffix='', years=AVAILABLE_YEARS,
-                site_list=DEFAULT_SITE_LIST, exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
+                site_list=DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
                 impute_data = PostProcessor.DEFAULT_IMPUTE_DATA,
                 save_to_csv=DEFAULT_SAVE_TO_CSV):
-        self._years = years
+
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
 
         self._metadata = self.load_metadata(metadata_filename, metadata_url)
-        print('Loaded metadata')
         self._emep_data = self.load_emep_data(emep_filename)
-
         self._save_to_csv = save_to_csv
         self._impute_data = impute_data
 
+        self._years = years
         if min_years:
             self._min_years = min_years
         else:
             self._min_years = 0.4*len(self._years)
-
         if useful_num_years:
             self._useful_num_years = useful_num_years
         else:
@@ -129,12 +127,13 @@ class AurnPostProcessor(PostProcessor):
 
         # get list of sites to process extract_site_data
         if not site_list:
-            site_list = self._meta_data['AURN_metadata']['site_id'].unique()
+            self._site_list = self._meta_data['AURN_metadata']['site_id'].unique()
         else:
             # Todo - Test that sites provided are correct
-            pass
+            self._site_list = site_list
 
-        self.stations = metadata.name
+        self.stations = self._metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
+        if self.verbose > 1: print('Stations: \n {}'.format(self.stations))
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data()
@@ -161,7 +160,7 @@ class AurnPostProcessor(PostProcessor):
         daily_dataframe = daily_dataframe.sort_index()
 
         # write this dataset to file
-        daily_dataframe.to_csv(self.out_dir.joinpath('pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
+        daily_dataframe.to_csv(os.path.join(self.out_dir,'pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
                                index=True, header=True, float_format='%.2f')
 
     def load_metadata(self, filename, alt_url=None):
@@ -190,13 +189,21 @@ class AurnPostProcessor(PostProcessor):
 
     def load_emep_data(self, filename):
         # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
-        filename = Path(filename)
         if filename:
+            filename = Path(filename)
             print('reading emep file')
-            emep_dataframe = pd.read_csv(filename.name)
-            return emep_dataframe.rename(columns={'NOx': 'NOXasNO2'})
+            try:
+                emep_dataframe = pd.read_csv(filename.name)
+            except Exception as err:
+                raise ValueError('Error loading the emap data from filename: {} . {}'.format(filename, err))
+            try:
+                return emep_dataframe.rename(columns={'NOx': 'NOXasNO2'})
+            except Exception as err:
+                raise ValueError('EMEP file does not contain an \'NOx\' column')
         else:
             return pd.DataFrame()
+
+
 
     # functions for station indentifying
 
@@ -278,14 +285,14 @@ class AurnPostProcessor(PostProcessor):
             if (date_num > self._min_years * 365):
                 required_site_list.append(site)
                 print('\t{} has {} years of data'.format(site, date_num / 365))
-            if (date_num > self.useful_num_years * 365):
+            if (date_num > self._useful_num_years * 365):
                 useful_site_list.append(site)
 
         return required_site_list, useful_site_list
 
     def get_station_distances(self, stations_in, site_in, useful_sites_in):
 
-        station_location = (stations_in.loc[site_in]['Latitude'], stations_in.loc[site_in]['Longitude'])
+        station_location = stations_in.loc[site_in]['Latitude'], stations_in.loc[site_in]['Longitude']
         station_distances = self.calc_station_distances(stations_in=stations_in.loc[useful_sites_in],
                                                    stat_location=station_location)
 
@@ -327,7 +334,7 @@ class AurnPostProcessor(PostProcessor):
 
         return years_process
 
-    def download_and_open_datafiles(self, subset_df, site, station_name, years):
+    def download_and_open_datafiles(self, site, station_name, years):
 
         downloaded_site_data = []
 
@@ -338,8 +345,8 @@ class AurnPostProcessor(PostProcessor):
                 print("\tdownloading file {}".format(download_url))
 
                 # Check to see if file exists or not. Special case for current year as updates on hourly basis
-                filename_path = self.out_dir.joinpath(downloaded_file)
-                if (filename_path.is_file() is True):
+                filename_path = os.path.join(self.out_dir, downloaded_file)
+                if os.path.exists(filename_path):
                     print("\t\tData file already exists, will use this")
                 else:
                     print("\t\tDownloading data file for ", station_name, " in ", str(year))
@@ -351,8 +358,8 @@ class AurnPostProcessor(PostProcessor):
 
                 # Append to dataframe list
                 downloaded_site_data.append(downloaded_data[site + "_" + str(year)])
-            except:
-                print("\t\tCouldn't download and extract data from {} for {}".format(year, station_name))
+            except Exception as err:
+                print("\t\tCouldn't download and extract data from {} for {}. {}".format(year, station_name, err))
 
         return downloaded_site_data
 
@@ -457,9 +464,11 @@ class AurnPostProcessor(PostProcessor):
 
         return df_out
 
-    def postprocess_organisation(self, hourly_dataframe, impute_values):
+    def postprocess_organisation(self, hourly_dataframe):
 
         final_dataframe = pd.DataFrame()
+        if self.verbose > 1:
+            print('Hourly dataframe: \n {}'.format(hourly_dataframe))
         site_list_internal = hourly_dataframe["SiteID"].unique()
 
         start_date = '2016-1-1'
@@ -473,10 +482,10 @@ class AurnPostProcessor(PostProcessor):
         spc_list = daily_hour_counts.columns.values
 
         # imputation of the values requires more preprocessing and work...
-        if impute_values:
+        if self._impute_data:
             # set the imputer options (if we are using them)
             imputer = IterativeImputer(random_state=0, add_indicator=False,
-                                       initial_strategy='mean', max_iter=100, verbose=2,
+                                       initial_strategy='mean', max_iter=100, verbose=self.verbose,
                                        estimator=BayesianRidge())
             # set the power transform options
             pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
@@ -512,7 +521,7 @@ class AurnPostProcessor(PostProcessor):
                 # copy these to a new dataframe
                 working_hourly_dataframe = pd.DataFrame([], index=date_index)
                 working_hourly_dataframe[req_spc] = \
-                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][req_spc]
+                    hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][req_spc]
 
                 # get list of neighbouring sites for each of the chemical species of interest
                 for spc in spc_list:
@@ -607,7 +616,7 @@ class AurnPostProcessor(PostProcessor):
                 continue
 
             # download the datasets
-            downloaded_site_data = self.download_and_open_datafiles(subset_df, site, station_name, years_process)
+            downloaded_site_data = self.download_and_open_datafiles(site, station_name, years_process)
 
             # if we couldn't download the data, skip this site
             if len(downloaded_site_data) == 0:
@@ -628,7 +637,7 @@ class AurnPostProcessor(PostProcessor):
 
             # Now save the full hourly dataframe as a .csv file
             if self._save_to_csv is True:
-                full_hourly_dataframe.to_csv(self.out_dir.joinpath(site + '.csv'), index=False, header=True)
+                full_hourly_dataframe.to_csv(os.path.join(self.out_dir, site + '.csv'), index=False, header=True)
 
         return final_dataframe
 
