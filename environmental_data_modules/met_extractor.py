@@ -6,7 +6,7 @@ except:
 from cmath import polar
 import json
 
-from .environment_module import EnvironmentModule
+from environmental_data_modules import EnvironmentModule
 
 
 class MetExtractor(EnvironmentModule):

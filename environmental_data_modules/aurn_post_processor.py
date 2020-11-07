@@ -42,8 +42,6 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 import os.path
 
 try:
-    import wget
-    import pyreadr
     import datetime
     import pandas as pd
     import numpy as np
@@ -56,18 +54,18 @@ try:
 except:
     pass
 
-from environmental_data_modules import PostProcessor
+from environmental_data_modules import PostProcessor, AurnModule
 
 
-class AurnPostProcessor(PostProcessor):
-    AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
-    SPECIES_LIST = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
+class AurnPostProcessor(PostProcessor, AurnModule):
 
     DEFAULT_OUT_DIR = 'Aurn_processed_data'  #Todo probably need to split class into download/process: download base_path = Path("AURN_data_download")
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
-    BASE_FILE_OUT = '{}/aurn_prcessed{}.csv'
+    BASE_FILE_OUT = '{}/aurn_processed{}.csv'
+
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"
     DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
+
     DEFAULT_EMEP_FILENAME = None
     DEFAULT_SITE_LIST = None
     DEFAULT_COLS_SPECIFIC_LIST = []
@@ -78,7 +76,6 @@ class AurnPostProcessor(PostProcessor):
     def __init__(self, out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
         super(AurnPostProcessor, self).__init__(out_dir, verbose)
 
-        self._years = AurnPostProcessor.AVAILABLE_YEARS
         self._metadata = None
         self._emep_data = None
         self._save_to_csv = AurnPostProcessor.DEFAULT_SAVE_TO_CSV
@@ -101,12 +98,13 @@ class AurnPostProcessor(PostProcessor):
 
         self._stations = stations
 
-    def process(self, metadata_filename, metadata_url=DEFAULT_METADATA_URL, outfile_suffix='', years=AVAILABLE_YEARS,
+    def process(self, in_file, metadata_filename, metadata_url=DEFAULT_METADATA_URL,
                 site_list=DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
-                save_to_csv=DEFAULT_SAVE_TO_CSV):
+                save_to_csv=DEFAULT_SAVE_TO_CSV,
+                outfile_suffix=''):
 
         # Process inputs
 
@@ -117,7 +115,8 @@ class AurnPostProcessor(PostProcessor):
         self._save_to_csv = save_to_csv
         self._impute_data = impute_data
 
-        self._years = years
+        # Get years from input file
+
         if min_years:
             self._min_years = min_years
         else:
@@ -137,22 +136,8 @@ class AurnPostProcessor(PostProcessor):
         self.stations = self._metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
         if self.verbose > 1: print('Stations: \n {}'.format(self.stations))
 
-        # create a dataframe with the hourly dataset for all stations
-        hourly_dataframe = self.extract_site_data()
-        hourly_dataframe = hourly_dataframe.rename(columns={'siteID': 'SiteID'})
-
-        # apply some filtering of negative and zero values
-
-        for species in AurnPostProcessor.SPECIES_LIST:
-            print('filtering {}:'.format(species))
-            try:
-                print('\t{} has {} positive values'.format(species, len(hourly_dataframe.loc[hourly_dataframe[species] > 0.0])))
-                print('\t{} has {} NaNs'.format(species, len(hourly_dataframe.loc[hourly_dataframe[species].isna()])))
-                print('\t{} has {} negative or zero values that will be replaced with NaNs'.format(species, len(
-                    hourly_dataframe.loc[hourly_dataframe[species] <= 0.0])))
-                hourly_dataframe.loc[hourly_dataframe[species] <= 0.0, species] = np.nan
-            except:
-                print('\t{} has  no values'.format(species))
+        # Read in hourly dataframe file
+        hourly_dataframe = pd.read_csv(in_file)
 
         # pull out the daily mean and max values for the site list
         # postprocessing the data set, to get daily data
@@ -165,29 +150,7 @@ class AurnPostProcessor(PostProcessor):
         daily_dataframe.to_csv(os.path.join(self.out_dir, 'pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
                                index=True, header=True, float_format='%.2f')
 
-    def load_metadata(self, filename, alt_url=None):
-        # Does the file exist?
-        filename = Path(filename)
-        if filename.is_file():
-            print("Metadata file {} already exists so will use this".format(filename))
-        elif alt_url:
-            # Does the URL alternative exist and does it work
-            print("Downloading data file using url {}".format(alt_url))
-            try:
-                filename = Path(wget.download(alt_url))
-                print('\nMetadata file loaded from url')
-            except Exception as err:
-                raise ValueError('Error obtaining metadata file from {}. {}'.format(alt_url, err))
-        else:
-            # Neither works
-            raise ValueError('Metadata filename does not exist and no url alternative provided')
 
-        # Read the RData file into a Pandas dataframe
-        try:
-            print('Reading filename {} into dataframe.'.format(filename.name))
-            return pyreadr.read_r(filename.name)
-        except Exception as err:
-            raise ValueError('Error reading into dataframe from R file: {} . {}'.format(filename, err))
 
     def load_emep_data(self, filename):
         # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
@@ -304,95 +267,6 @@ class AurnPostProcessor(PostProcessor):
         station_distances = station_distances.dropna()
 
         return station_distances
-
-    # %%
-
-    # functions for downloading data
-
-    def define_years_to_download(self, subset_df, years):
-
-        # Check to see if your requested years will work and if not, change it
-        # to do this lets create two new columns of datetimes for earliest and latest
-        datetime_start = pd.to_datetime(subset_df['start_date'].values, format='%Y/%m/%d').year
-        # Problem with the end date is it could be ongoing. In which case, convert that entry into a date and to_datetime
-        now = datetime.datetime.now()
-        datetime_end_temp = subset_df['end_date'].values
-        step = 0
-        for i in datetime_end_temp:
-            if i == 'ongoing':
-                datetime_end_temp[step] = str(now.year) + '-' + str(now.month) + '-' + str(now.day)
-            step += 1
-        datetime_end = pd.to_datetime(datetime_end_temp).year
-
-        earliest_year = np.min(datetime_start)
-        latest_year = np.max(datetime_end)
-
-        # now create list of years to process
-        years_process = []
-
-        for year in years:
-            if (year <= latest_year and year >= earliest_year):
-                years_process.append(year)
-
-        return years_process
-
-    def download_and_open_datafiles(self, site, station_name, years):
-
-        downloaded_site_data = []
-
-        for year in years:
-            try:
-                downloaded_file = site + "_" + str(year) + ".RData"
-                download_url = "https://uk-air.defra.gov.uk/openair/R_data/" + downloaded_file
-                print("\tdownloading file {}".format(download_url))
-
-                # Check to see if file exists or not. Special case for current year as updates on hourly basis
-                filename_path = os.path.join(self.out_dir, downloaded_file)
-                if os.path.exists(filename_path):
-                    print("\t\tData file already exists, will use this")
-                else:
-                    print("\t\tDownloading data file for ", station_name, " in ", str(year))
-                    wget.download(download_url, out=str(self.out_dir))
-
-                # Read the RData file into a Pandas dataframe
-                downloaded_data = pyreadr.read_r(str(filename_path))
-                # Drop non-required fields
-
-                # Append to dataframe list
-                downloaded_site_data.append(downloaded_data[site + "_" + str(year)])
-            except Exception as err:
-                print("\t\tCouldn't download and extract data from {} for {}. {}".format(year, station_name, err))
-
-        return downloaded_site_data
-
-    def load_sort_data(self, downloaded_site_data):
-
-        final_dataframe = pd.concat(downloaded_site_data, axis=0, ignore_index=True)
-
-        final_dataframe['datetime'] = pd.to_datetime(final_dataframe['date'])
-        final_dataframe = final_dataframe.sort_values(by='datetime', ascending=True)
-        # final_dataframe=final_dataframe.set_index('datetime')
-
-        return final_dataframe
-
-    def tidy_hourly_data(self, hourly_dataframe, site):
-
-        columns_of_interest = ['datetime', 'O3', 'NO2', 'SO2', 'NOXasNO2', 'PM2.5', 'PM10']
-        ds_columns = hourly_dataframe.columns
-
-        # retain the data we are interested in (as not all datasets have all variables)
-        columns_to_retain = set(columns_of_interest) & set(ds_columns)
-        working_dataframe = hourly_dataframe[columns_to_retain]
-
-        working_dataframe = working_dataframe.rename(columns={'datetime': 'Date'})
-
-        # add the site as a new column, and set as part of multiindex with the date
-        # site_name = "{} [AQ]".format(site)
-        site_name = "{}".format(site)
-
-        working_dataframe['siteID'] = site_name
-
-        return working_dataframe
 
     def postprocess_data(self, input_dataframe, site):
 
@@ -600,52 +474,6 @@ class AurnPostProcessor(PostProcessor):
 
         return final_dataframe
 
-    # %%
-    def extract_site_data(self):
-
-        final_dataframe = pd.DataFrame()
-
-        for site in self._site_list:
-
-            # select our subset of metadata for this station
-            subset_df = self._metadata['AURN_metadata'][self._metadata['AURN_metadata'].site_id == site]
-            station_name = subset_df['site_name'].values[0]
-
-            print("processing site {} ({})".format(site, station_name))
-
-            # get the list of years of data for this station
-            years_process = self.define_years_to_download(subset_df, self._years)
-
-            # if the list of years is empty, then skip this site
-            if not years_process:
-                print("\t\tNo data for years of interest, skipping this site")
-                continue
-
-            # download the datasets
-            downloaded_site_data = self.download_and_open_datafiles(site, station_name, years_process)
-
-            # if we couldn't download the data, skip this site
-            if len(downloaded_site_data) == 0:
-                print("\t\tNo data could be downloaded for {}".format(station_name))
-                continue
-
-            # combine and sort data
-            full_hourly_dataframe = self.load_sort_data(downloaded_site_data)
-
-            # tidy data, adding site column and removing excess columns
-            full_hourly_dataframe = self.tidy_hourly_data(full_hourly_dataframe, site)
-
-            # return the full hourly dataset
-            final_dataframe = final_dataframe.append(full_hourly_dataframe)
-
-            # postprocessing the data set, to get daily data
-            # final_dataframe = final_dataframe.append(postprocess_data(full_hourly_dataframe,site))
-
-            # Now save the full hourly dataframe as a .csv file
-            if self._save_to_csv is True:
-                full_hourly_dataframe.to_csv(os.path.join(self.out_dir, site + '.csv'), index=False, header=True)
-
-        return final_dataframe
 
     # %%  testing the reshaping code
 

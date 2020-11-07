@@ -20,11 +20,11 @@ if __name__ == '__main__':
                              "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
-        in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnPostProcessor.AVAILABLE_YEARS]) + ']'))
+        in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnExtractor.AVAILABLE_YEARS]) + ']'))
     parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
     parser.add_argument("--useful_num_years", "-u", type=int, help="minimum number of years of data for any site that \
         we are going to use as a reference site later. (this cannot be less than min_years)")
-    parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
+    parser.add_argument("--sites", "-i", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
     parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
@@ -35,10 +35,10 @@ if __name__ == '__main__':
 
     # output directory/file names
     parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
-                        help="output directory name. Default: {}".format(MetExtractor.DEFAULT_OUT_DIR))
+                        help="output directory name. Default: {}".format(AurnExtractor.DEFAULT_OUT_DIR))
     parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
                         help="suffix to be appended to output file name. Default: {}".format(
-                            MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
+                            AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
             help="Level of output for debugging (Default: {} (0 = no verbose output))".format(
@@ -126,15 +126,21 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
         verbose = AurnPostProcessor.DEFAULT_VERBOSE
 
-    extractor = AurnExtractor(out_dir=)
+    extractor = AurnExtractor(out_dir=outdir_name, verbose=verbose)
+    extractor.extract_data(metadata_filename=metadata_filename,
+                           metadata_url=metadata_url,
+                           years=years,
+                           site_list=site_list,
+                           save_to_csv=args.save_to_csv,
+                           outfile_suffix=outfile_suffix)
 
     processor = AurnPostProcessor(out_dir=outdir_name, verbose=verbose)
-    processor.process(metadata_filename=metadata_filename,
-                      metadata_url=metadata_url,
-                      outfile_suffix= outfile_suffix,
-                      years=years,
-                      site_list=site_list,
-                      emep_filename=emep_filename,
-                      useful_num_years=useful_num_years,
-                      impute_data=args.impute_values,
-                      save_to_csv=args.save_to_csv)
+    processor.process(  in_file=AurnExtractor.file_out,
+                        metadata_filename=metadata_filename,
+                        metadata_url=metadata_url,
+                        outfile_suffix= outfile_suffix,
+                        site_list=site_list,
+                        emep_filename=emep_filename,
+                        useful_num_years=useful_num_years,
+                        impute_data=args.impute_values,
+                        save_to_csv=args.save_to_csv)
