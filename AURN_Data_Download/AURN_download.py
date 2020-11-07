@@ -26,15 +26,12 @@ if __name__ == '__main__':
         we are going to use as a reference site later. (this cannot be less than min_years)")
     parser.add_argument("--sites", "-s", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
-
     parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.set_defaults(save_to_csv=True)
-
     parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values (default).")
     parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
     parser.set_defaults(impute_values=True)
-
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
             help="Level of output for debugging (Default: {} (0 = no verbose output))".format(
@@ -98,18 +95,8 @@ if __name__ == '__main__':
         print('No sites provided, so using all available sites in metadata file')
         site_list = None
 
-    # process control flags
-    if args.save_to_csv:
-        save_to_csv = args.save_to_csv
-    else:
-        save_to_csv = True
-    print('Save to csv: {}'.format(save_to_csv))
-
-    if args.impute_values:
-        impute_values = args.impute_values
-    else:
-        impute_values = True
-    print('Impute values: {}'.format(impute_values))
+    print('Save to csv: {}'.format(args.save_to_csv))
+    print('Impute values: {}'.format(args.impute_values))
 
     if args.verbose:
         verbose = max(args.verbose, 0)
@@ -127,6 +114,5 @@ if __name__ == '__main__':
                       site_list=site_list,
                       emep_filename=emep_filename,
                       useful_num_years=useful_num_years,
-                      save_to_csv=AurnPostProcessor.DEFAULT_SAVE_TO_CSV)
-
-
+                      impute_data=args.impute_values,
+                      save_to_csv=args.save_to_csv)

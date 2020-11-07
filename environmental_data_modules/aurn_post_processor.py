@@ -60,6 +60,8 @@ from environmental_data_modules import PostProcessor
 
 
 class AurnPostProcessor(PostProcessor):
+    AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
+    SPECIES_LIST = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
 
     DEFAULT_OUT_DIR = 'Aurn_processed_data'  #Todo probably need to split class into download/process: download base_path = Path("AURN_data_download")
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
@@ -67,10 +69,8 @@ class AurnPostProcessor(PostProcessor):
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"
     DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
     DEFAULT_EMEP_FILENAME = None
-
     DEFAULT_SITE_LIST = None
     DEFAULT_COLS_SPECIFIC_LIST = []
-    AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
     DEFAULT_SAVE_TO_CSV = True
     DEFAULT_USEFUL_NUM_YEARS = None
     DEFAULT_MIN_YEARS = None
@@ -105,8 +105,10 @@ class AurnPostProcessor(PostProcessor):
                 site_list=DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
-                impute_data = PostProcessor.DEFAULT_IMPUTE_DATA,
+                impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
                 save_to_csv=DEFAULT_SAVE_TO_CSV):
+
+        # Process inputs
 
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
 
@@ -140,17 +142,17 @@ class AurnPostProcessor(PostProcessor):
         hourly_dataframe = hourly_dataframe.rename(columns={'siteID': 'SiteID'})
 
         # apply some filtering of negative and zero values
-        spc_list = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
-        for spc in spc_list:
-            print('filtering {}:'.format(spc))
+
+        for species in AurnPostProcessor.SPECIES_LIST:
+            print('filtering {}:'.format(species))
             try:
-                print('\t{} has {} positive values'.format(spc, len(hourly_dataframe.loc[hourly_dataframe[spc] > 0.0])))
-                print('\t{} has {} NaNs'.format(spc, len(hourly_dataframe.loc[hourly_dataframe[spc].isna()])))
-                print('\t{} has {} negative or zero values that will be replaced with NaNs'.format(spc, len(
-                    hourly_dataframe.loc[hourly_dataframe[spc] <= 0.0])))
-                hourly_dataframe.loc[hourly_dataframe[spc] <= 0.0, spc] = np.nan
+                print('\t{} has {} positive values'.format(species, len(hourly_dataframe.loc[hourly_dataframe[species] > 0.0])))
+                print('\t{} has {} NaNs'.format(species, len(hourly_dataframe.loc[hourly_dataframe[species].isna()])))
+                print('\t{} has {} negative or zero values that will be replaced with NaNs'.format(species, len(
+                    hourly_dataframe.loc[hourly_dataframe[species] <= 0.0])))
+                hourly_dataframe.loc[hourly_dataframe[species] <= 0.0, species] = np.nan
             except:
-                print('\t{} has  no values'.format(spc))
+                print('\t{} has  no values'.format(species))
 
         # pull out the daily mean and max values for the site list
         # postprocessing the data set, to get daily data
@@ -160,7 +162,7 @@ class AurnPostProcessor(PostProcessor):
         daily_dataframe = daily_dataframe.sort_index()
 
         # write this dataset to file
-        daily_dataframe.to_csv(os.path.join(self.out_dir,'pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
+        daily_dataframe.to_csv(os.path.join(self.out_dir, 'pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
                                index=True, header=True, float_format='%.2f')
 
     def load_metadata(self, filename, alt_url=None):
@@ -421,15 +423,8 @@ class AurnPostProcessor(PostProcessor):
 
         return data_out
 
-    # %%
-
     # %%  testing the reshaping code
-
-    def transform_and_impute_data(self, df_in, pt, imputer):
-
-        # define the method we wish to use
-        # pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
-
+    def transform_and_impute_data(self, df_in, power_transformer, imputer):
         # copy the input array, and note the columns
         df_work = df_in.copy(deep=True)
         cols = df_in.columns
@@ -445,30 +440,36 @@ class AurnPostProcessor(PostProcessor):
                 col_save.append(col)
         df_work = df_work.drop(columns=col_remove)
 
+        if self.verbose > 2: print('df_work input to power transformer: \n {}'.format(df_work))
         # power transformer fitting and transforming
-        pt.fit(df_work.dropna())
-        np_out = pt.transform(df_work)
+        power_transformer.fit(df_work.dropna())
+        if self.verbose > 2: print('Power transformer: Completed data fitting. Beginning power transformation')
+        np_out = power_transformer.transform(df_work)
+        if self.verbose > 2: print('Power transformer: Completed transformation. Beginning imputation')
 
         # impute the missing values in this new dataframe
         imputer.fit(np_out)
+        if self.verbose > 2: print('Imputer: Completed imputation fitting. Beginning imputer tranformation')
         imp_out = imputer.transform(np_out)
+        if self.verbose > 2: print('Imputer Completed transformation. Beginning inverse transformation')
 
         # apply the inverse transformation for our datasets (leaving out the indicator flags)
-        np_inv = pt.inverse_transform(imp_out[:, :np_out.shape[1]])
+        np_inv = power_transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
+        if self.verbose > 2: print('Imputer Completed inverse transformation. Beginning copying and tranforming values')
 
         # copy the transformed values to a new dataframe
         df_out = df_in.copy(deep=True)
         for pos, col in enumerate(col_save):
             pos_out = list(cols).index(col)
             df_out.iloc[:, pos_out] = np_inv[:, pos]
+        if self.verbose > 1: print('Imputation: copied transformed values into new dataframe')
 
         return df_out
 
     def postprocess_organisation(self, hourly_dataframe):
 
         final_dataframe = pd.DataFrame()
-        if self.verbose > 1:
-            print('Hourly dataframe: \n {}'.format(hourly_dataframe))
+        if self.verbose > 1: print('Hourly dataframe: \n {}'.format(hourly_dataframe))
         site_list_internal = hourly_dataframe["SiteID"].unique()
 
         start_date = '2016-1-1'
@@ -488,7 +489,7 @@ class AurnPostProcessor(PostProcessor):
                                        initial_strategy='mean', max_iter=100, verbose=self.verbose,
                                        estimator=BayesianRidge())
             # set the power transform options
-            pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
+            power_transformer = preprocessing.PowerTransformer(method='box-cox', standardize=False)
 
             # Set station number
             station_number = min(5, len(site_list_internal) - 1)
@@ -506,11 +507,12 @@ class AurnPostProcessor(PostProcessor):
                 if self.verbose > 0: print('\t\tuse sites {}:'.format(spc), use_sites[spc])
 
             if not self._emep_data.empty:
+                if self.verbose > 0: print('Loading EMEP data')
                 emep_dataframe_internal = self._emep_data.set_index('Date')
 
-            if self.verbose > 0: print('1. Site list internal: ', site_list_internal)
+            if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
             for site in site_list_internal:
-                if self.verbose > 0: print('2. Site: ', site)
+                if self.verbose > 1: print('2. Site: ', site)
 
                 # get list of chemical species that we need to impute for this site (including Date info)
                 req_spc = []
@@ -525,25 +527,29 @@ class AurnPostProcessor(PostProcessor):
 
                 # get list of neighbouring sites for each of the chemical species of interest
                 for spc in spc_list:
-                    if self.verbose > 0: print('3. Species: ', spc)
+                    if self.verbose > 1: print('3. Species: ', spc)
                     station_distances = self.get_station_distances(self.stations, site, use_sites[spc])
-                    if self.verbose > 0: print('4. Station number:', station_number)
-                    if self.verbose > 0: print('5. distances:', station_distances)
-                    if self.verbose > 0: print('6.', len(station_distances))
+                    if self.verbose > 1: print('4. Station number:', station_number)
+                    if self.verbose > 1: print('5. distances:', station_distances)
+                    if self.verbose > 1: print('6.', len(station_distances))
                     for ii in range(0, min(station_number, len(station_distances))):
-                        if self.verbose > 0: print('7. ii', ii)
+                        if self.verbose > 1: print('7. ii', ii)
                         station_code = station_distances.index[ii]
                         working_hourly_dataframe['{}_{}'.format(spc, station_code)] = \
                             hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == station_code][spc]
 
                 # get EMEP predictions of chemical species of interest (if needed)
+                if self.verbose > 1: print('EMEP data: {}'.format(self._emep_data))
                 if not self._emep_data.empty:
+                    if self.verbose > 0: print('Using EMEP data')
                     for spc in spc_list:
                         working_hourly_dataframe['{}_{}'.format(spc, 'EMEP')] = \
                             emep_dataframe_internal[emep_dataframe_internal['SiteID'] == site][spc]
 
                 # run the imputation process
-                imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe, pt=pt, imputer=imputer)
+                imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe,
+                                                                          power_transformer=power_transformer,
+                                                                          imputer=imputer)
 
                 # copy imputed data of interest into original dataframe
                 for spc in spc_list:
@@ -643,10 +649,10 @@ class AurnPostProcessor(PostProcessor):
 
     # %%  testing the reshaping code
 
-    def test_preprocess_code(self, df_in, pt, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
+    def test_preprocess_code(self, df_in, power_transformer, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
 
         # define the method we wish to use
-        # pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
+        # power_transformer = preprocessing.PowerTransformer(method='box-cox', standardize=False)
 
         # define the species which we will convert <=0 values to a minimum value
         # spc_zero_process = ['O3','NO2','NOXasNO2']
@@ -672,8 +678,8 @@ class AurnPostProcessor(PostProcessor):
         df_work = df_work.drop(columns=col_remove)
 
         # power transformer fitting and transforming
-        pt.fit(df_work.dropna())
-        np_out = pt.transform(df_work)
+        power_transformer.fit(df_work.dropna())
+        np_out = power_transformer.transform(df_work)
 
         # copy the transformed values to a new dataframe
         df_out = df_in.copy(deep=True)
@@ -681,4 +687,4 @@ class AurnPostProcessor(PostProcessor):
             pos_out = list(cols).index(col)
             df_out.iloc[:, pos_out] = np_out[:, pos]
 
-        return pt, df_out
+        return power_transformer, df_out
