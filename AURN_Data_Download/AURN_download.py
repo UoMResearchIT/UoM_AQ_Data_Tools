@@ -6,7 +6,7 @@ sys.path.append("..")
 import argparse
 
 
-from environmental_data_modules import AurnPostProcessor
+from environmental_data_modules import AurnExtractor, AurnPostProcessor
 
 
 if __name__ == '__main__':
@@ -32,6 +32,13 @@ if __name__ == '__main__':
     parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values (default).")
     parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
     parser.set_defaults(impute_values=True)
+
+    # output directory/file names
+    parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
+                        help="output directory name. Default: {}".format(MetExtractor.DEFAULT_OUT_DIR))
+    parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
+                        help="suffix to be appended to output file name. Default: {}".format(
+                            MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
             help="Level of output for debugging (Default: {} (0 = no verbose output))".format(
@@ -98,6 +105,20 @@ if __name__ == '__main__':
     print('Save to csv: {}'.format(args.save_to_csv))
     print('Impute values: {}'.format(args.impute_values))
 
+    if args.outdir_name:
+        outdir_name = args.outdir_name
+        print('Using outdir_name: {}'.format(outdir_name))
+    else:
+        print('No outdir_name given, so will use default: {}'.format(AurnExtractor.DEFAULT_OUT_DIR))
+        outdir_name = AurnExtractor.DEFAULT_OUT_DIR
+
+    if args.outfile_suffix:
+        outfile_suffix = args.outfile_suffix
+        print('Using outfile_suffix: {}'.format(outfile_suffix))
+    else:
+        print('No outfile_suffix provided, so using default: {}'.format(str(AurnExtractor.DEFAULT_OUT_FILE_SUFFIX)))
+        outfile_suffix = AurnExtractor.DEFAULT_OUT_FILE_SUFFIX
+
     if args.verbose:
         verbose = max(args.verbose, 0)
         print('verbose: ', verbose)
@@ -105,11 +126,12 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
         verbose = AurnPostProcessor.DEFAULT_VERBOSE
 
+    extractor = AurnExtractor(out_dir=)
 
-    processor = AurnPostProcessor(out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=verbose)
+    processor = AurnPostProcessor(out_dir=outdir_name, verbose=verbose)
     processor.process(metadata_filename=metadata_filename,
                       metadata_url=metadata_url,
-                      outfile_suffix='_test1',
+                      outfile_suffix= outfile_suffix,
                       years=years,
                       site_list=site_list,
                       emep_filename=emep_filename,
