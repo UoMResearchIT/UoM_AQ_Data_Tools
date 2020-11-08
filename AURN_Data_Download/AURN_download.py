@@ -59,7 +59,7 @@ if __name__ == '__main__':
         metadata_filename = args.metadata_filename
         print('Metadata filename: {}'.format(metadata_filename))
     else:
-        print('No metadata_filename provided, so using default:', AurnPostProcessor.DEFAULT_METADATA_FILE)
+        print("No metadata_filename provided, so using default: '{}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
         metadata_filename = AurnPostProcessor.DEFAULT_METADATA_FILE
 
     if args.emep_filename:
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         years = args.years
         print('Years selected:', years)
     else:
-        print('No years provided, so using default: ', '[' + ", ".join([str(int) for int in AVAILABLE_YEARS]) + ']')
+        print('No years provided, so using default: [{}]'.format(", ".join([str(int) for int in AVAILABLE_YEARS])))
         years = AVAILABLE_YEARS
 
     if args.min_years:
@@ -126,18 +126,19 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
         verbose = AurnPostProcessor.DEFAULT_VERBOSE
 
-    extractor = AurnExtractor(out_dir=outdir_name, verbose=verbose)
-    extractor.extract_data(metadata_filename=metadata_filename,
-                           metadata_url=metadata_url,
+    extractor = AurnExtractor(metadata_filename=metadata_filename,
+                              metadata_url=metadata_url,
+                              out_dir=outdir_name, verbose=verbose)
+    extractor.extract_data(
                            years=years,
                            site_list=site_list,
                            save_to_csv=args.save_to_csv,
                            outfile_suffix=outfile_suffix)
 
-    processor = AurnPostProcessor(out_dir=outdir_name, verbose=verbose)
-    processor.process(  in_file=AurnExtractor.file_out,
-                        metadata_filename=metadata_filename,
-                        metadata_url=metadata_url,
+    processor = AurnPostProcessor(metadata_filename=metadata_filename,
+                                  metadata_url=metadata_url,
+                                  out_dir=outdir_name, verbose=verbose)
+    processor.process(  in_file=extractor.file_out,
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
                         emep_filename=emep_filename,

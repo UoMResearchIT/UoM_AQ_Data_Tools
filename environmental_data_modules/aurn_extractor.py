@@ -14,20 +14,19 @@ class AurnExtractor(EnvironmentModule, AurnModule):
     AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
 
     # Define defaults
-    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
-    DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
     DEFAULT_SITE_LIST = None
     DEFAULT_COLS_SPECIFIC_LIST = []
     DEFAULT_SAVE_TO_CSV = True
     BASE_FILE_OUT = '{}/aurn_extracted_data{}.csv'
 
-    def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
+    def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
+                 out_dir=EnvironmentModule.DEFAULT_OUT_DIR,
+                 verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(AurnExtractor, self).__init__(out_dir, verbose)
+        AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
         self._cols_specific = []
         self._file_out = None
-
         self._years = AurnExtractor.AVAILABLE_YEARS
-        self._metadata = None
         self._save_to_csv = AurnExtractor.DEFAULT_SAVE_TO_CSV
         self._site_list = AurnExtractor.DEFAULT_SITE_LIST
 
@@ -35,21 +34,20 @@ class AurnExtractor(EnvironmentModule, AurnModule):
     def file_out(self):
         return self._file_out
 
-    def extract_data(self, metadata_filename, metadata_url=DEFAULT_METADATA_URL,
+    def extract_data(self,
                      years=AVAILABLE_YEARS,
                      site_list=DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
                      outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX):
 
         self._file_out = AurnExtractor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
-        self._metadata = self.load_metadata(metadata_filename, metadata_url)
         self._save_to_csv = save_to_csv
 
         self._years = years
 
         # get list of sites to process extract_site_data
         if not site_list:
-            self._site_list = self._meta_data['AURN_metadata']['site_id'].unique()
+            self._site_list = self.meta_data['AURN_metadata']['site_id'].unique()
         else:
             # Todo - Test that sites provided are correct
             self._site_list = site_list
@@ -72,8 +70,14 @@ class AurnExtractor(EnvironmentModule, AurnModule):
             except:
                 print('\t{} has  no values'.format(species))
 
+        # Put column names in correct order
+        hourly_dataframe = hourly_dataframe[list(AurnModule.EXTRACTED_FILE_COLS)]
+
+        if self.verbose > 1: print('hourly_dataframe: \n {}'.format(hourly_dataframe))
         if save_to_csv:
-            hourly_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
+            # Give index a name (for saving)
+            hourly_dataframe.index.name = AurnModule.EXTRACTED_FILE_INDEX
+            hourly_dataframe.to_csv(self.file_out, header=True)
 
         return hourly_dataframe
 
@@ -84,7 +88,7 @@ class AurnExtractor(EnvironmentModule, AurnModule):
         for site in self._site_list:
 
             # select our subset of metadata for this station
-            subset_df = self._metadata['AURN_metadata'][self._metadata['AURN_metadata'].site_id == site]
+            subset_df = self.metadata['AURN_metadata'][self.metadata['AURN_metadata'].site_id == site]
             station_name = subset_df['site_name'].values[0]
 
             print("processing site {} ({})".format(site, station_name))

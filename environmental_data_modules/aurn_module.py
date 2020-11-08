@@ -6,6 +6,19 @@ from abc import ABCMeta, abstractmethod
 
 class AurnModule(object):
     __metaclass__ = ABCMeta
+    EXTRACTED_FILE_INDEX = 'index'
+    EXTRACTED_FILE_COLS = ['Date', 'SiteID', 'O3', 'NO2', 'NOXasNO2', 'SO2', 'PM2.5','PM10']
+
+    # Define defaults
+    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
+    DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
+
+    def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):
+        self._metadata = self.load_metadata(metadata_filename, metadata_url)
+
+    @property
+    def metadata(self):
+        return self._metadata
 
     def load_metadata(self, filename, alt_url=None):
         # Does the file exist?

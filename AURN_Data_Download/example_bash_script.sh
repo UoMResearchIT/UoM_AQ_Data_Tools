@@ -26,7 +26,7 @@ MINYEARS='1'
 USEYEARS='1'
 # EXAMPLE 1
 YEARS="2016 2017"
-VERBOSE=1
+VERBOSE=3
 ARGUMENTS_1=" --impute_values --metadata_url ${META_DATA_URL} --min_years ${MINYEARS} --useful_num_years ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} --verbose ${VERBOSE}"
 
 

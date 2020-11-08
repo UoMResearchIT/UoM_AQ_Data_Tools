@@ -59,12 +59,9 @@ from environmental_data_modules import PostProcessor, AurnModule
 
 class AurnPostProcessor(PostProcessor, AurnModule):
 
-    DEFAULT_OUT_DIR = 'Aurn_processed_data'  #Todo probably need to split class into download/process: download base_path = Path("AURN_data_download")
+    DEFAULT_OUT_DIR = 'Aurn_processed_data'
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
-    BASE_FILE_OUT = '{}/aurn_processed{}.csv'
-
-    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
-    DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
+    BASE_FILE_OUT = '{}/aurn_processed_daily_{}.csv'
 
     DEFAULT_EMEP_FILENAME = None
     DEFAULT_SITE_LIST = None
@@ -73,10 +70,11 @@ class AurnPostProcessor(PostProcessor, AurnModule):
     DEFAULT_USEFUL_NUM_YEARS = None
     DEFAULT_MIN_YEARS = None
 
-    def __init__(self, out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
+    def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
+                 out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
         super(AurnPostProcessor, self).__init__(out_dir, verbose)
+        AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
 
-        self._metadata = None
         self._emep_data = None
         self._save_to_csv = AurnPostProcessor.DEFAULT_SAVE_TO_CSV
         self._useful_num_years = AurnPostProcessor.DEFAULT_USEFUL_NUM_YEARS
@@ -98,7 +96,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         self._stations = stations
 
-    def process(self, in_file, metadata_filename, metadata_url=DEFAULT_METADATA_URL,
+    def process(self, in_file,
                 site_list=DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
@@ -109,8 +107,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         # Process inputs
 
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
-
-        self._metadata = self.load_metadata(metadata_filename, metadata_url)
         self._emep_data = self.load_emep_data(emep_filename)
         self._save_to_csv = save_to_csv
         self._impute_data = impute_data
@@ -137,7 +133,16 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         if self.verbose > 1: print('Stations: \n {}'.format(self.stations))
 
         # Read in hourly dataframe file
-        hourly_dataframe = pd.read_csv(in_file)
+        hourly_dataframe = pd.read_csv( in_file,
+                                        sep=',',
+                                        usecols=[AurnModule.EXTRACTED_FILE_INDEX].append(AurnModule.EXTRACTED_FILE_COLS),
+                                        index_col=AurnModule.EXTRACTED_FILE_INDEX,
+                                        parse_dates=['Date'])
+
+        if self.verbose > 1:
+            print('Hourly dataframe: \n {}'.format(hourly_dataframe))
+            print('Hourly dataframe data types: \n {}'.format(hourly_dataframe.dtypes))
+
 
         # pull out the daily mean and max values for the site list
         # postprocessing the data set, to get daily data
@@ -147,9 +152,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         daily_dataframe = daily_dataframe.sort_index()
 
         # write this dataset to file
-        daily_dataframe.to_csv(os.path.join(self.out_dir, 'pollution_daily_data_{}-{}.csv'.format(years[0], years[-1])),
-                               index=True, header=True, float_format='%.2f')
-
+        daily_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
 
     def load_emep_data(self, filename):
@@ -343,7 +346,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
     def postprocess_organisation(self, hourly_dataframe):
 
         final_dataframe = pd.DataFrame()
-        if self.verbose > 1: print('Hourly dataframe: \n {}'.format(hourly_dataframe))
         site_list_internal = hourly_dataframe["SiteID"].unique()
 
         start_date = '2016-1-1'
@@ -449,9 +451,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 temp_dataframe = temp_dataframe.rename_axis('time_stamp', axis=0).set_index('sensor_name', append=True)
                 final_dataframe = final_dataframe.append(temp_dataframe)
 
-
         else:  # simpler post processing of data
-
             for site in site_list_internal:
                 # select our subset of metadata for this station
                 station_name = self.stations.loc[site]['site_name']
