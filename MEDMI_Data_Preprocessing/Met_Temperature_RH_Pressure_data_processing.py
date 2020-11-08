@@ -157,7 +157,7 @@ if __name__ == '__main__':
         verbose = MetPostProcessor.DEFAULT_VERBOSE
 
     post_processor = MetPostProcessor(out_dir, stations_filename=stations_filename, verbose=verbose)
-    post_processor.post_process(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
+    post_processor.process(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
                                 exclude_site_list=exclude_site_list,
                                 min_temperature=min_temperature, reference_num_stations=reference_num_stations,
                                 min_years=min_years, reference_num_years=reference_num_years,

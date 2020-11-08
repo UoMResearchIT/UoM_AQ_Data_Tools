@@ -55,15 +55,12 @@ class MetPostProcessor(PostProcessor):
     DEFAULT_IMPUTER_INITIAL_STRATEGY = 'mean'
     DEFAULT_IMPUTER_MAX_ITER = 300
     DEFAULT_IMPUTER_ESTIMATOR = None
-
-    DEFAULT_QT_OUTPUT_DISTRIBUTION = 'normal'
-    DEFAULT_QT_RANDOM_STATE = 0
+    DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION = 'normal'
 
     def __init__(self, out_dir=DEFAULT_OUT_DIR, stations_filename=DEFAULT_STATIONS_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
         self.stations = stations_filename
-
 
         self._date_calcs_format = MetPostProcessor.DEFAULT_DATE_CALCS_FORMAT
         self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
@@ -71,8 +68,15 @@ class MetPostProcessor(PostProcessor):
         self._reference_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
         self._cols_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
         self._met_data = None
-        self.imputer = None
-        self.quantile_transformer = None
+        self._imputer = None
+        self._transformer = None
+
+    @PostProcessor.transformer.setter
+    def transformer(self, transformer):
+        if transformer is None or type(transformer).__name__ is 'QuantileTransformer':
+            self._transformer = transformer
+        else:
+            raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
 
     @PostProcessor.stations.setter
     def stations(self, filename):
@@ -86,17 +90,16 @@ class MetPostProcessor(PostProcessor):
             except:
                 raise ValueError('Stations file has no column header: Station')
 
-
-    def post_process(self, file_in, outfile_suffix='',
-                     date_range=PostProcessor.DEFAULT_DATE_RANGE,
-                     exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
-                     min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
-                     min_years=DEFAULT_MIN_YEARS, reference_num_years=DEFAULT_REFERENCE_NUM_YEARS,
-                     impute_data=PostProcessor.DEFAULT_IMPUTE_DATA, print_stats=PostProcessor.DEFAULT_PRINT_STATS,
-                     random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
-                     inital_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
-                     max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                     output_distribution=DEFAULT_QT_OUTPUT_DISTRIBUTION):
+    def process(self, file_in, outfile_suffix='',
+                date_range=PostProcessor.DEFAULT_DATE_RANGE,
+                exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
+                min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
+                min_years=DEFAULT_MIN_YEARS, reference_num_years=DEFAULT_REFERENCE_NUM_YEARS,
+                impute_data=PostProcessor.DEFAULT_IMPUTE_DATA, print_stats=PostProcessor.DEFAULT_PRINT_STATS,
+                random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
+                initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
+                max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
+                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION):
 
         self.date_range = date_range
         self._reference_num_stations = reference_num_stations
@@ -107,12 +110,12 @@ class MetPostProcessor(PostProcessor):
         self._print_stats = print_stats
 
         self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
-                                   initial_strategy=inital_strategy, max_iter=max_iter, verbose=self.verbose,
+                                   initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
                                    estimator=estimator)
 
         # set the power transform options
-        self.quantile_transformer = preprocessing.QuantileTransformer(
-            output_distribution=output_distribution, random_state=random_state)
+        self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
+                                                             random_state=random_state)
 
         print('checking validity of and loading met data file')
         self._met_data = self.load_met_data(file_in)
@@ -409,15 +412,15 @@ class MetPostProcessor(PostProcessor):
         if self.verbose > 1: print('df_work input to quantile transformer: \n {}'.format(df_work))
 
         # power transformer fitting and transforming
-        self.quantile_transformer.fit(df_work.dropna())
-        np_out = self.quantile_transformer.transform(df_work)
+        self.transformer.fit(df_work.dropna())
+        np_out = self.transformer.transform(df_work)
 
         # impute the missing values in this new dataframe
         self.imputer.fit(np_out)
         imp_out = self.imputer.transform(np_out)
 
         # apply the inverse transformation for our datasets (leaving out the indicator flags)
-        np_inv = self.quantile_transformer.inverse_transform(imp_out[:,:np_out.shape[1]])
+        np_inv = self.transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
 
         # copy the transformed values to a new dataframe
         df_out = df_in.copy(deep=True)

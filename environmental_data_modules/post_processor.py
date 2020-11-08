@@ -37,6 +37,20 @@ class PostProcessor(EnvironmentModule):
     def stations(self):
         return self._stations
 
+    @property
+    def imputer(self):
+        return self._imputer
+
+    @imputer.setter
+    def imputer(self, imputer):
+        if imputer is None or type(imputer).__name__ == 'IterativeImputer':
+            self._imputer = imputer
+        else:
+            raise ValueError('Error setting imputer, incorrect object type: {}'.format(type(imputer)))
+
+    @property
+    def transformer(self):
+        return self._transformer
 
     #%% station geographic routines
     def calc_station_distances(self, stations_in, stat_location):

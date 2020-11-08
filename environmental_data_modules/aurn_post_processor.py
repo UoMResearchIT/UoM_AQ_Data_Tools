@@ -70,6 +70,14 @@ class AurnPostProcessor(PostProcessor, AurnModule):
     DEFAULT_USEFUL_NUM_YEARS = None
     DEFAULT_MIN_YEARS = None
 
+    DEFAULT_IMPUTER_RANDOM_STATE = 0
+    DEFAULT_IMPUTER_ADD_INDICATOR = False
+    DEFAULT_IMPUTER_INITIAL_STRATEGY = 'mean'
+    DEFAULT_IMPUTER_MAX_ITER = 100
+    DEFAULT_IMPUTER_ESTIMATOR = BayesianRidge()
+    DEFAULT_TRANSFORMER_METHOD = 'box-cox'
+    DEFAULT_TRANSFORMER_STANDARDIZE = False
+
     def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
                  out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
         super(AurnPostProcessor, self).__init__(out_dir, verbose)
@@ -81,12 +89,20 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         self._min_years = AurnPostProcessor.DEFAULT_MIN_YEARS
         self._impute_data = AurnPostProcessor.DEFAULT_IMPUTE_DATA
         self._site_list = AurnPostProcessor.DEFAULT_SITE_LIST
+        self._imputer = None
+        self._transformer = None
+
+    @PostProcessor.transformer.setter
+    def transformer(self, transformer):
+        if transformer is None or type(transformer).__name__ == 'PowerTransformer':
+            self._transformer = transformer
+        else:
+            raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
 
     @PostProcessor.stations.setter
     def stations(self, raw_data):
         if self.verbose > 0:
             print('Loading stations data metadata')
-
         try:
             stations = raw_data.drop_duplicates()
             stations = stations.rename(columns={"site_id": "SiteID", "latitude": "Latitude", "longitude": "Longitude"})
@@ -101,6 +117,10 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
+                random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
+                initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
+                max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
+                transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE,
                 save_to_csv=DEFAULT_SAVE_TO_CSV,
                 outfile_suffix=''):
 
@@ -112,7 +132,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         self._impute_data = impute_data
 
         # Get years from input file
-
         if min_years:
             self._min_years = min_years
         else:
@@ -138,26 +157,28 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                                         usecols=[AurnModule.EXTRACTED_FILE_INDEX].append(AurnModule.EXTRACTED_FILE_COLS),
                                         index_col=AurnModule.EXTRACTED_FILE_INDEX,
                                         parse_dates=['Date'])
-
         if self.verbose > 1:
             print('Hourly dataframe: \n {}'.format(hourly_dataframe))
             print('Hourly dataframe data types: \n {}'.format(hourly_dataframe.dtypes))
 
+        # set the imputer options (if we are using them)
+        self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
+                                        initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
+                                        estimator=estimator)
+        # set the power transform options
+        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
         # pull out the daily mean and max values for the site list
         # postprocessing the data set, to get daily data
         daily_dataframe = self.postprocess_organisation(hourly_dataframe)
-
         # sort the data
         daily_dataframe = daily_dataframe.sort_index()
-
         # write this dataset to file
         daily_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
-
     def load_emep_data(self, filename):
         # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
-        if filename:
+        if filename is not None:
             filename = Path(filename)
             print('reading emep file')
             try:
@@ -170,8 +191,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 raise ValueError('EMEP file does not contain an \'NOx\' column')
         else:
             return pd.DataFrame()
-
-
 
     # functions for station indentifying
 
@@ -300,8 +319,8 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         return data_out
 
-    # %%  testing the reshaping code
-    def transform_and_impute_data(self, df_in, power_transformer, imputer):
+    #  testing the reshaping code
+    def transform_and_impute_data(self, df_in):
         # copy the input array, and note the columns
         df_work = df_in.copy(deep=True)
         cols = df_in.columns
@@ -319,19 +338,19 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         if self.verbose > 2: print('df_work input to power transformer: \n {}'.format(df_work))
         # power transformer fitting and transforming
-        power_transformer.fit(df_work.dropna())
+        self.transformer.fit(df_work.dropna())
         if self.verbose > 2: print('Power transformer: Completed data fitting. Beginning power transformation')
-        np_out = power_transformer.transform(df_work)
+        np_out = self.transformer.transform(df_work)
         if self.verbose > 2: print('Power transformer: Completed transformation. Beginning imputation')
 
         # impute the missing values in this new dataframe
-        imputer.fit(np_out)
+        self.imputer.fit(np_out)
         if self.verbose > 2: print('Imputer: Completed imputation fitting. Beginning imputer tranformation')
-        imp_out = imputer.transform(np_out)
+        imp_out = self.imputer.transform(np_out)
         if self.verbose > 2: print('Imputer Completed transformation. Beginning inverse transformation')
 
         # apply the inverse transformation for our datasets (leaving out the indicator flags)
-        np_inv = power_transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
+        np_inv = self.transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
         if self.verbose > 2: print('Imputer Completed inverse transformation. Beginning copying and tranforming values')
 
         # copy the transformed values to a new dataframe
@@ -360,13 +379,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         # imputation of the values requires more preprocessing and work...
         if self._impute_data:
-            # set the imputer options (if we are using them)
-            imputer = IterativeImputer(random_state=0, add_indicator=False,
-                                       initial_strategy='mean', max_iter=100, verbose=self.verbose,
-                                       estimator=BayesianRidge())
-            # set the power transform options
-            power_transformer = preprocessing.PowerTransformer(method='box-cox', standardize=False)
-
             # Set station number
             station_number = min(5, len(site_list_internal) - 1)
 
@@ -423,9 +435,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                             emep_dataframe_internal[emep_dataframe_internal['SiteID'] == site][spc]
 
                 # run the imputation process
-                imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe,
-                                                                          power_transformer=power_transformer,
-                                                                          imputer=imputer)
+                imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe)
 
                 # copy imputed data of interest into original dataframe
                 for spc in spc_list:
@@ -475,12 +485,9 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         return final_dataframe
 
 
-    # %%  testing the reshaping code
+    #  testing the reshaping code
 
-    def test_preprocess_code(self, df_in, power_transformer, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
-
-        # define the method we wish to use
-        # power_transformer = preprocessing.PowerTransformer(method='box-cox', standardize=False)
+    def test_preprocess_code(self, df_in, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
 
         # define the species which we will convert <=0 values to a minimum value
         # spc_zero_process = ['O3','NO2','NOXasNO2']
@@ -506,8 +513,8 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         df_work = df_work.drop(columns=col_remove)
 
         # power transformer fitting and transforming
-        power_transformer.fit(df_work.dropna())
-        np_out = power_transformer.transform(df_work)
+        self.transformer.fit(df_work.dropna())
+        np_out = self.transformer.transform(df_work)
 
         # copy the transformed values to a new dataframe
         df_out = df_in.copy(deep=True)
@@ -515,4 +522,4 @@ class AurnPostProcessor(PostProcessor, AurnModule):
             pos_out = list(cols).index(col)
             df_out.iloc[:, pos_out] = np_out[:, pos]
 
-        return power_transformer, df_out
+        return self.transformer, df_out
