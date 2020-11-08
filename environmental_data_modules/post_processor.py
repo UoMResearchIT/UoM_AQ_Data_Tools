@@ -46,7 +46,7 @@ class PostProcessor(EnvironmentModule):
         if imputer is None or type(imputer).__name__ == 'IterativeImputer':
             self._imputer = imputer
         else:
-            raise ValueError('Error setting imputer, incorrect object type: {}'.format(type(imputer)))
+            raise ValueError('Error setting imputer, incorrect object type: {}'.format(type(imputer).__name__))
 
     @property
     def transformer(self):
