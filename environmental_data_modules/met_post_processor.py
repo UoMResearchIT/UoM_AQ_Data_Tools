@@ -38,7 +38,7 @@ from environmental_data_modules import PostProcessor, MetModule
 
 class MetPostProcessor(PostProcessor, MetModule):
 
-    BASE_FILE_OUT = '{}/daily_mean_max_temp_RH_pres{}.csv'
+    BASE_FILE_OUT = '{}/Met_ppd_daily_mean_max_temp_RH_pres{}.csv'
     DATE_CALCS_FORMAT = '%Y-%m-%d %H:%M:%S'
     INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
 
