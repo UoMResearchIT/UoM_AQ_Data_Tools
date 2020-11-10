@@ -60,12 +60,10 @@ from environmental_data_modules import PostProcessor, AurnModule
 class AurnPostProcessor(PostProcessor, AurnModule):
 
     DEFAULT_OUT_DIR = 'Aurn_processed_data'
-    DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
     BASE_FILE_OUT = '{}/aurn_processed_daily_{}.csv'
 
     DEFAULT_EMEP_FILENAME = None
     DEFAULT_SITE_LIST = None
-    DEFAULT_COLS_SPECIFIC_LIST = []
     DEFAULT_SAVE_TO_CSV = True
     DEFAULT_USEFUL_NUM_YEARS = None
     DEFAULT_MIN_YEARS = None
@@ -74,7 +72,10 @@ class AurnPostProcessor(PostProcessor, AurnModule):
     DEFAULT_IMPUTER_ADD_INDICATOR = False
     DEFAULT_IMPUTER_INITIAL_STRATEGY = 'mean'
     DEFAULT_IMPUTER_MAX_ITER = 100
-    DEFAULT_IMPUTER_ESTIMATOR = BayesianRidge()
+    try:
+        DEFAULT_IMPUTER_ESTIMATOR = BayesianRidge()
+    except:
+        DEFAULT_IMPUTER_ESTIMATOR = None
     DEFAULT_TRANSFORMER_METHOD = 'box-cox'
     DEFAULT_TRANSFORMER_STANDARDIZE = False
 
@@ -154,8 +155,8 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         # Read in hourly dataframe file
         hourly_dataframe = pd.read_csv( in_file,
                                         sep=',',
-                                        usecols=[AurnModule.EXTRACTED_FILE_INDEX].append(AurnModule.EXTRACTED_FILE_COLS),
-                                        index_col=AurnModule.EXTRACTED_FILE_INDEX,
+                                        usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.EXTRACTED_FILE_COLS),
+                                        index_col=AurnModule.INDEX_EXTRACTED,
                                         parse_dates=['Date'])
         if self.verbose > 1:
             print('Hourly dataframe: \n {}'.format(hourly_dataframe))
@@ -292,7 +293,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
     def postprocess_data(self, input_dataframe, site):
 
-        working_dataframe = input_dataframe.drop(columns='SiteID')
+        working_dataframe = input_dataframe.drop(columns=AurnModule.SITE_ID_NEW)
         tempgroups = working_dataframe.groupby(pd.Grouper(key='Date', freq='1D'))
 
         data_counts = tempgroups.count()
@@ -367,8 +368,8 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         final_dataframe = pd.DataFrame()
         site_list_internal = hourly_dataframe["SiteID"].unique()
 
-        start_date = '2016-1-1'
-        end_date = '2019-12-31 23'
+        start_date = self.date_range[0]
+        end_date = self.date_range[1]
         date_index = pd.date_range(start=start_date, end=end_date, freq='1H')
         hourly_dataframe_internal = hourly_dataframe.set_index('Date')
 

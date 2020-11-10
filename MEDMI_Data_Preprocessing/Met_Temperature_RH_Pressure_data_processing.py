@@ -36,9 +36,9 @@ if __name__ == '__main__':
     ## Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
                         help="start and end dates. (array - first two values only). \
-                            Expected date format: {} \n Default: {}".format(
-                            MetPostProcessor.DEFAULT_DATE_RANGE_FORMAT.replace('%', ''),
-                            ' '.join(MetPostProcessor.DEFAULT_DATE_RANGE)))
+                            Expected date format: {} \n Default: [{}, {}]".format(
+                            MetPostProcessor.INPUT_DATE_FORMAT.replace('%', ''),
+                            MetPostProcessor.DEFAULT_START_DATE, MetPostProcessor.DEFAULT_END_DATE))
 
     ## Calculation parameters
     parser.add_argument("--min_years", "-y", type=float, help="minimum number of years of data that a site must have")

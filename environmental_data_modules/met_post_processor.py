@@ -20,26 +20,30 @@ Unified production script for MEDMI data processing. This will:
 
 import pandas as pd
 import numpy as np
-
+from datetime import datetime
 
 try:
-    import metpy.calc as mpcalc
-    from metpy.units import units
     from sklearn.experimental import enable_iterative_imputer
     from sklearn.impute import IterativeImputer
     from sklearn.linear_model import BayesianRidge
     from sklearn import preprocessing
+
+    import metpy.calc as mpcalc
+    from metpy.units import units
 except:
     pass  # print('Warning: Unable to load library: {}'.format(err))
 
-from environmental_data_modules import PostProcessor
+from environmental_data_modules import PostProcessor, MetModule
 
 
-class MetPostProcessor(PostProcessor):
+class MetPostProcessor(PostProcessor, MetModule):
+
+    BASE_FILE_OUT = '{}/daily_mean_max_temp_RH_pres{}.csv'
+    DATE_CALCS_FORMAT = '%Y-%m-%d %H:%M:%S'
+    INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
+
     DEFAULT_OUT_DIR = 'Met_processed_data'
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
-    BASE_FILE_OUT = '{}/daily_mean_max_temp_RH_pres{}.csv'
-
     DEFAULT_COLS_SPECIFIC_LIST = ['temperature', 'rel_hum', 'pressure', 'dewpoint']
     DEFAULT_EXCLUDE_STATION_LIST = [117]
     DEFAULT_MIN_TEMPERATURE = -20
@@ -47,8 +51,6 @@ class MetPostProcessor(PostProcessor):
     DEFAULT_REFERENCE_NUMBER_STATIONS = 5
     DEFAULT_REFERENCE_NUM_YEARS = 0.0625 #3.5
     DEFAULT_MIN_YEARS = 0.04 #1
-
-    DEFAULT_DATE_CALCS_FORMAT = '%Y-%m-%d %H:%M:%S'
 
     DEFAULT_IMPUTER_RANDOM_STATE = 0
     DEFAULT_IMPUTER_ADD_INDICATOR = True
@@ -60,20 +62,20 @@ class MetPostProcessor(PostProcessor):
     def __init__(self, out_dir=DEFAULT_OUT_DIR, stations_filename=DEFAULT_STATIONS_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
+        MetModule.__init__(self)
         self.stations = stations_filename
-
-        self._date_calcs_format = MetPostProcessor.DEFAULT_DATE_CALCS_FORMAT
+        self._date_calcs_format = MetPostProcessor.DATE_CALCS_FORMAT
         self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
         self._reference_num_stations = MetPostProcessor.DEFAULT_REFERENCE_NUMBER_STATIONS
         self._reference_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
-        self._cols_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
+        self._columns_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
         self._met_data = None
         self._imputer = None
         self._transformer = None
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
-        if transformer is None or type(transformer).__name__ is 'QuantileTransformer':
+        if transformer is None or type(transformer).__name__ == 'QuantileTransformer':
             self._transformer = transformer
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
@@ -90,8 +92,7 @@ class MetPostProcessor(PostProcessor):
             except:
                 raise ValueError('Stations file has no column header: Station')
 
-    def process(self, file_in, outfile_suffix='',
-                date_range=PostProcessor.DEFAULT_DATE_RANGE,
+    def process(self, file_in, outfile_suffix='', date_range=None,
                 exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
                 min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
                 min_years=DEFAULT_MIN_YEARS, reference_num_years=DEFAULT_REFERENCE_NUM_YEARS,
@@ -101,7 +102,11 @@ class MetPostProcessor(PostProcessor):
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
                 output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION):
 
-        self.date_range = date_range
+        if date_range is not None:
+            self.date_range = [datetime.strptime(date_range[0], MetPostProcessor.INPUT_DATE_FORMAT),
+                               datetime.strptime(date_range[1], MetPostProcessor.INPUT_DATE_FORMAT)]
+        else:
+            self.date_range = MetPostProcessor.DEFAULT_DATE_RANGE
         self._reference_num_stations = reference_num_stations
         self._min_years = min_years
         self._reference_num_years = reference_num_years
@@ -120,7 +125,7 @@ class MetPostProcessor(PostProcessor):
         print('checking validity of and loading met data file')
         self._met_data = self.load_met_data(file_in)
 
-        if self.verbose > 1: print('Metadata before dropping/filtering: {}'.format(self._met_data))
+        if self.verbose > 1: print('Metadata before dropping/filtering: \n {}'.format(self._met_data))
 
         print('dropping duplicate values and unwanted stations')
         self.find_and_drop_duplicates_and_unwanted_stations(exclude_site_list)
@@ -163,12 +168,11 @@ class MetPostProcessor(PostProcessor):
 
     def load_met_data(self, file_in):
         print('    load data file')
-
         try:
-            met_data = pd.read_csv(file_in, usecols=self.get_all_cols(), skiprows=self._skip_input_rows,
+            met_data = pd.read_csv(file_in, usecols=self.get_all_columns(), skiprows=self._skip_input_rows,
                                    engine='python', sep=',\s*', na_values='None')
-        except:
-            raise ValueError('Error reading specified file: {}'.format(file_in))
+        except Exception as err:
+            raise ValueError('Error reading specified file: {}. {}'.format(file_in, err))
         if len(met_data.index) < 1:
             raise ValueError('Input file ({}) is empty'.format(file_in))
         print('    correct date string')
@@ -187,7 +191,7 @@ class MetPostProcessor(PostProcessor):
 
         for dpoint in range(0,49):
             dcounts = [dpoint]
-            for col_name in self._cols_specific:
+            for col_name in self._columns_specific:
                 dcounts.append(dc_in[dc_in[col_name]==dpoint].count().values[0])
             print('{0:4},{1:7},{2:7},{3:7},{4:7}'.format(*dcounts))
 
@@ -359,7 +363,7 @@ class MetPostProcessor(PostProcessor):
 
         # plot the distribution of the calculated RH difference from measured RH
         if self._print_stats:
-            met_data_internal = self._met_data.set_index(['date','siteID'])
+            met_data_internal = self._met_data.set_index(['date', 'siteID'])
 
             met_data_internal['rh2'] = met_data_out['rel_hum']
 

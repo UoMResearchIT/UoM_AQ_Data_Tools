@@ -1,9 +1,12 @@
-import os
-import wget
-import pyreadr
-import datetime
-import pandas as pd
-import numpy as np
+try:
+    import os
+    import wget
+    import pyreadr
+    import datetime
+    import pandas as pd
+    import numpy as np
+except:
+    pass
 
 from environmental_data_modules import EnvironmentModule, AurnModule
 
@@ -15,24 +18,18 @@ class AurnExtractor(EnvironmentModule, AurnModule):
 
     # Define defaults
     DEFAULT_SITE_LIST = None
-    DEFAULT_COLS_SPECIFIC_LIST = []
     DEFAULT_SAVE_TO_CSV = True
-    BASE_FILE_OUT = '{}/aurn_extracted_data{}.csv'
+    BASE_FILE_OUT = '{}/AURN_extracted{}.csv'
 
     def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
                  out_dir=EnvironmentModule.DEFAULT_OUT_DIR,
                  verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(AurnExtractor, self).__init__(out_dir, verbose)
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
-        self._cols_specific = []
-        self._file_out = None
+        self._base_file_out = AurnExtractor.BASE_FILE_OUT
         self._years = AurnExtractor.AVAILABLE_YEARS
         self._save_to_csv = AurnExtractor.DEFAULT_SAVE_TO_CSV
         self._site_list = AurnExtractor.DEFAULT_SITE_LIST
-
-    @property
-    def file_out(self):
-        return self._file_out
 
     def extract_data(self,
                      years=AVAILABLE_YEARS,
@@ -40,21 +37,21 @@ class AurnExtractor(EnvironmentModule, AurnModule):
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
                      outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX):
 
-        self._file_out = AurnExtractor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
+        self._outfile_suffix = outfile_suffix
+        self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
         self._save_to_csv = save_to_csv
-
         self._years = years
 
         # get list of sites to process extract_site_data
         if not site_list:
-            self._site_list = self.meta_data['AURN_metadata']['site_id'].unique()
+            self._site_list = self.meta_data['AURN_metadata'][AurnModule.SITE_ID_AURN_METADATA].unique()
         else:
             # Todo - Test that sites provided are correct
             self._site_list = site_list
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data()
-        hourly_dataframe = hourly_dataframe.rename(columns={'siteID': 'SiteID'})
+        hourly_dataframe = hourly_dataframe.rename(columns={AurnModule.SITE_ID_EXTRACTED: AurnModule.SITE_ID_NEW})
 
         # apply some filtering of negative and zero values
 
@@ -76,7 +73,7 @@ class AurnExtractor(EnvironmentModule, AurnModule):
         if self.verbose > 1: print('hourly_dataframe: \n {}'.format(hourly_dataframe))
         if save_to_csv:
             # Give index a name (for saving)
-            hourly_dataframe.index.name = AurnModule.EXTRACTED_FILE_INDEX
+            hourly_dataframe.index.name = AurnModule.INDEX_EXTRACTED
             hourly_dataframe.to_csv(self.file_out, header=True)
 
         return hourly_dataframe
@@ -118,6 +115,7 @@ class AurnExtractor(EnvironmentModule, AurnModule):
             # return the full hourly dataset
             final_dataframe = final_dataframe.append(full_hourly_dataframe)
 
+            # Todo Doug: should this be removed
             # postprocessing the data set, to get daily data
             # final_dataframe = final_dataframe.append(postprocess_data(full_hourly_dataframe,site))
 
@@ -131,8 +129,8 @@ class AurnExtractor(EnvironmentModule, AurnModule):
 
     def define_years_to_download(self, subset_df, years):
 
-        # Check to see if your requested years will work and if not, change it
-        # to do this lets create two new columns of datetimes for earliest and latest
+        # Check to see if your requested years will work and if not, change it to do this.
+        # Create two new columns of datetimes for earliest and latest
         datetime_start = pd.to_datetime(subset_df['start_date'].values, format='%Y/%m/%d').year
         # Problem with the end date is it could be ongoing. In which case, convert that entry into a date and to_datetime
         now = datetime.datetime.now()
@@ -210,6 +208,6 @@ class AurnExtractor(EnvironmentModule, AurnModule):
         # site_name = "{} [AQ]".format(site)
         site_name = "{}".format(site)
 
-        working_dataframe['siteID'] = site_name
+        working_dataframe[AurnModule.SITE_ID_EXTRACTED] = site_name
 
         return working_dataframe

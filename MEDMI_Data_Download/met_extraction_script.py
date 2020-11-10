@@ -29,9 +29,9 @@ if __name__ == '__main__':
     # Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
                         help="start and end dates. (array - first two values only). \
-                            Expected date format: {} \n Default: {}".format(
-                            MetExtractor.DEFAULT_DATE_RANGE_FORMAT.replace('%', ''),
-                            ' '.join(MetExtractor.DEFAULT_DATE_RANGE)))
+                            Expected date format: {} \n Default: [{}, {}]".format(
+                            MetExtractor.INPUT_DATE_FORMAT.replace('%', ''),
+                            MetExtractor.DEFAULT_START_DATE, MetExtractor.DEFAULT_END_DATE))
 
 
     # Latitude / longitude

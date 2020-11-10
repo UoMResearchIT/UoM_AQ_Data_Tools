@@ -1,13 +1,18 @@
-import wget
-import pyreadr
-from pathlib import Path
-from abc import ABCMeta, abstractmethod
+try:
+    import wget
+    import pyreadr
+    from pathlib import Path
+    from abc import ABCMeta, abstractmethod
+except:
+    pass
 
 
 class AurnModule(object):
-    __metaclass__ = ABCMeta
-    EXTRACTED_FILE_INDEX = 'index'
-    EXTRACTED_FILE_COLS = ['Date', 'SiteID', 'O3', 'NO2', 'NOXasNO2', 'SO2', 'PM2.5','PM10']
+    INDEX_EXTRACTED = 'index'
+    SITE_ID_EXTRACTED = 'siteID'
+    SITE_ID_NEW = 'SiteID'
+    SITE_ID_AURN_METADATA = 'site_id'
+    EXTRACTED_FILE_COLS = ['Date', 'SiteID', 'O3', 'NO2', 'NOXasNO2', 'SO2', 'PM2.5', 'PM10']
 
     # Define defaults
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"
