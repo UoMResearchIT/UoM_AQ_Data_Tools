@@ -14,6 +14,7 @@ class EnvironmentModule:
     UK_LONGITUDES = [-11., 3.]
     LONGITUDE_RANGE = [-180., 360.]
     LATITUDE_RANGE = [-90., 90.]
+    INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
 
     # Define defaults
     DEFAULT_OUT_FILE_SUFFIX = ''
@@ -63,7 +64,10 @@ class EnvironmentModule:
 
     @date_range.setter
     def date_range(self, range):
-        # Example input: ['2017-1-1_0', '2017-06-30_23']
+        if range is None:
+            self.__date_range = range
+            return
+
         if isinstance(range[0], datetime):
             datetime_1 = range[0]
         else:

@@ -19,7 +19,6 @@ class PostProcessor(EnvironmentModule):
     DEFAULT_IMPUTE_DATA = True
     DEFAULT_PRINT_STATS = True
     DEFAULT_SKIP_INPUT_ROWS = 1
-    DEFAULT_MIN_YEARS = 1
 
 
     def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
@@ -29,13 +28,15 @@ class PostProcessor(EnvironmentModule):
         self._print_stats = PostProcessor.DEFAULT_PRINT_STATS
         self._file_in = None
         self._skip_input_rows = PostProcessor.DEFAULT_SKIP_INPUT_ROWS
-        self._min_years = PostProcessor.DEFAULT_MIN_YEARS
-        self._stations = None
+        self._station_data = None
+        self._min_years_reference = None
+        self._min_years = None
+        self._imputer = None
 
 
     @property
-    def stations(self):
-        return self._stations
+    def station_data(self):
+        return self._station_data
 
     @property
     def imputer(self):
@@ -51,6 +52,46 @@ class PostProcessor(EnvironmentModule):
     @property
     def transformer(self):
         return self._transformer
+
+    @property
+    def impute_data(self):
+        return self._impute_data
+
+    @impute_data.setter
+    def impute_data(self, impute):
+        if not impute in [True, False]:
+            raise Exception('impute_data value must be a boolean. {} was input.'.format(impute))
+        if impute and self.imputer is None:
+            raise Warning('Imputation requested but imputer is currently None')
+        self._impute_data = impute
+
+    @property
+    def min_years_reference(self):
+        return self._min_years_reference
+
+    @min_years_reference.setter
+    def min_years_reference(self, min_years):
+        try:
+            min_years = float(min_years)
+        except:
+            raise ValueError('min_years_reference value ({}) must be numeric'.format(min_years))
+        if min_years < 0:
+            raise ValueError('min_years_reference must be non-negative.')
+        self._min_years_reference = min_years
+
+    @property
+    def min_years(self):
+     return self._min_years
+
+    @min_years.setter
+    def min_years(self, min_years):
+        try:
+            min_years = float(min_years)
+        except:
+            raise ValueError('min_years value ({}) must be numeric'.format(min_years))
+        if min_years < 0:
+            raise ValueError('min_years must be non-negative.')
+        self._min_years = min_years
 
     #%% station geographic routines
     def calc_station_distances(self, stations_in, stat_location):

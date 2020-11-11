@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     ## Calculation parameters
     parser.add_argument("--min_years", "-y", type=float, help="minimum number of years of data that a site must have")
-    parser.add_argument("--ref_num_years", "-u", type=float, help="minimum number of years of data for any site that \
+    parser.add_argument("--min_years_ref", "-u", type=float, help="minimum number of years of data for any site that \
         we are going to use as a reference site later (if less than min_years, will set to min_years)")
     parser.add_argument("--ref_num_stations", "-r", type=int, help="number of stations to be used for imputation")
     parser.add_argument("--min_temp", "-m", type=int, help="Minimum temperature to be used (lower are ignored) \
@@ -116,13 +116,13 @@ if __name__ == '__main__':
         print('No min_years provided, so using default: '.format(MetPostProcessor.DEFAULT_MIN_YEARS))
         min_years = MetPostProcessor.DEFAULT_MIN_YEARS
 
-    if args.ref_num_years:
-        reference_num_years = max(args.ref_num_years, min_years)
+    if args.min_years_ref:
+        min_years_ref = max(args.min_years_ref, min_years)
         print('Reference number of years (minimum number of years of data for any site that we are going to use as a \
-            reference site later; this cannot be less than min_years):', reference_num_years)
+            reference site later; this cannot be less than min_years):', min_years_ref)
     else:
-        print('No useful_num_years provided, so using default: {}'.format(MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS))
-        useful_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
+        print('No min_years_ref provided, so using default: {}'.format(MetPostProcessor.DEFAULT_MIN_YEARS_REFERENCE))
+        min_years_ref = MetPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
 
     if args.ref_num_stations:
         reference_num_stations = args.ref_num_stations
@@ -156,9 +156,9 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(MetPostProcessor.DEFAULT_VERBOSE)))
         verbose = MetPostProcessor.DEFAULT_VERBOSE
 
-    post_processor = MetPostProcessor(out_dir, stations_filename=stations_filename, verbose=verbose)
+    post_processor = MetPostProcessor(out_dir, station_data_filename=stations_filename, verbose=verbose)
     post_processor.process(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
                                 exclude_site_list=exclude_site_list,
                                 min_temperature=min_temperature, reference_num_stations=reference_num_stations,
-                                min_years=min_years, reference_num_years=reference_num_years,
+                                min_years=min_years, min_years_reference=min_years_ref,
                                 impute_data=args.impute_values, print_stats=args.print_stats)

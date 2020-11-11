@@ -38,20 +38,22 @@ from environmental_data_modules import PostProcessor, MetModule
 
 class MetPostProcessor(PostProcessor, MetModule):
 
+    # Define 'absolute' constants
     BASE_FILE_OUT = '{}/Met_ppd_daily_mean_max_temp_RH_pres{}.csv'
     DATE_CALCS_FORMAT = '%Y-%m-%d %H:%M:%S'
-    INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
+    COLS_SPECIFIC_LIST = ['temperature', 'rel_hum', 'pressure', 'dewpoint']
 
+    # Define default constants
     DEFAULT_OUT_DIR = 'Met_processed_data'
     DEFAULT_FILE_IN = 'data_met/temp_rh_press_dewpoint_2016-2019.csv'
-    DEFAULT_COLS_SPECIFIC_LIST = ['temperature', 'rel_hum', 'pressure', 'dewpoint']
+    DEFAULT_STATION_DATA_FILENAME = "../station_data/station_data_clean.csv"
     DEFAULT_EXCLUDE_STATION_LIST = [117]
-    DEFAULT_MIN_TEMPERATURE = -20
-    DEFAULT_STATIONS_FILENAME = "../station_data/station_data_clean.csv"
-    DEFAULT_REFERENCE_NUMBER_STATIONS = 5
-    DEFAULT_REFERENCE_NUM_YEARS = 0.0625 #3.5
-    DEFAULT_MIN_YEARS = 0.04 #1
 
+    # Calculation defaults
+    DEFAULT_MIN_TEMPERATURE = -20
+    DEFAULT_REFERENCE_NUMBER_STATIONS = 5
+    DEFAULT_MIN_YEARS_REFERENCE = 0.0625 #3.5
+    DEFAULT_MIN_YEARS = 0.04 #1
     DEFAULT_IMPUTER_RANDOM_STATE = 0
     DEFAULT_IMPUTER_ADD_INDICATOR = True
     DEFAULT_IMPUTER_INITIAL_STRATEGY = 'mean'
@@ -59,19 +61,21 @@ class MetPostProcessor(PostProcessor, MetModule):
     DEFAULT_IMPUTER_ESTIMATOR = None
     DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION = 'normal'
 
-    def __init__(self, out_dir=DEFAULT_OUT_DIR, stations_filename=DEFAULT_STATIONS_FILENAME,
+    def __init__(self, out_dir=DEFAULT_OUT_DIR, station_data_filename=DEFAULT_STATION_DATA_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
-        self.stations = stations_filename
+        self.station_data = station_data_filename
+        self._columns_specific = MetPostProcessor.COLS_SPECIFIC_LIST
+        self._met_extracted_data = None
         self._date_calcs_format = MetPostProcessor.DATE_CALCS_FORMAT
         self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
-        self._reference_num_stations = MetPostProcessor.DEFAULT_REFERENCE_NUMBER_STATIONS
-        self._reference_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
-        self._columns_specific = MetPostProcessor.DEFAULT_COLS_SPECIFIC_LIST
-        self._met_data = None
-        self._imputer = None
-        self._transformer = None
+        self.min_years = MetPostProcessor.DEFAULT_MIN_YEARS
+        self.min_years_reference = MetPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
+        self.reference_num_stations = MetPostProcessor.DEFAULT_REFERENCE_NUMBER_STATIONS
+        self.impute_data = False
+        self.imputer = None
+        self.transformer = None
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
@@ -80,22 +84,49 @@ class MetPostProcessor(PostProcessor, MetModule):
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
 
-    @PostProcessor.stations.setter
-    def stations(self, filename):
+    @PostProcessor.station_data.setter
+    def station_data(self, filename):
         try:
-            self._stations = pd.read_csv(filename)
+            self._station_data = pd.read_csv(filename)
         except Exception as err:
-            raise ValueError('Error loading stations file {}. {}'.format(filename, err))
+            raise ValueError('Error loading station_data file {}. {}'.format(filename, err))
         else:
             try:
-                self._stations = self._stations.set_index('Station')
-            except:
-                raise ValueError('Stations file has no column header: Station')
+                self._station_data = self._station_data.set_index('Station')
+            except ValueError:
+                raise ValueError('Station data file has no column header: Station')
+
+    @property
+    def min_temperature(self):
+        return self._min_temperature
+
+    @min_temperature.setter
+    def min_temperature(self, min_temp):
+        try:
+            min_years = float(min_temp)
+        except ValueError:
+            raise ValueError('min_temperature value ({}) must be numeric'.format(min_temp))
+        # Todo: More tests to force a range of allowable temps
+        self._min_temperature = min_temp
+
+    @property
+    def reference_num_stations(self):
+        return self._reference_num_stations
+
+    @reference_num_stations.setter
+    def reference_num_stations(self, num_stations):
+        try:
+            num_stations = int(num_stations)
+        except ValueError:
+            raise ValueError('reference_num_stations value ({}) must be an integer'.format(num_stations))
+        if num_stations < 0:
+            raise ValueError('reference_num_stations value ({}) must be non-negative.')
+        self._reference_num_stations = num_stations
 
     def process(self, file_in, outfile_suffix='', date_range=None,
                 exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
                 min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
-                min_years=DEFAULT_MIN_YEARS, reference_num_years=DEFAULT_REFERENCE_NUM_YEARS,
+                min_years=DEFAULT_MIN_YEARS, min_years_reference=DEFAULT_MIN_YEARS_REFERENCE,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA, print_stats=PostProcessor.DEFAULT_PRINT_STATS,
                 random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
@@ -107,25 +138,26 @@ class MetPostProcessor(PostProcessor, MetModule):
                                datetime.strptime(date_range[1], MetPostProcessor.INPUT_DATE_FORMAT)]
         else:
             self.date_range = MetPostProcessor.DEFAULT_DATE_RANGE
-        self._reference_num_stations = reference_num_stations
-        self._min_years = min_years
-        self._reference_num_years = reference_num_years
+        self.min_temperature = min_temperature
+        self.reference_num_stations = reference_num_stations
+        self.min_years = min_years
+        self.min_years_reference = min_years_reference
         self.file_out = MetPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
-        self._impute_data = impute_data
         self._print_stats = print_stats
-
-        self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
-                                   initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
-                                   estimator=estimator)
+        if impute_data:
+            self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
+                                       initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
+                                       estimator=estimator)
+        self.impute_data = impute_data
 
         # set the power transform options
         self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
                                                              random_state=random_state)
 
         print('checking validity of and loading met data file')
-        self._met_data = self.load_met_data(file_in)
+        self._met_extracted_data = self.load_met_data(file_in)
 
-        if self.verbose > 1: print('Metadata before dropping/filtering: \n {}'.format(self._met_data))
+        if self.verbose > 1: print('Metadata before dropping/filtering: \n {}'.format(self._met_extracted_data))
 
         print('dropping duplicate values and unwanted stations')
         self.find_and_drop_duplicates_and_unwanted_stations(exclude_site_list)
@@ -134,19 +166,19 @@ class MetPostProcessor(PostProcessor, MetModule):
         self.drop_single_daily_measurement_stations()
 
         print('filtering to remove unrealistically low temperatures')
-        self.remove_low_temperature_data(min_temperature)
+        self.remove_low_temperature_data()
 
         print('filter for minimum data lengths, and reduce dataset to only stations of interest')
-        self._met_data, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint = \
+        self._met_extracted_data, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint = \
             self.list_required_and_reference_sites()
 
-        if self.verbose > 1: print('Metadata after dropping/filtering: {}'.format(self._met_data))
+        if self.verbose > 1: print('Metadata after dropping/filtering: {}'.format(self._met_extracted_data))
 
-        if len(self._met_data.index) == 0:
+        if len(self._met_extracted_data.index) == 0:
             print('Exiting post-processing: Metadata is empty after initial filtering processes')
             return
 
-        if self._impute_data:
+        if self.impute_data:
             print('imputation of data, returning hourly data')
             met_data_temp, met_data_pres, met_data_dewpoint = self.organise_data_imputation(
                 reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint)
@@ -200,7 +232,7 @@ class MetPostProcessor(PostProcessor, MetModule):
 
     def find_and_drop_duplicates_and_unwanted_stations(self, exlude_stations):
         # Pull out all duplicated values
-        met_duplicates = self._met_data[self._met_data.duplicated(subset=['date','siteID'], keep=False)]
+        met_duplicates = self._met_extracted_data[self._met_extracted_data.duplicated(subset=['date','siteID'], keep=False)]
 
         # Split these into those with, and without, pressure data (SYNOP will have pressure data)
         #   We will keep (most of) the readings with pressure data, and will drop (most of) the
@@ -228,19 +260,19 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         # Append to this list the indexes of all station data that we are dropping completely
         for station in exlude_stations:
-            station_drop_indexes = self._met_data[self._met_data['siteID']==station].index
+            station_drop_indexes = self._met_extracted_data[self._met_extracted_data['siteID']==station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
 
         # Finally drop all the data that is unwanted
-        met_data_reduced = self._met_data.drop(index=indexes_to_drop)
+        met_data_reduced = self._met_extracted_data.drop(index=indexes_to_drop)
 
-        self._met_data = met_data_reduced
+        self._met_extracted_data = met_data_reduced
 
 
     def drop_single_daily_measurement_stations(self):
         # group the data by date, and count the readings per day
-        tempgroups = self._met_data.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+        tempgroups = self._met_extracted_data.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
         data_counts = tempgroups.count()
 
         # some diagnostic output, if required
@@ -270,11 +302,11 @@ class MetPostProcessor(PostProcessor, MetModule):
         # drop all the stations with only single daily readings
         indexes_to_drop = pd.Int64Index(data=[],dtype='int64')
         for station in station_single_list:
-            station_drop_indexes = self._met_data[self._met_data['siteID']==station].index
+            station_drop_indexes = self._met_extracted_data[self._met_extracted_data['siteID']==station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
         # drop all the data that is unwanted
-        met_data_reduced = self._met_data.drop(index=indexes_to_drop)
+        met_data_reduced = self._met_extracted_data.drop(index=indexes_to_drop)
 
         # print diag output for new dataset
         if self._print_stats:
@@ -283,25 +315,26 @@ class MetPostProcessor(PostProcessor, MetModule):
             data_counts = tempgroups.count()
             self.print_data_count_stats(data_counts)
 
-        self._met_data = met_data_reduced
+        self._met_extracted_data = met_data_reduced
 
 
     #%% function for getting two lists of stations, one for required site, one for reference sites
 
     def station_listing(self, var_string):
+        #Todo Doug: can this be merged with station_listing() in aurn_post_processor (and put in to post_processor)
         '''
         arguments:
             var_string:
                 label for variable of interest
-            min_years (default 1):
-                minimum number of years of data that a site must have
-            reference_num_years (default 3.5):
-                minimum number of years of data for any site that we
-                are going to use as a reference site later
 
         other dependancies:
-            self._met_data:
+            self._met_extracted_data:
                 measurement data set
+            self.min_years (default 1):
+                minimum number of years of data that a site must have
+            self.min_years_reference (default 3.5):
+                minimum number of years of data for any site that we
+                are going to use as a reference site later
 
         returns:
             required_site_list:
@@ -310,20 +343,20 @@ class MetPostProcessor(PostProcessor, MetModule):
                 list of sites with a data count > useful_num_years
         '''
 
-        site_list_interior = self._met_data['siteID'].unique()
+        site_list_interior = self._met_extracted_data['siteID'].unique()
 
         required_site_list=[]
         reference_site_list=[]
 
         for site in site_list_interior:
-            metsite = self._met_data[self._met_data['siteID']==site]
+            metsite = self._met_extracted_data[self._met_extracted_data['siteID']==site]
             try:
                 measurement_num = len(metsite[metsite[var_string].notna()])
             except:
                 measurement_num = 0
-            if(measurement_num > self._min_years*365*24):
+            if(measurement_num > self.min_years*365*24):
                 required_site_list.append(site)
-            if(measurement_num > self._reference_num_years*365*24):
+            if(measurement_num > self.min_years_reference*365*24):
                 reference_site_list.append(site)
 
         return required_site_list,reference_site_list
@@ -341,7 +374,7 @@ class MetPostProcessor(PostProcessor, MetModule):
         # get a list of all sites which are required for at least one measurement set
         required_sites = list(dict.fromkeys(req_sites_temp + req_sites_pres + req_sites_dewpoint))
         print('there are {} required sites, and {} reference sites'.format(len(required_sites), len(reference_sites)))
-        met_data_filtered = self._met_data[self._met_data['siteID'].isin(required_sites)]
+        met_data_filtered = self._met_extracted_data[self._met_extracted_data['siteID'].isin(required_sites)]
 
         return (met_data_filtered, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint)
 
@@ -363,7 +396,7 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         # plot the distribution of the calculated RH difference from measured RH
         if self._print_stats:
-            met_data_internal = self._met_data.set_index(['date', 'siteID'])
+            met_data_internal = self._met_extracted_data.set_index(['date', 'siteID'])
 
             met_data_internal['rh2'] = met_data_out['rel_hum']
 
@@ -381,8 +414,8 @@ class MetPostProcessor(PostProcessor, MetModule):
 
     def get_station_distances(self, site_in, useful_sites_in):
 
-        station_location = (self.stations.loc[site_in]['Latitude'], self.stations.loc[site_in]['Longitude'])
-        station_distances = self.calc_station_distances(stations_in=self.stations.loc[useful_sites_in], \
+        station_location = (self.station_data.loc[site_in]['Latitude'], self.station_data.loc[site_in]['Longitude'])
+        station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in], \
                                                    stat_location=station_location)
 
         # sort by distance, then drop any station which is the same location as our site of interest
@@ -391,9 +424,6 @@ class MetPostProcessor(PostProcessor, MetModule):
         station_distances = station_distances.dropna()
 
         return station_distances
-
-
-
 
     #%% functions for imputation of the datasets
 
@@ -434,13 +464,12 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         return df_out
 
-
     def get_full_datasets(self, req_sites_list, useful_sites_list, station_list_string, var_string):
         date_index = pd.date_range(start=self.date_range[0], end=self.date_range[1],
                                    freq='1H', name='date')
 
         # add the Date index
-        indexed_orig_data = self._met_data.set_index('date')
+        indexed_orig_data = self._met_extracted_data.set_index('date')
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -464,7 +493,7 @@ class MetPostProcessor(PostProcessor, MetModule):
 
                 station_distances = self.get_station_distances(site, useful_sites_list)
                 # get data for the [reference_station_number] closest stations:
-                for ii in range(0, self._reference_num_stations):
+                for ii in range(0, self.reference_num_stations):
                     ts[station_list_string[ii]] = \
                         indexed_orig_data[indexed_orig_data.siteID==station_distances.index[ii]][var_string]
 
@@ -494,7 +523,7 @@ class MetPostProcessor(PostProcessor, MetModule):
 
     def organise_data_imputation(self, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint):
 
-        station_list = [ 'station{}'.format(x+1) for x in range(0, self._reference_num_stations) ]
+        station_list = ['station{}'.format(x+1) for x in range(0, self.reference_num_stations)]
 
         print('imputing temperature data')
         met_data_out_temp = self.get_full_datasets(req_sites_temp, reference_sites, station_list, 'temperature')
@@ -511,15 +540,20 @@ class MetPostProcessor(PostProcessor, MetModule):
     def sort_datasets(self, req_sites_list, var_string):
         # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
         # AG: Todo Doug: check OK.
-        start_date = max(self._met_data['date'].min(), self.date_range[0])
-        end_date = min(self._met_data['date'].max(), self.date_range[1])
+        start_date = max(self._met_extracted_data['date'].min(), self.date_range[0])
+        end_date = min(self._met_extracted_data['date'].max(), self.date_range[1])
 
-        if self.verbose > 1: print('Using date range in sort_datasets: {} to {}'.format(str(start_date, end_date)))
+        print('Start date: {}'.format(datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT)))
+        print('End date: {}'.format(datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)))
+        if self.verbose > 1: print('Using date range in sort_datasets: {} to {}'.format(
+            datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT),
+            datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)
+        ))
 
         date_index = pd.date_range(start=start_date, end=end_date, freq='1H', name='date')
 
         # add the Date index
-        indexed_orig_data = self._met_data.set_index('date')
+        indexed_orig_data = self._met_extracted_data.set_index('date')
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -561,14 +595,14 @@ class MetPostProcessor(PostProcessor, MetModule):
         return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
 
-    def remove_low_temperature_data(self, min_temperature):
+    def remove_low_temperature_data(self):
 
-        md_cold = self._met_data[self._met_data['temperature']<min_temperature]
+        md_cold = self._met_extracted_data[self._met_extracted_data['temperature']<self.min_temperature]
 
         if len(md_cold) > 0:
             print('     deleting this temperature and dew point temperature data')
             print(md_cold)
-            self._met_data.loc[md_cold.index,['temperature','dewpoint']] = np.nan
+            self._met_extracted_data.loc[md_cold.index,['temperature','dewpoint']] = np.nan
         else:
             print('    no low temperature data to remove')
 

@@ -16,7 +16,6 @@ class MetExtractor(EnvironmentModule, MetModule):
     # Define 'absolute' constants
     ADDITIONAL_VALS_KEY = 'Additional field values'
     BASE_FILE_OUT = '{}/Met_extracted_{}{}{}.csv'
-    INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
     MEDMI_DATE_FORMAT = '%Y-%m-%d %H'
 
     # Define default constants
@@ -135,7 +134,7 @@ class MetExtractor(EnvironmentModule, MetModule):
             self.file_out = self._temp_file_out.format('', self.outfile_suffix_string)
             self._headstring = self._head_string.format('', self.date_range[0], self.date_range[1])
 
-        print('extracting {}'.format(self._headstring, date_range[0], date_range[1]))
+        print('extracting {}'.format(self._headstring, self.date_range[0], self.date_range[1]))
         return self._extract_data(extraction_dict)
 
     def _extract_data(self, extraction_dict, save_to_file=True):

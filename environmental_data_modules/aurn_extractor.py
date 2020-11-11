@@ -15,9 +15,9 @@ class AurnExtractor(EnvironmentModule, AurnModule):
     # Define 'absolute' constants
     SPECIES_LIST = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
     AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
+    DATE_RANGE = None  # Date range not used in Aurn Extraction, just whole years
 
     # Define defaults
-    DEFAULT_SITE_LIST = None
     DEFAULT_SAVE_TO_CSV = True
     BASE_FILE_OUT = '{}/AURN_extracted{}.csv'
 
@@ -27,27 +27,39 @@ class AurnExtractor(EnvironmentModule, AurnModule):
         super(AurnExtractor, self).__init__(out_dir, verbose)
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
         self._base_file_out = AurnExtractor.BASE_FILE_OUT
-        self._years = AurnExtractor.AVAILABLE_YEARS
+        self.years = AurnExtractor.AVAILABLE_YEARS
         self._save_to_csv = AurnExtractor.DEFAULT_SAVE_TO_CSV
-        self._site_list = AurnExtractor.DEFAULT_SITE_LIST
+        self.date_range = AurnExtractor.DATE_RANGE
+
+    @property
+    def years(self):
+        return self.__years
+
+    @years.setter
+    def years(self, years):
+        try:
+            years = set(list(years))
+        except Exception:
+            raise ValueError('Years must be a list. Input: {}'.format(years))
+
+        error_years = set(years) - set(AurnExtractor.AVAILABLE_YEARS)
+        assert len(error_years) == 0, \
+            "Each year must be contained in available years: {}. Error years: {}".format(
+                AurnExtractor.AVAILABLE_YEARS, str(error_years))
+        self.__years = years
+
 
     def extract_data(self,
                      years=AVAILABLE_YEARS,
-                     site_list=DEFAULT_SITE_LIST,
+                     site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
                      outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX):
 
         self._outfile_suffix = outfile_suffix
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
         self._save_to_csv = save_to_csv
-        self._years = years
-
-        # get list of sites to process extract_site_data
-        if not site_list:
-            self._site_list = self.meta_data['AURN_metadata'][AurnModule.SITE_ID_AURN_METADATA].unique()
-        else:
-            # Todo - Test that sites provided are correct
-            self._site_list = site_list
+        self.years = years
+        self.site_list = site_list
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data()
@@ -91,7 +103,7 @@ class AurnExtractor(EnvironmentModule, AurnModule):
             print("processing site {} ({})".format(site, station_name))
 
             # get the list of years of data for this station
-            years_process = self.define_years_to_download(subset_df, self._years)
+            years_process = self.define_years_to_download(subset_df, self.years)
 
             # if the list of years is empty, then skip this site
             if not years_process:

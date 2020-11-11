@@ -58,16 +58,17 @@ from environmental_data_modules import PostProcessor, AurnModule
 
 
 class AurnPostProcessor(PostProcessor, AurnModule):
-
-    DEFAULT_OUT_DIR = 'Aurn_processed_data'
+    # Define 'absolute' constants
     BASE_FILE_OUT = '{}/aurn_processed_daily_{}.csv'
 
+    # Define default constants
+    DEFAULT_OUT_DIR = 'Aurn_processed_data'
     DEFAULT_EMEP_FILENAME = None
-    DEFAULT_SITE_LIST = None
     DEFAULT_SAVE_TO_CSV = True
-    DEFAULT_USEFUL_NUM_YEARS = None
-    DEFAULT_MIN_YEARS = None
 
+    # Calculation defaults
+    DEFAULT_MIN_YEARS_REFERENCE = 1
+    DEFAULT_MIN_YEARS = 1
     DEFAULT_IMPUTER_RANDOM_STATE = 0
     DEFAULT_IMPUTER_ADD_INDICATOR = False
     DEFAULT_IMPUTER_INITIAL_STRATEGY = 'mean'
@@ -86,12 +87,11 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         self._emep_data = None
         self._save_to_csv = AurnPostProcessor.DEFAULT_SAVE_TO_CSV
-        self._useful_num_years = AurnPostProcessor.DEFAULT_USEFUL_NUM_YEARS
-        self._min_years = AurnPostProcessor.DEFAULT_MIN_YEARS
-        self._impute_data = AurnPostProcessor.DEFAULT_IMPUTE_DATA
-        self._site_list = AurnPostProcessor.DEFAULT_SITE_LIST
-        self._imputer = None
-        self._transformer = None
+        self.min_years_reference = AurnPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
+        self.min_years = AurnPostProcessor.DEFAULT_MIN_YEARS
+        self.impute_data = False
+        self.imputer = None
+        self.transformer = None
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
@@ -100,23 +100,24 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
 
-    @PostProcessor.stations.setter
-    def stations(self, raw_data):
+    @PostProcessor.station_data.setter
+    def station_data(self, raw_data):
         if self.verbose > 0:
             print('Loading stations data metadata')
         try:
-            stations = raw_data.drop_duplicates()
-            stations = stations.rename(columns={"site_id": "SiteID", "latitude": "Latitude", "longitude": "Longitude"})
-            stations = stations.set_index('SiteID')
+            station_data = raw_data.drop_duplicates()
+            station_data = station_data.rename(
+                columns={"site_id": "SiteID", "latitude": "Latitude", "longitude": "Longitude"})
+            station_data = station_data.set_index('SiteID')
         except Exception as err:
             raise ValueError('Unable to get correct site data from Metadata input file. Check metadata file content.')
 
-        self._stations = stations
+        self._station_data = station_data
 
-    def process(self, in_file,
-                site_list=DEFAULT_SITE_LIST,
+    def process(self, in_file, date_range=None,
+                site_list=AurnModule.DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
-                useful_num_years=DEFAULT_USEFUL_NUM_YEARS, min_years=PostProcessor.DEFAULT_MIN_YEARS,
+                min_years_reference=DEFAULT_MIN_YEARS_REFERENCE, min_years=DEFAULT_MIN_YEARS,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
                 random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
@@ -126,46 +127,42 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 outfile_suffix=''):
 
         # Process inputs
+        if date_range is not None:
+            self.date_range = [datetime.strptime(date_range[0], AurnPostProcessor.INPUT_DATE_FORMAT),
+                               datetime.strptime(date_range[1], AurnPostProcessor.INPUT_DATE_FORMAT)]
+        else:
+            self.date_range = AurnPostProcessor.DEFAULT_DATE_RANGE
 
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
         self._emep_data = self.load_emep_data(emep_filename)
         self._save_to_csv = save_to_csv
-        self._impute_data = impute_data
-
-        # Get years from input file
-        if min_years:
-            self._min_years = min_years
-        else:
-            self._min_years = 0.4*len(self._years)
-        if useful_num_years:
-            self._useful_num_years = useful_num_years
-        else:
-            self._useful_num_years = max(0.8*len(self._years), min_years)
-
-        # get list of sites to process extract_site_data
-        if not site_list:
-            self._site_list = self._meta_data['AURN_metadata']['site_id'].unique()
-        else:
-            # Todo - Test that sites provided are correct
-            self._site_list = site_list
-
-        self.stations = self._metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
-        if self.verbose > 1: print('Stations: \n {}'.format(self.stations))
+        self.min_years = min_years
+        self.min_years_reference = min_years_reference
+        self.site_list = site_list
+        self.station_data = self.metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
+        if self.verbose > 1: print('Station data: \n {}'.format(self.station_data))
 
         # Read in hourly dataframe file
-        hourly_dataframe = pd.read_csv( in_file,
-                                        sep=',',
-                                        usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.EXTRACTED_FILE_COLS),
-                                        index_col=AurnModule.INDEX_EXTRACTED,
-                                        parse_dates=['Date'])
+        try:
+            hourly_dataframe = pd.read_csv(in_file,
+                                           sep=',',
+                                           usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.EXTRACTED_FILE_COLS),
+                                           index_col=AurnModule.INDEX_EXTRACTED,
+                                           parse_dates=['Date'])
+        except Exception as err:
+            raise ValueError('Unable to read Met extracted data file {}. {}'.format(in_file, err))
+
         if self.verbose > 1:
             print('Hourly dataframe: \n {}'.format(hourly_dataframe))
             print('Hourly dataframe data types: \n {}'.format(hourly_dataframe.dtypes))
 
-        # set the imputer options (if we are using them)
-        self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
-                                        initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
-                                        estimator=estimator)
+        if impute_data:
+            # set the imputer options (if we are using them)
+            self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
+                                            initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
+                                            estimator=estimator)
+        self.impute_data = impute_data
+
         # set the power transform options
         self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
@@ -249,7 +246,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 days which meet that criteria)
             min_years (default 1):
                 minimum number of years of data that a site must have
-            useful_num_years (default 3.5):
+            min_years_reference (default 3.5):
                 minimum number of years of data for any site that we
                 are going to use as a reference site later
 
@@ -257,7 +254,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
             required_site_list:
                 list of sites with a data count > min_years
             useful_site_list:
-                list of sites with a data count > useful_num_years
+                list of sites with a data count > min_years_reference
         '''
 
         site_list_interior = grouped_data_in.index.levels[0]
@@ -270,10 +267,10 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 date_num = len(grouped_data_in.loc[(site,),])
             except:
                 date_num = 0
-            if (date_num > self._min_years * 365):
+            if date_num > self.min_years * 365:
                 required_site_list.append(site)
                 print('\t{} has {} years of data'.format(site, date_num / 365))
-            if (date_num > self._useful_num_years * 365):
+            if date_num > self.min_years_reference * 365:
                 useful_site_list.append(site)
 
         return required_site_list, useful_site_list
@@ -379,7 +376,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         spc_list = daily_hour_counts.columns.values
 
         # imputation of the values requires more preprocessing and work...
-        if self._impute_data:
+        if self.impute_data:
             # Set station number
             station_number = min(5, len(site_list_internal) - 1)
 
@@ -417,7 +414,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 # get list of neighbouring sites for each of the chemical species of interest
                 for spc in spc_list:
                     if self.verbose > 1: print('3. Species: ', spc)
-                    station_distances = self.get_station_distances(self.stations, site, use_sites[spc])
+                    station_distances = self.get_station_distances(self.station_data, site, use_sites[spc])
                     if self.verbose > 1: print('4. Station number:', station_number)
                     if self.verbose > 1: print('5. distances:', station_distances)
                     if self.verbose > 1: print('6.', len(station_distances))
@@ -465,7 +462,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         else:  # simpler post processing of data
             for site in site_list_internal:
                 # select our subset of metadata for this station
-                station_name = self.stations.loc[site]['site_name']
+                station_name = self.station_data.loc[site]['site_name']
                 print("processing site {} ({})".format(site, station_name))
 
                 working_hourly_dataframe = pd.DataFrame([], index=date_index)

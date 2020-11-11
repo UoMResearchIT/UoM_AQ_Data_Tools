@@ -17,13 +17,37 @@ class AurnModule(object):
     # Define defaults
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"
     DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
+    DEFAULT_SITE_LIST = None
 
     def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):
         self._metadata = self.load_metadata(metadata_filename, metadata_url)
+        self._site_list = AurnModule.DEFAULT_SITE_LIST
 
     @property
     def metadata(self):
         return self._metadata
+
+    @property
+    def site_list(self):
+        return self._site_list
+
+    @site_list.setter
+    def site_list(self, site_list):
+        all_sites = self.metadata['AURN_metadata'][AurnModule.SITE_ID_AURN_METADATA].unique()
+        # get list of sites to process extract_site_data
+        if site_list is None:
+            self._site_list = all_sites
+        else:
+            try:
+                site_list = set(list(site_list))
+            except Exception:
+                raise ValueError('Site list must be a list. Input: {}'.format(site_list))
+            error_sites = set(site_list) - set(all_sites)
+            assert len(error_sites) == 0, \
+                "Each site must be contained in available sites (from Aurn metadata: {}. Error sites: {}".format(
+                    all_sites, str(error_sites))
+            self._site_list = site_list
+
 
     def load_metadata(self, filename, alt_url=None):
         # Does the file exist?

@@ -22,7 +22,7 @@ if __name__ == '__main__':
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
         in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnExtractor.AVAILABLE_YEARS]) + ']'))
     parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
-    parser.add_argument("--useful_num_years", "-u", type=int, help="minimum number of years of data for any site that \
+    parser.add_argument("--min_years_ref", "-u", type=int, help="minimum number of years of data for any site that \
         we are going to use as a reference site later. (this cannot be less than min_years)")
     parser.add_argument("--sites", "-i", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
@@ -86,14 +86,13 @@ if __name__ == '__main__':
               .format(len(years), 0.4*len(years)))
         min_years = 0.4*len(years)
 
-    if args.useful_num_years:
-        useful_num_years = max(args.useful_num_years,min_years)
-        print('Useful number of years:', useful_num_years)
+    if args.min_years_ref:
+        min_years_ref = max(args.min_years_ref, min_years)
+        print('Minimum years ref:', min_years_ref)
     else:
-        useful_num_years = max(min_years, 0.8 * len(years))
-        print('No useful_num_years provided, so using default: max(min_years, 0.8*number of years): \
+        min_years_ref = max(min_years, 0.8 * len(years))
+        print('No min_years_ref provided, so using default: max(min_years, 0.8*number of years): \
          Max({}, 0.8*{}={})'.format(min_years, len(years), max(min_years, 0.8*len(years))))
-
 
     if args.sites:
         site_list = args.sites
@@ -142,6 +141,7 @@ if __name__ == '__main__':
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
                         emep_filename=emep_filename,
-                        useful_num_years=useful_num_years,
+                        min_years=min_years,
+                        min_years_reference=min_years_ref,
                         impute_data=args.impute_values,
                         save_to_csv=args.save_to_csv)
