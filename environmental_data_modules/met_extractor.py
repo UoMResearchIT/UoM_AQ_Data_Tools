@@ -137,14 +137,14 @@ class MetExtractor(EnvironmentModule, MetModule):
         print('extracting {}'.format(self._headstring, self.date_range[0], self.date_range[1]))
         return self._extract_data(extraction_dict)
 
-    def _extract_data(self, extraction_dict, save_to_file=True):
+    def _extract_data(self, extraction_dict, save_to_csv=True):
         if self.verbose >= 1:
             print('extracting data for {}'.format(self.MEASUREMENT_NAME))
         if self.verbose > 1:
             print('using extraction dict: {}'.format(json.dumps(extraction_dict, default=str)))
         datadata = self._perform_extraction(extraction_dict)
-        if save_to_file:
-            self._save_to_file(datadata)
+        if save_to_csv:
+            self._save_to_csv(datadata)
         return datadata
 
     def _perform_extraction(self, dict):
@@ -161,7 +161,7 @@ class MetExtractor(EnvironmentModule, MetModule):
 
         return datadata
 
-    def _save_to_file(self, data_result):
+    def _save_to_csv(self, data_result):
         print('saving to file: {}'.format(self.file_out))
 
         with open(self.file_out, 'w') as dfile:
@@ -264,7 +264,7 @@ class MetExtractorWind(MetExtractor):
         return result
 
 
-    def _save_to_file(self, datadata):
+    def _save_to_csv(self, datadata):
         print('saving to file: {}'.format(self.file_out))
         with open(self.file_out, 'w') as dfile:
             dfile.write(self._headstring)

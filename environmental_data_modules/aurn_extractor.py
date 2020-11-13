@@ -28,7 +28,6 @@ class AurnExtractor(EnvironmentModule, AurnModule):
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
         self._base_file_out = AurnExtractor.BASE_FILE_OUT
         self.years = AurnExtractor.AVAILABLE_YEARS
-        self._save_to_csv = AurnExtractor.DEFAULT_SAVE_TO_CSV
         self.date_range = AurnExtractor.DATE_RANGE
 
     @property
@@ -57,12 +56,11 @@ class AurnExtractor(EnvironmentModule, AurnModule):
 
         self._outfile_suffix = outfile_suffix
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
-        self._save_to_csv = save_to_csv
         self.years = years
         self.site_list = site_list
 
         # create a dataframe with the hourly dataset for all stations
-        hourly_dataframe = self.extract_site_data()
+        hourly_dataframe = self.extract_site_data(save_to_csv)
         hourly_dataframe = hourly_dataframe.rename(columns={AurnModule.SITE_ID_EXTRACTED: AurnModule.SITE_ID_NEW})
 
         # apply some filtering of negative and zero values
@@ -90,7 +88,7 @@ class AurnExtractor(EnvironmentModule, AurnModule):
 
         return hourly_dataframe
 
-    def extract_site_data(self):
+    def extract_site_data(self, save_to_csv):
 
         final_dataframe = pd.DataFrame()
 
@@ -131,8 +129,8 @@ class AurnExtractor(EnvironmentModule, AurnModule):
             # postprocessing the data set, to get daily data
             # final_dataframe = final_dataframe.append(postprocess_data(full_hourly_dataframe,site))
 
-            # Now save the full hourly dataframe as a .csv file
-            if self._save_to_csv is True:
+            if save_to_csv is True:
+                # Now save the full hourly dataframe as a .csv file
                 full_hourly_dataframe.to_csv(os.path.join(self.out_dir, site + '.csv'), index=False, header=True)
 
         return final_dataframe
