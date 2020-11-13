@@ -12,6 +12,10 @@ from environmental_data_modules import EnvironmentModule, AurnModule, DateYearsP
 
 
 class AurnExtractor(EnvironmentModule, AurnModule, DateYearsProcessor):
+    """
+        Class used for extracting data from the AURN server.
+    """
+
     # Define 'absolute' constants
     SPECIES_LIST = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
 

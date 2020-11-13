@@ -57,6 +57,9 @@ from environmental_data_modules import PostProcessor, AurnModule, DateRangeProce
 
 
 class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
+    """
+        Class used for post-processing data that has been extracted from AURN server.
+    """
     # Define 'absolute' constants
     BASE_FILE_OUT = '{}/aurn_processed_daily_{}.csv'
 

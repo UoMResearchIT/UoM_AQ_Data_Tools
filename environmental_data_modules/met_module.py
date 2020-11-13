@@ -1,5 +1,10 @@
+from abc import ABCMeta, abstractmethod
 
 class MetModule(object):
+    __metaclass__ = ABCMeta
+    """
+        Abstract Class used for extracting and post-processing data that has been extracted from MEDMI server.
+    """
     COLUMNS_BASE = ['date', 'siteID']
 
     def __init__(self):

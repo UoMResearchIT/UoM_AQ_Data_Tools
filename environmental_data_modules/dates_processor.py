@@ -10,6 +10,9 @@ class DatesProcessor(object):
 
 
 class DateRangeProcessor(DatesProcessor):
+    """
+        Class used for processing date ranges (with a start and end date)
+    """
     INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
     START_DATE = datetime(2016, 1, 1, 0)
 
@@ -74,6 +77,9 @@ class DateRangeProcessor(DatesProcessor):
 
 
 class DateYearsProcessor(DatesProcessor):
+    """
+        Class used for processing list of years
+    """
 
     START_YEAR = 2016
 
@@ -87,7 +93,7 @@ class DateYearsProcessor(DatesProcessor):
     @years.setter
     def years(self, years):
         try:
-            years = set(list(years))
+            years = list(years)
         except Exception:
             raise TypeError('years must be a list. Current input: {}'.format(years))
 

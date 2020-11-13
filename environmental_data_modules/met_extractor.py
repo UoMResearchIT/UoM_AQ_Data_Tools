@@ -11,6 +11,9 @@ from environmental_data_modules import EnvironmentModule, MetModule, DateRangePr
 
 
 class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
+    """
+        Abstract class, parent of classes used for extracting data from the MEDMI server.
+    """
     __metaclass__ = ABCMeta
 
     # Define 'absolute' constants
@@ -189,6 +192,9 @@ class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
 
 
 class MetExtractorRain(MetExtractor):
+    """
+        Class used for extracting rain data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.rain_drnl_ob.prcp_amt 1'
     MEASUREMENT_NAME = 'rain'
     ALLOWED_EXTRA_DATASETS = []
@@ -201,6 +207,9 @@ class MetExtractorRain(MetExtractor):
 
 
 class MetExtractorTemperature(MetExtractor):
+    """
+        Class used for extracting temperature data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.air_temperature'
     MEASUREMENT_NAME = 'temperature'
     ALLOWED_EXTRA_DATASETS = ['rel_hum', 'pressure', 'dewpoint']
@@ -213,6 +222,9 @@ class MetExtractorTemperature(MetExtractor):
 
 
 class MetExtractorRelativeHumidity(MetExtractor):
+    """
+        Class used for extracting relative humidity data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.rltv_hum'
     MEASUREMENT_NAME = 'rel_hum'
     ALLOWED_EXTRA_DATASETS = ['temperature', 'pressure', 'dewpoint']
@@ -225,6 +237,9 @@ class MetExtractorRelativeHumidity(MetExtractor):
 
 
 class MetExtractorStationPressure(MetExtractor):
+    """
+        Class used for extracting station pressure data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.stn_pres'
     MEASUREMENT_NAME = 'pressure'
     ALLOWED_EXTRA_DATASETS = ['rel_hum', 'temperature', 'dewpoint']
@@ -237,6 +252,9 @@ class MetExtractorStationPressure(MetExtractor):
 
 
 class MetExtractorDewpoint(MetExtractor):
+    """
+        Class used for extracting dewpoint data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.weather_hrly_ob.dewpoint'
     MEASUREMENT_NAME = 'dewpoint'
     ALLOWED_EXTRA_DATASETS = ['rel_hum', 'pressure', 'temperature']
@@ -249,6 +267,9 @@ class MetExtractorDewpoint(MetExtractor):
 
 
 class MetExtractorWind(MetExtractor):
+    """
+        Class used for extracting wind data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.wind_mean_ob.mean_wind_speed 1'
     MEASUREMENT_NAME = 'wind'
     ALLOWED_EXTRA_DATASETS = []
@@ -283,6 +304,10 @@ class MetExtractorWind(MetExtractor):
 
 
 class MetExtractorPollen(MetExtractor):
+    """
+        Class used for extracting all pollen species data from the MEDMI server.
+        Parent class of individual pollen species extractors (e.g. urtica)
+    """
     MEASUREMENT_NAME = 'pollen'
     ALLOWED_EXTRA_DATASETS = []
 
@@ -307,66 +332,105 @@ class MetExtractorPollen(MetExtractor):
 
 
 class MetExtractorPollenAlnus(MetExtractorPollen):
+    """
+        Class used for extracting alnus pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.alnus'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenAmbrosia(MetExtractorPollen):
+    """
+        Class used for extracting ambrosia pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.ambrosia'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenArtemesia(MetExtractorPollen):
+    """
+        Class used for extracting artemesia pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.artemisia'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenBetula(MetExtractorPollen):
+    """
+        Class used for extracting betula pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.betula'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenCorylus(MetExtractorPollen):
+    """
+        Class used for extracting corylus pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.corylus'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenFraxinus(MetExtractorPollen):
+    """
+        Class used for extracting fraxinus pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.fraxinus'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenPlatanus(MetExtractorPollen):
+    """
+        Class used for extracting platanus pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.platanus'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenPoacea(MetExtractorPollen):
+    """
+        Class used for extracting poacea pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.poaceae'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenQuercus(MetExtractorPollen):
+    """
+        Class used for extracting quercus pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.quercus'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenSalix(MetExtractorPollen):
+    """
+        Class used for extracting salix pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.salix'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenUlmus(MetExtractorPollen):
+    """
+        Class used for extracting ulmus pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.ulmus'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenUrtica(MetExtractorPollen):
+    """
+        Class used for extracting urtica pollen data from the MEDMI server.
+    """
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.urtica'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
 
 
 class MetExtractorPollenGroup(object):
+    """
+        Class used to contain a collection of pollen data extractors for extracting from the MEDMI server.
+    """
     DEFAULT_OUTDIR = 'Pollen_outputs'
     DEFAULT_OUTFILE_SUFFIX = '_pollen'
     DEFAULT_VERBOSE = 0

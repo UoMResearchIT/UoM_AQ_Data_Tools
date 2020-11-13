@@ -8,6 +8,12 @@ except:
 
 
 class AurnModule(object):
+    """
+        Abstract Class used for extracting and post-processing data that has been extracted from AURN server.
+
+    """
+    __metaclass__ = ABCMeta
+
     INDEX_EXTRACTED = 'index'
     SITE_ID_EXTRACTED = 'siteID'
     SITE_ID_NEW = 'SiteID'

@@ -14,6 +14,9 @@ except:
 from environmental_data_modules import EnvironmentModule
 
 class PostProcessor(EnvironmentModule):
+    """
+        Abstract class, parent of classes used for post-processing data that has been extracted from AURN/MEDMI servers.
+    """
     __metaclass__ = ABCMeta
 
     DEFAULT_IMPUTE_DATA = True

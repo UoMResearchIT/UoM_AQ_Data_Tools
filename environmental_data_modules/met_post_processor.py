@@ -37,6 +37,9 @@ from environmental_data_modules import PostProcessor, MetModule, DateRangeProces
 
 
 class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
+    """
+        Class used for post-processing data that has been extracted from MEDMI server.
+    """
 
     # Define 'absolute' constants
     BASE_FILE_OUT = '{}/Met_ppd_daily_mean_max_temp_RH_pres{}.csv'
