@@ -19,6 +19,7 @@ class PostProcessor(EnvironmentModule):
     DEFAULT_IMPUTE_DATA = True
     DEFAULT_PRINT_STATS = True
     DEFAULT_SKIP_INPUT_ROWS = 1
+    DEFAULT_SAVE_TO_CSV = True
 
 
     def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
@@ -109,7 +110,7 @@ class PostProcessor(EnvironmentModule):
 
     # %% function for creating date objects
     def parse_calcs_date(self, date_in):
-        return datetime.strptime(date_in, self._date_calcs_format)
+        return datetime.strptime(date_in, self.DATE_CALCS_FORMAT)
 
     def calc_nanmean(self, data_in):
         return np.nanmean(data_in)

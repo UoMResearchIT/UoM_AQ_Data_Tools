@@ -39,7 +39,6 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 (note, the NaN count will include sites that we will not be imputing with data)
 
 """
-import os.path
 
 try:
     import datetime
@@ -64,7 +63,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
     # Define default constants
     DEFAULT_OUT_DIR = 'Aurn_processed_data'
     DEFAULT_EMEP_FILENAME = None
-    DEFAULT_SAVE_TO_CSV = True
 
     # Calculation defaults
     DEFAULT_MIN_YEARS_REFERENCE = 1
@@ -86,7 +84,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
 
         self._emep_data = None
-        self._save_to_csv = AurnPostProcessor.DEFAULT_SAVE_TO_CSV
         self.min_years_reference = AurnPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
         self.min_years = AurnPostProcessor.DEFAULT_MIN_YEARS
         self.impute_data = False
@@ -123,7 +120,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
                 transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE,
-                save_to_csv=DEFAULT_SAVE_TO_CSV,
+                save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV,
                 outfile_suffix=''):
 
         # Process inputs
@@ -135,7 +132,6 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
         self._emep_data = self.load_emep_data(emep_filename)
-        self._save_to_csv = save_to_csv
         self.min_years = min_years
         self.min_years_reference = min_years_reference
         self.site_list = site_list
@@ -171,8 +167,12 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         daily_dataframe = self.postprocess_organisation(hourly_dataframe)
         # sort the data
         daily_dataframe = daily_dataframe.sort_index()
-        # write this dataset to file
-        daily_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
+
+        if save_to_csv:
+            # write this dataset to file
+            daily_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
+
+        return daily_dataframe
 
     def load_emep_data(self, filename):
         # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)

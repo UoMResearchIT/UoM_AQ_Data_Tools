@@ -41,7 +41,7 @@ class MetPostProcessor(PostProcessor, MetModule):
     # Define 'absolute' constants
     BASE_FILE_OUT = '{}/Met_ppd_daily_mean_max_temp_RH_pres{}.csv'
     DATE_CALCS_FORMAT = '%Y-%m-%d %H:%M:%S'
-    COLS_SPECIFIC_LIST = ['temperature', 'rel_hum', 'pressure', 'dewpoint']
+    COLUMNS_SPECIFIC = ['temperature', 'rel_hum', 'pressure', 'dewpoint']
 
     # Define default constants
     DEFAULT_OUT_DIR = 'Met_processed_data'
@@ -65,10 +65,8 @@ class MetPostProcessor(PostProcessor, MetModule):
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
+        self._columns_specific = MetPostProcessor.COLUMNS_SPECIFIC
         self.station_data = station_data_filename
-        self._columns_specific = MetPostProcessor.COLS_SPECIFIC_LIST
-        self._met_extracted_data = None
-        self._date_calcs_format = MetPostProcessor.DATE_CALCS_FORMAT
         self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
         self.min_years = MetPostProcessor.DEFAULT_MIN_YEARS
         self.min_years_reference = MetPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
@@ -131,7 +129,8 @@ class MetPostProcessor(PostProcessor, MetModule):
                 random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION):
+                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
+                save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV):
 
         if date_range is not None:
             self.date_range = [datetime.strptime(date_range[0], MetPostProcessor.INPUT_DATE_FORMAT),
@@ -155,47 +154,52 @@ class MetPostProcessor(PostProcessor, MetModule):
                                                              random_state=random_state)
 
         print('checking validity of and loading met data file')
-        self._met_extracted_data = self.load_met_data(file_in)
+        met_extracted_data = self.load_met_data(file_in)
 
-        if self.verbose > 1: print('Metadata before dropping/filtering: \n {}'.format(self._met_extracted_data))
+        if self.verbose > 1: print('Metadata before dropping/filtering: \n {}'.format(met_extracted_data))
 
         print('dropping duplicate values and unwanted stations')
-        self.find_and_drop_duplicates_and_unwanted_stations(exclude_site_list)
+        met_extracted_data = self.find_and_drop_duplicates_and_unwanted_stations(met_extracted_data,
+                                                                                 exclude_site_list)
 
         print('dropping single daily measurement stations')
-        self.drop_single_daily_measurement_stations()
+        met_extracted_data = self.drop_single_daily_measurement_stations(met_extracted_data)
 
         print('filtering to remove unrealistically low temperatures')
-        self.remove_low_temperature_data()
+        met_extracted_data = self.remove_low_temperature_data(met_extracted_data)
 
         print('filter for minimum data lengths, and reduce dataset to only stations of interest')
-        self._met_extracted_data, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint = \
-            self.list_required_and_reference_sites()
+        met_extracted_data, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint = \
+            self.list_required_and_reference_sites(met_extracted_data)
 
-        if self.verbose > 1: print('Metadata after dropping/filtering: {}'.format(self._met_extracted_data))
+        if self.verbose > 1: print('Metadata after dropping/filtering: {}'.format(met_extracted_data))
 
-        if len(self._met_extracted_data.index) == 0:
+        if len(met_extracted_data.index) == 0:
             print('Exiting post-processing: Metadata is empty after initial filtering processes')
             return
 
         if self.impute_data:
             print('imputation of data, returning hourly data')
             met_data_temp, met_data_pres, met_data_dewpoint = self.organise_data_imputation(
-                reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint)
+                met_extracted_data, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint)
         else:
             print('sorting data (no imputation), returning hourly data')
             met_data_temp, met_data_pres, met_data_dewpoint = self.organise_data(
-                req_sites_temp, req_sites_pres, req_sites_dewpoint)
+                met_extracted_data, req_sites_temp, req_sites_pres, req_sites_dewpoint)
 
         print('calculation of relative humidity from temperature and dew point temperature')
-        met_data_rh = self.rh_calculations(met_data_temp, met_data_dewpoint)
+        met_data_rh = self.rh_calculations(met_extracted_data, met_data_temp, met_data_dewpoint)
 
         # calculate the daily max and mean for each station
-        met_data_hourly = self.combine_and_organise_mean_max(met_data_temp, met_data_pres, met_data_rh)
+        met_data_hourly = self.combine_and_organise_mean_max(
+            met_extracted_data, met_data_temp, met_data_pres, met_data_rh)
 
-        # write data to file
-        if self.verbose > 1: print('Writing to file: {}'.format(self.file_out.format(outfile_suffix)))
-        met_data_hourly.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
+        if save_to_csv:
+            # write data to file
+            if self.verbose > 1: print('Writing to file: {}'.format(self.file_out.format(outfile_suffix)))
+            met_data_hourly.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
+
+        return met_data_hourly
 
 
     def load_met_data(self, file_in):
@@ -223,32 +227,31 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         for dpoint in range(0,49):
             dcounts = [dpoint]
-            for col_name in self._columns_specific:
+            for col_name in self.COLUMNS_SPECIFIC:
                 dcounts.append(dc_in[dc_in[col_name]==dpoint].count().values[0])
             print('{0:4},{1:7},{2:7},{3:7},{4:7}'.format(*dcounts))
 
-
     #%% functions for finding and removing unwanted data
 
-    def find_and_drop_duplicates_and_unwanted_stations(self, exlude_stations):
+    def find_and_drop_duplicates_and_unwanted_stations(self, met_data_in, exlude_stations):
         # Pull out all duplicated values
-        met_duplicates = self._met_extracted_data[self._met_extracted_data.duplicated(subset=['date','siteID'], keep=False)]
+        met_duplicates = met_data_in[met_data_in.duplicated(subset=['date', 'siteID'], keep=False)]
 
         # Split these into those with, and without, pressure data (SYNOP will have pressure data)
         #   We will keep (most of) the readings with pressure data, and will drop (most of) the
         #   readings without pressure data.
-        met_dup_with_pres = met_duplicates[met_duplicates['pressure'].isna()==False]
-        met_dup_no_pres = met_duplicates[met_duplicates['pressure'].isna()==True]
+        met_dup_with_pres = met_duplicates[met_duplicates['pressure'].isna() == False]
+        met_dup_no_pres = met_duplicates[met_duplicates['pressure'].isna() == True]
 
         # Get the 2nd data points which are duplicated *and* where both have pressure data (these are only a few points)
         #   These will be the few readings with pressure data that we drop, so we set keep to 'first' so that we
         #   get the indexes for the 'last' values.
-        met_dup_with_pres_dups = met_dup_with_pres[met_dup_with_pres.duplicated(subset=['date','siteID'], keep='first')]
+        met_dup_with_pres_dups = met_dup_with_pres[met_dup_with_pres.duplicated(subset=['date', 'siteID'], keep='first')]
 
         # Find the duplicates where there is no pressure data for either, and save the first value (<10,000 points)
         #   In this case we also want to preserve the first data points, but as we are going to drop the
         #   indexes we extract from our list of indexes to throw away we want to set keep to 'last' in this instance.
-        met_dup_no_pres_dups = met_dup_no_pres[met_dup_no_pres.duplicated(subset=['date','siteID'], keep='last')]
+        met_dup_no_pres_dups = met_dup_no_pres[met_dup_no_pres.duplicated(subset=['date', 'siteID'], keep='last')]
         met_dup_no_pres_reduced = met_dup_no_pres.drop(index=met_dup_no_pres_dups.index)
 
 
@@ -260,19 +263,15 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         # Append to this list the indexes of all station data that we are dropping completely
         for station in exlude_stations:
-            station_drop_indexes = self._met_extracted_data[self._met_extracted_data['siteID']==station].index
+            station_drop_indexes = met_data_in[met_data_in['siteID'] == station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
-
         # Finally drop all the data that is unwanted
-        met_data_reduced = self._met_extracted_data.drop(index=indexes_to_drop)
+        return met_data_in.drop(index=indexes_to_drop)
 
-        self._met_extracted_data = met_data_reduced
-
-
-    def drop_single_daily_measurement_stations(self):
+    def drop_single_daily_measurement_stations(self, met_data_in):
         # group the data by date, and count the readings per day
-        tempgroups = self._met_extracted_data.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+        tempgroups = met_data_in.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
         data_counts = tempgroups.count()
 
         # some diagnostic output, if required
@@ -302,25 +301,25 @@ class MetPostProcessor(PostProcessor, MetModule):
         # drop all the stations with only single daily readings
         indexes_to_drop = pd.Int64Index(data=[],dtype='int64')
         for station in station_single_list:
-            station_drop_indexes = self._met_extracted_data[self._met_extracted_data['siteID']==station].index
+            station_drop_indexes = met_data_in[met_data_in['siteID']==station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
         # drop all the data that is unwanted
-        met_data_reduced = self._met_extracted_data.drop(index=indexes_to_drop)
+        met_data_reduced = met_data_in.drop(index=indexes_to_drop)
 
         # print diag output for new dataset
         if self._print_stats:
             print('new stats for the reduced data:')
-            tempgroups = met_data_reduced.groupby(['siteID',pd.Grouper(key='date', freq='1D')])
-            data_counts = tempgroups.count()
+            temp_groups = met_data_reduced.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+            data_counts = temp_groups.count()
             self.print_data_count_stats(data_counts)
 
-        self._met_extracted_data = met_data_reduced
+        return met_data_reduced
 
 
     #%% function for getting two lists of stations, one for required site, one for reference sites
 
-    def station_listing(self, var_string):
+    def station_listing(self, met_extracted_data, var_string):
         #Todo Doug: can this be merged with station_listing() in aurn_post_processor (and put in to post_processor)
         '''
         arguments:
@@ -328,7 +327,7 @@ class MetPostProcessor(PostProcessor, MetModule):
                 label for variable of interest
 
         other dependancies:
-            self._met_extracted_data:
+            met_extracted_data:
                 measurement data set
             self.min_years (default 1):
                 minimum number of years of data that a site must have
@@ -343,30 +342,30 @@ class MetPostProcessor(PostProcessor, MetModule):
                 list of sites with a data count > useful_num_years
         '''
 
-        site_list_interior = self._met_extracted_data['siteID'].unique()
+        site_list_interior = met_extracted_data['siteID'].unique()
 
-        required_site_list=[]
-        reference_site_list=[]
+        required_site_list = []
+        reference_site_list = []
 
         for site in site_list_interior:
-            metsite = self._met_extracted_data[self._met_extracted_data['siteID']==site]
+            metsite = met_extracted_data[met_extracted_data['siteID'] == site]
             try:
                 measurement_num = len(metsite[metsite[var_string].notna()])
             except:
                 measurement_num = 0
-            if(measurement_num > self.min_years*365*24):
+            if measurement_num > self.min_years*365*24:
                 required_site_list.append(site)
-            if(measurement_num > self.min_years_reference*365*24):
+            if measurement_num > self.min_years_reference*365*24:
                 reference_site_list.append(site)
 
-        return required_site_list,reference_site_list
+        return required_site_list, reference_site_list
 
 
-    def list_required_and_reference_sites(self):
+    def list_required_and_reference_sites(self, met_data_in):
         print('    get the lists of required and reference stations for each measurement variable')
-        req_sites_temp,    reference_sites_temp     = self.station_listing('temperature')
-        req_sites_pres,    reference_sites_pres     = self.station_listing('pressure')
-        req_sites_dewpoint, reference_sites_dewpoint  = self.station_listing('dewpoint')
+        req_sites_temp, reference_sites_temp = self.station_listing(met_data_in, 'temperature')
+        req_sites_pres, reference_sites_pres = self.station_listing(met_data_in, 'pressure')
+        req_sites_dewpoint, reference_sites_dewpoint = self.station_listing(met_data_in, 'dewpoint')
 
         # find a unified list of useful sites for all our measurements
         reference_sites = [x for x in reference_sites_dewpoint if x in reference_sites_pres]
@@ -374,29 +373,28 @@ class MetPostProcessor(PostProcessor, MetModule):
         # get a list of all sites which are required for at least one measurement set
         required_sites = list(dict.fromkeys(req_sites_temp + req_sites_pres + req_sites_dewpoint))
         print('there are {} required sites, and {} reference sites'.format(len(required_sites), len(reference_sites)))
-        met_data_filtered = self._met_extracted_data[self._met_extracted_data['siteID'].isin(required_sites)]
+        met_data_filtered = met_data_in[met_data_in['siteID'].isin(required_sites)]
 
-        return (met_data_filtered, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint)
-
+        return met_data_filtered, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint
 
     #%% functions for calculating RH from temperature and dew point temperature data
 
-    def rh_calculations(self, met_data_temp, met_data_dewpoint):
+    def rh_calculations(self, met_data_in, met_data_temp, met_data_dewpoint):
         # merge the two input datasets, dropping indexes which are not in both
         met_data_all = met_data_temp.merge(met_data_dewpoint, how='inner', left_index=True, right_index=True)
         if self.verbose > 1: print('Met data in: {}'.format(met_data_all))
 
         # create output data frame
         met_data_out = pd.DataFrame(index=met_data_all.index)
-        met_data_out['rel_hum'] = mpcalc.relative_humidity_from_dewpoint(met_data_all['temperature'].values * units.degC, \
-                                      met_data_all['dewpoint'].values * units.degC) * 100.0
-
+        met_data_out['rel_hum'] = mpcalc.relative_humidity_from_dewpoint(
+            met_data_all['temperature'].values * units.degC,
+            met_data_all['dewpoint'].values * units.degC) * 100.0
 
         met_data_out['rel_hum.flag'] = met_data_all[['temperature.flag','dewpoint.flag']].values.max(1)
 
         # plot the distribution of the calculated RH difference from measured RH
         if self._print_stats:
-            met_data_internal = self._met_extracted_data.set_index(['date', 'siteID'])
+            met_data_internal = met_data_in.set_index(['date', 'siteID'])
 
             met_data_internal['rh2'] = met_data_out['rel_hum']
 
@@ -405,7 +403,6 @@ class MetPostProcessor(PostProcessor, MetModule):
             ax = met_data_internal['rhdiff'].hist(bins=100)
             ax.semilogy()
             ax.set_xlabel('RH_new - RH')
-
 
         return met_data_out
 
@@ -464,12 +461,12 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         return df_out
 
-    def get_full_datasets(self, req_sites_list, useful_sites_list, station_list_string, var_string):
+    def get_full_datasets(self, met_extracted_data, req_sites_list, useful_sites_list, station_list_string, var_string):
         date_index = pd.date_range(start=self.date_range[0], end=self.date_range[1],
                                    freq='1H', name='date')
 
         # add the Date index
-        indexed_orig_data = self._met_extracted_data.set_index('date')
+        indexed_orig_data = met_extracted_data.set_index('date')
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -521,27 +518,30 @@ class MetPostProcessor(PostProcessor, MetModule):
         return full_data_out
 
 
-    def organise_data_imputation(self, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint):
+    def organise_data_imputation(self, met_extracted_data, reference_sites, req_sites_temp, req_sites_pres,
+                                 req_sites_dewpoint):
 
         station_list = ['station{}'.format(x+1) for x in range(0, self.reference_num_stations)]
 
         print('imputing temperature data')
-        met_data_out_temp = self.get_full_datasets(req_sites_temp, reference_sites, station_list, 'temperature')
+        met_data_out_temp = self.get_full_datasets(
+            met_extracted_data, req_sites_temp, reference_sites, station_list, 'temperature')
 
         print('imputing pressure data')
-        met_data_out_pressure = self.get_full_datasets(req_sites_pres, reference_sites, station_list, 'pressure')
+        met_data_out_pressure = self.get_full_datasets(
+            met_extracted_data, req_sites_pres, reference_sites, station_list, 'pressure')
 
         print('imputing dew point temperature')
-        met_data_out_dewpoint = self.get_full_datasets(req_sites_dewpoint, reference_sites, station_list, 'dewpoint')
+        met_data_out_dewpoint = self.get_full_datasets(
+            met_extracted_data, req_sites_dewpoint, reference_sites, station_list, 'dewpoint')
 
         return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
-
-    def sort_datasets(self, req_sites_list, var_string):
+    def sort_datasets(self, met_extracted_data, req_sites_list, var_string):
         # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
         # AG: Todo Doug: check OK.
-        start_date = max(self._met_extracted_data['date'].min(), self.date_range[0])
-        end_date = min(self._met_extracted_data['date'].max(), self.date_range[1])
+        start_date = max(met_extracted_data['date'].min(), self.date_range[0])
+        end_date = min(met_extracted_data['date'].max(), self.date_range[1])
 
         print('Start date: {}'.format(datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT)))
         print('End date: {}'.format(datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)))
@@ -553,7 +553,7 @@ class MetPostProcessor(PostProcessor, MetModule):
         date_index = pd.date_range(start=start_date, end=end_date, freq='1H', name='date')
 
         # add the Date index
-        indexed_orig_data = self._met_extracted_data.set_index('date')
+        indexed_orig_data = met_extracted_data.set_index('date')
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -583,54 +583,51 @@ class MetPostProcessor(PostProcessor, MetModule):
 
         return full_data_out
 
-
-    def organise_data(self, req_sites_temp, req_sites_pres, req_sites_dewpoint):
+    def organise_data(self, met_extracted_data, req_sites_temp, req_sites_pres, req_sites_dewpoint):
         print('sorting temperature data')
-        met_data_out_temp = self.sort_datasets(req_sites_temp, 'temperature')
+        met_data_out_temp = self.sort_datasets(met_extracted_data, req_sites_temp, 'temperature')
         print('sorting pressure data')
-        met_data_out_pressure = self.sort_datasets(req_sites_pres, 'pressure')
+        met_data_out_pressure = self.sort_datasets(met_extracted_data, req_sites_pres, 'pressure')
         print('sorting dew point temperature')
-        met_data_out_dewpoint = self.sort_datasets(req_sites_dewpoint, 'dewpoint')
+        met_data_out_dewpoint = self.sort_datasets(met_extracted_data, req_sites_dewpoint, 'dewpoint')
 
         return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
-
-    def remove_low_temperature_data(self):
-
-        md_cold = self._met_extracted_data[self._met_extracted_data['temperature']<self.min_temperature]
+    def remove_low_temperature_data(self, met_data_in):
+        md_cold = met_data_in[met_data_in['temperature'] < self.min_temperature]
 
         if len(md_cold) > 0:
             print('     deleting this temperature and dew point temperature data')
             print(md_cold)
-            self._met_extracted_data.loc[md_cold.index,['temperature','dewpoint']] = np.nan
+            met_data_in.loc[md_cold.index, ['temperature', 'dewpoint']] = np.nan
         else:
             print('    no low temperature data to remove')
 
+        return met_data_in
 
-    def extract_mean_max(self, ts_in,var_in_string,var_out_string):
-
-        tempgroups = ts_in.groupby([pd.Grouper(level="date",freq='1D'),'siteID'])
-
+    def extract_mean_max(self, ts_in, var_in_string, var_out_string):
+        temp_groups = ts_in.groupby([pd.Grouper(level="date", freq='1D'), 'siteID'])
         out_data = pd.DataFrame()
 
-        out_data['{}.max'.format(var_out_string)] = tempgroups.max()[var_in_string]
-        out_data['{}.mean'.format(var_out_string)] = tempgroups.mean()[var_in_string]
-        out_data['{}.flag'.format(var_out_string)] = tempgroups.mean()['{}.flag'.format(var_in_string)]
+        out_data['{}.max'.format(var_out_string)] = temp_groups.max()[var_in_string]
+        out_data['{}.mean'.format(var_out_string)] = temp_groups.mean()[var_in_string]
+        out_data['{}.flag'.format(var_out_string)] = temp_groups.mean()['{}.flag'.format(var_in_string)]
 
         return out_data
 
 
-    def combine_and_organise_mean_max(self, met_data_temp,met_data_pres,met_data_rh):
+    def combine_and_organise_mean_max(self, met_data_in, met_data_temp, met_data_pres, met_data_rh):
 
-        met_groups_rh   = self.extract_mean_max(met_data_rh,'rel_hum','RelativeHumidity')
-        met_groups_temp = self.extract_mean_max(met_data_temp,'temperature','Temperature')
-        met_groups_pres = self.extract_mean_max(met_data_pres,'pressure','Pressure')
+        met_groups_rh = self.extract_mean_max(met_data_rh, 'rel_hum', 'RelativeHumidity')
+        met_groups_temp = self.extract_mean_max(met_data_temp, 'temperature', 'Temperature')
+        met_groups_pres = self.extract_mean_max(met_data_pres, 'pressure', 'Pressure')
 
-        combined_data = met_groups_temp.merge(met_groups_rh,how='outer',left_index=True,right_index=True)
-        combined_data = combined_data.merge(met_groups_pres,how='outer',left_index=True,right_index=True)
+        combined_data = met_groups_temp.merge(met_groups_rh, how='outer', left_index=True, right_index=True)
+        combined_data = combined_data.merge(met_groups_pres, how='outer', left_index=True, right_index=True)
 
         combined_data.sort_index(level=1,inplace=True)
-        combined_data.index = combined_data.index.set_levels(['{} [WEATHER]'.format(x) for x in combined_data.index.levels[1]], level=1)
-        combined_data.index.rename(['time_stamp','sensor_name'],inplace=True)
+        combined_data.index = combined_data.index.set_levels(
+            ['{} [WEATHER]'.format(x) for x in combined_data.index.levels[1]], level=1)
+        combined_data.index.rename(['time_stamp', 'sensor_name'], inplace=True)
 
         return combined_data
