@@ -104,6 +104,7 @@ class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
 
         return result
 
+
     def extract_data(self, date_range=None,
                      latitude_range=EnvironmentModule.UK_LATITUDES, longitude_range=EnvironmentModule.UK_LONGITUDES,
                      outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX,
@@ -300,7 +301,7 @@ class MetExtractorPollen(MetExtractor):
     def get_pollen_species():
         return [s.MEASUREMENT_NAME for s in MetExtractor.all_subclasses(MetExtractorPollen)]
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets=[]):
+    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets):
         return self._extractor.extract_data(date_range, latitude_range, longitude_range, outfile_suffix,
                                             extract_extra_datasets)
 
@@ -318,6 +319,7 @@ class MetExtractorPollenAmbrosia(MetExtractorPollen):
 class MetExtractorPollenArtemesia(MetExtractorPollen):
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.artemisia'
     MEASUREMENT_NAME = SOURCE_REFERENCE.split('.')[-1]
+
 
 class MetExtractorPollenBetula(MetExtractorPollen):
     SOURCE_REFERENCE = 'midas.pollen_drnl_ob.betula'
@@ -376,7 +378,7 @@ class MetExtractorPollenGroup(object):
         self.out_dir = out_dir
         self.verbose = verbose
 
-    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets=[]):
+    def extract_data(self, date_range, latitude_range, longitude_range, outfile_suffix, extract_extra_datasets):
         result = []
         for pollen_extractor in self._extractors:
             result.append(pollen_extractor.extract_data(
