@@ -8,14 +8,12 @@ try:
 except:
     pass
 
-from environmental_data_modules import EnvironmentModule, AurnModule
+from environmental_data_modules import EnvironmentModule, AurnModule, DateYearsProcessor
 
 
-class AurnExtractor(EnvironmentModule, AurnModule):
+class AurnExtractor(EnvironmentModule, AurnModule, DateYearsProcessor):
     # Define 'absolute' constants
     SPECIES_LIST = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
-    AVAILABLE_YEARS = [2016, 2017, 2018, 2019]
-    DATE_RANGE = None  # Date range not used in Aurn Extraction, just whole years
 
     # Define defaults
     DEFAULT_SAVE_TO_CSV = True
@@ -26,30 +24,12 @@ class AurnExtractor(EnvironmentModule, AurnModule):
                  verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(AurnExtractor, self).__init__(out_dir, verbose)
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
+        DateYearsProcessor.__init__(self)
         self._base_file_out = AurnExtractor.BASE_FILE_OUT
-        self.years = AurnExtractor.AVAILABLE_YEARS
-        self.date_range = AurnExtractor.DATE_RANGE
-
-    @property
-    def years(self):
-        return self.__years
-
-    @years.setter
-    def years(self, years):
-        try:
-            years = set(list(years))
-        except Exception:
-            raise ValueError('Years must be a list. Input: {}'.format(years))
-
-        error_years = set(years) - set(AurnExtractor.AVAILABLE_YEARS)
-        assert len(error_years) == 0, \
-            "Each year must be contained in available years: {}. Error years: {}".format(
-                AurnExtractor.AVAILABLE_YEARS, str(error_years))
-        self.__years = years
 
 
     def extract_data(self,
-                     years=AVAILABLE_YEARS,
+                     years=DateYearsProcessor.get_available_years(),
                      site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
                      outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX):

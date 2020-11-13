@@ -1,7 +1,5 @@
 from abc import ABCMeta, abstractmethod
 import os, errno
-from datetime import datetime
-
 
 class EnvironmentModule:
     """
@@ -14,14 +12,10 @@ class EnvironmentModule:
     UK_LONGITUDES = [-11., 3.]
     LONGITUDE_RANGE = [-180., 360.]
     LATITUDE_RANGE = [-90., 90.]
-    INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
 
     # Define defaults
     DEFAULT_OUT_FILE_SUFFIX = ''
     DEFAULT_OUT_DIR = 'out_dir'
-    DEFAULT_START_DATE = datetime(2016, 1, 1, 0)
-    DEFAULT_END_DATE = datetime(2019, 12, 31, 23)
-    DEFAULT_DATE_RANGE = [DEFAULT_START_DATE, DEFAULT_END_DATE]
     DEFAULT_VERBOSE = 0
 
 
@@ -38,11 +32,9 @@ class EnvironmentModule:
         """
         self.out_dir = dir_name
         self.verbose = verbose
-        self.__date_range = EnvironmentModule.DEFAULT_DATE_RANGE
         self._base_file_out = None
         self._file_out = None
         self._outfile_suffix = EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX
-
 
 
     @staticmethod
@@ -57,29 +49,6 @@ class EnvironmentModule:
     @property
     def base_file_out(self):
         return self._base_file_out
-
-    @property
-    def date_range(self):
-        return self.__date_range
-
-    @date_range.setter
-    def date_range(self, range):
-        if range is None:
-            self.__date_range = range
-            return
-
-        if isinstance(range[0], datetime):
-            datetime_1 = range[0]
-        else:
-            raise ValueError('Start date is not in datetime format')
-        if isinstance(range[1], datetime):
-            datetime_2 = range[1]
-        else:
-            raise ValueError('End date is not in datetime format')
-        if datetime_1 >= datetime_2:
-            raise ValueError('Start date is not earlier than end date.')
-        self.__date_range = [datetime_1, datetime_2]
-        
 
     @property
     def out_dir(self):

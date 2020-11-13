@@ -20,7 +20,7 @@ if __name__ == '__main__':
                              "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
-        in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnExtractor.AVAILABLE_YEARS]) + ']'))
+        in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnExtractor.get_available_years()]) + ']'))
     parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
     parser.add_argument("--min_years_ref", "-u", type=int, help="minimum number of years of data for any site that \
         we are going to use as a reference site later. (this cannot be less than min_years)")

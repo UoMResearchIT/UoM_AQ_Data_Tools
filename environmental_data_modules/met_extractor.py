@@ -7,10 +7,10 @@ from cmath import polar
 from datetime import datetime
 import json
 
-from environmental_data_modules import EnvironmentModule, MetModule
+from environmental_data_modules import EnvironmentModule, MetModule, DateRangeProcessor
 
 
-class MetExtractor(EnvironmentModule, MetModule):
+class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
     __metaclass__ = ABCMeta
 
     # Define 'absolute' constants
@@ -24,6 +24,7 @@ class MetExtractor(EnvironmentModule, MetModule):
     def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
         super(MetExtractor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
+        DateRangeProcessor.__init__(self)
         self._headstring = None
         self._base_file_out = MetExtractor.BASE_FILE_OUT
         self._temp_file_out = ''
@@ -112,10 +113,10 @@ class MetExtractor(EnvironmentModule, MetModule):
         self._outfile_suffix = outfile_suffix
 
         if date_range is not None:
-            self.date_range = [datetime.strptime(date_range[0], MetExtractor.INPUT_DATE_FORMAT),
-                               datetime.strptime(date_range[1], MetExtractor.INPUT_DATE_FORMAT)]
+            self.date_range = [datetime.strptime(date_range[0], DateRangeProcessor.INPUT_DATE_FORMAT),
+                               datetime.strptime(date_range[1], DateRangeProcessor.INPUT_DATE_FORMAT)]
         else:
-            self.date_range = EnvironmentModule.DEFAULT_DATE_RANGE
+            self.date_range = [self.get_available_start(), self.get_available_end()]
 
         if extract_extra_datasets:
             self._extra_datasets = self.ALLOWED_EXTRA_DATASETS
@@ -129,12 +130,12 @@ class MetExtractor(EnvironmentModule, MetModule):
             self.file_out = self._temp_file_out.format('_extras-{}'.format(str_extra_datasets),
                                                        self.outfile_suffix_string)
             self._headstring = self._head_string.format(' and extra datasets: {}'.format(str(str_extra_datasets)),
-                                                        self.date_range[0], self.date_range[1])
+                                                        self.start, self.end)
         else:
             self.file_out = self._temp_file_out.format('', self.outfile_suffix_string)
-            self._headstring = self._head_string.format('', self.date_range[0], self.date_range[1])
+            self._headstring = self._head_string.format('', self.start, self.end)
 
-        print('extracting {}'.format(self._headstring, self.date_range[0], self.date_range[1]))
+        print('extracting {}'.format(self._headstring, self.start, self.end))
         return self._extract_data(extraction_dict)
 
     def _extract_data(self, extraction_dict, save_to_csv=True):
@@ -262,7 +263,6 @@ class MetExtractorWind(MetExtractor):
         result = super(MetExtractorWind, self)._get_extraction_dict()
         result['Complex wind type'] = self._complex_wind_type
         return result
-
 
     def _save_to_csv(self, datadata):
         print('saving to file: {}'.format(self.file_out))

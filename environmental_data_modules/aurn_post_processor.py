@@ -53,10 +53,10 @@ try:
 except:
     pass
 
-from environmental_data_modules import PostProcessor, AurnModule
+from environmental_data_modules import PostProcessor, AurnModule, DateRangeProcessor
 
 
-class AurnPostProcessor(PostProcessor, AurnModule):
+class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
     # Define 'absolute' constants
     BASE_FILE_OUT = '{}/aurn_processed_daily_{}.csv'
 
@@ -82,6 +82,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
                  out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
         super(AurnPostProcessor, self).__init__(out_dir, verbose)
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
+        DateRangeProcessor.__init__(self)
 
         self._emep_data = None
         self.min_years_reference = AurnPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
@@ -125,10 +126,10 @@ class AurnPostProcessor(PostProcessor, AurnModule):
 
         # Process inputs
         if date_range is not None:
-            self.date_range = [datetime.strptime(date_range[0], AurnPostProcessor.INPUT_DATE_FORMAT),
-                               datetime.strptime(date_range[1], AurnPostProcessor.INPUT_DATE_FORMAT)]
+            self.date_range = [datetime.strptime(date_range[0], DateRangeProcessor.INPUT_DATE_FORMAT),
+                               datetime.strptime(date_range[1], DateRangeProcessor.INPUT_DATE_FORMAT)]
         else:
-            self.date_range = AurnPostProcessor.DEFAULT_DATE_RANGE
+            self.date_range = [self.get_available_start(), self.get_available_end()]
 
         self.file_out = AurnPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
         self._emep_data = self.load_emep_data(emep_filename)
@@ -365,9 +366,7 @@ class AurnPostProcessor(PostProcessor, AurnModule):
         final_dataframe = pd.DataFrame()
         site_list_internal = hourly_dataframe["SiteID"].unique()
 
-        start_date = self.date_range[0]
-        end_date = self.date_range[1]
-        date_index = pd.date_range(start=start_date, end=end_date, freq='1H')
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H')
         hourly_dataframe_internal = hourly_dataframe.set_index('Date')
 
         # do some analysis of the data, getting data counts

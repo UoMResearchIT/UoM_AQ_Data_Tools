@@ -33,10 +33,10 @@ try:
 except:
     pass  # print('Warning: Unable to load library: {}'.format(err))
 
-from environmental_data_modules import PostProcessor, MetModule
+from environmental_data_modules import PostProcessor, MetModule, DateRangeProcessor
 
 
-class MetPostProcessor(PostProcessor, MetModule):
+class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
     # Define 'absolute' constants
     BASE_FILE_OUT = '{}/Met_ppd_daily_mean_max_temp_RH_pres{}.csv'
@@ -65,6 +65,7 @@ class MetPostProcessor(PostProcessor, MetModule):
                  verbose=PostProcessor.DEFAULT_VERBOSE):
         super(MetPostProcessor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
+        DateRangeProcessor.__init__(self)
         self._columns_specific = MetPostProcessor.COLUMNS_SPECIFIC
         self.station_data = station_data_filename
         self.min_temperature = MetPostProcessor.DEFAULT_MIN_TEMPERATURE
@@ -136,7 +137,8 @@ class MetPostProcessor(PostProcessor, MetModule):
             self.date_range = [datetime.strptime(date_range[0], MetPostProcessor.INPUT_DATE_FORMAT),
                                datetime.strptime(date_range[1], MetPostProcessor.INPUT_DATE_FORMAT)]
         else:
-            self.date_range = MetPostProcessor.DEFAULT_DATE_RANGE
+            self.date_range = [self.get_available_start(), self.get_available_end()]
+
         self.min_temperature = min_temperature
         self.reference_num_stations = reference_num_stations
         self.min_years = min_years
@@ -462,7 +464,7 @@ class MetPostProcessor(PostProcessor, MetModule):
         return df_out
 
     def get_full_datasets(self, met_extracted_data, req_sites_list, useful_sites_list, station_list_string, var_string):
-        date_index = pd.date_range(start=self.date_range[0], end=self.date_range[1],
+        date_index = pd.date_range(start=self.start, end=self.end,
                                    freq='1H', name='date')
 
         # add the Date index
@@ -539,9 +541,9 @@ class MetPostProcessor(PostProcessor, MetModule):
 
     def sort_datasets(self, met_extracted_data, req_sites_list, var_string):
         # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
-        # AG: Todo Doug: check OK.
-        start_date = max(met_extracted_data['date'].min(), self.date_range[0])
-        end_date = min(met_extracted_data['date'].max(), self.date_range[1])
+        # Todo Doug: check OK.
+        start_date = max(met_extracted_data['date'].min(), self.start)
+        end_date = min(met_extracted_data['date'].max(), self.end)
 
         print('Start date: {}'.format(datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT)))
         print('End date: {}'.format(datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)))

@@ -38,7 +38,7 @@ if __name__ == '__main__':
                         help="start and end dates. (array - first two values only). \
                             Expected date format: {} \n Default: [{}, {}]".format(
                             MetPostProcessor.INPUT_DATE_FORMAT.replace('%', ''),
-                            MetPostProcessor.DEFAULT_START_DATE, MetPostProcessor.DEFAULT_END_DATE))
+                            MetPostProcessor.get_available_start(), MetPostProcessor.get_available_end()))
 
     ## Calculation parameters
     parser.add_argument("--min_years", "-y", type=float, help="minimum number of years of data that a site must have")
@@ -106,8 +106,8 @@ if __name__ == '__main__':
             raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
         print('Using date range: [{}]'.format(','.join(date_range)))
     else:
-        print('No date_range provided, so using default: [{}]'.format(','.join(MetPostProcessor.DEFAULT_DATE_RANGE)))
-        date_range = MetPostProcessor.DEFAULT_DATE_RANGE
+        print('No date_range provided, so using default: [{}]'.format(','.join(MetPostProcessor.get_available_dates())))
+        date_range = MetPostProcessor.get_available_dates()
 
     if args.min_years:
         min_years = args.min_years

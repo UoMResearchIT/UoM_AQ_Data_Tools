@@ -25,12 +25,12 @@ ARGUMENTS_1=" --file_in ${FILE_IN_TEST}  --stations_filename ${STATIONS_FILENAME
   
 FILE_IN_TEST='inputs/Anns_for_Doug_tests/Met_extracted_temp_extras-rel_hum-pressure-dewpoint_June2017.csv'
 OUT_DIR_TEST='met_postprocessing_test_with_dougs'
-OUTFILE_SUFFIX_TEST='_June2017'
+OUTFILE_SUFFIX_TEST='_June2017_imputed'
 DATE_RANGE_TEST="2017-01-01_00 2017-06-30_23"
 ARGUMENTS_TEST=" --file_in ${FILE_IN_TEST}  --stations_filename ${STATIONS_FILENAME}
   --out_dir ${OUT_DIR_TEST} --outfile_suffix ${OUTFILE_SUFFIX_TEST} --date_range ${DATE_RANGE_TEST}
   --exclude_sites ${EXCLUDE_SITE_LIST} --min_temp ${MIN_TEMP}  --min_years ${MIN_YEARS}
   --min_years_ref ${REFERENCE_NUM_YEARS} --ref_num_stations ${REFERENCE_NUM_STATIONS}
-  --no_impute_values --print_stats --verbose ${VERBOSE}"
+  --impute_values --print_stats --verbose ${VERBOSE}"
 
 python Met_Temperature_RH_Pressure_data_processing.py ${ARGUMENTS_TEST}
