@@ -7,10 +7,10 @@ from cmath import polar
 from datetime import datetime
 import json
 
-from environmental_data_modules import EnvironmentModule, MetModule, DateRangeProcessor
+from environmental_data_modules import Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
 
 
-class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
+class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor):
     """
         Abstract class, parent of classes used for extracting data from the MEDMI server.
     """
@@ -24,18 +24,28 @@ class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
     # Define default constants
     DEFAULT_ADD_EXTRA_MEASUREMENTS = False
 
-    def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
+    def __init__(self, out_dir=Extractor.DEFAULT_OUT_DIR, verbose=Extractor.DEFAULT_VERBOSE):
+        """ Initialise instance of the MetExtractor class.
+            Initialises the private class variables
+
+            Args:
+                out_dir: (string) directory to be used for all outputs
+                verbose: (integer) level of verbosity in output.
+
+            Returns:
+                Initialised instance of MetExtractor
+
+        """
         super(MetExtractor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
         DateRangeProcessor.__init__(self)
+        RegionRectProcessor.__init__(self)
         self._headstring = None
         self._base_file_out = MetExtractor.BASE_FILE_OUT
         self._temp_file_out = ''
         self._extra_datasets = []
         self._columns_base = MetExtractor.COLUMNS_BASE
         self._columns_specific = []
-        self.latitude_range = EnvironmentModule.UK_LATITUDES
-        self.longitude_range = EnvironmentModule.UK_LONGITUDES
 
     @staticmethod
     def get_source_ref_from_name(name):
@@ -55,46 +65,8 @@ class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
     def get_available_measurements():
         return [s.MEASUREMENT_NAME for s in MetExtractor.all_subclasses(MetExtractor)]
 
-    @property
-    def latitude_range(self):
-        return self.__latitude_range
-
-    @latitude_range.setter
-    def latitude_range(self, range):
-        try:
-            val_1 = float(range[0])
-            val_2 = float(range[1])
-        except ValueError as err:
-            raise err
-        if not ((EnvironmentModule.LATITUDE_RANGE[0] <= val_1) and (val_1 <= EnvironmentModule.LATITUDE_RANGE[1])):
-            raise ValueError('Latitude first value falls outside global range')
-        if not ((EnvironmentModule.LATITUDE_RANGE[0] <= val_2) and (val_2 <= EnvironmentModule.LATITUDE_RANGE[1])):
-            raise ValueError('Latitude last value falls outside global range')
-        self.__latitude_range = [val_1, val_2]
-
-    @property
-    def longitude_range(self):
-        return self.__longitude_range
-
-    @longitude_range.setter
-    def longitude_range(self, range):
-        try:
-            val_1 = float(range[0])
-            val_2 = float(range[1])
-        except ValueError as err:
-            raise err
-        if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_1 <= EnvironmentModule.LONGITUDE_RANGE[1]):
-            raise ValueError('Longitude first value falls outside global range')
-        if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_2 <= EnvironmentModule.LONGITUDE_RANGE[1]):
-            raise ValueError('Longitude last value falls outside global range')
-        self.__longitude_range = [val_1, val_2]
-
-    def get_all_columns(self):
-        return super(MetExtractor, self).get_all_columns() + self._extra_datasets
-
-    def set_region(self, latitude_range, longitude_range):
-        self.latitude_range = latitude_range
-        self.longitude_range = longitude_range
+    def get_all_column_headers(self):
+        return super(MetExtractor, self).get_all_column_headers() + self._extra_datasets
 
     def _get_extraction_dict(self):
         result = {
@@ -107,11 +79,25 @@ class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
 
         return result
 
-
     def extract_data(self, date_range=None,
-                     latitude_range=EnvironmentModule.UK_LATITUDES, longitude_range=EnvironmentModule.UK_LONGITUDES,
-                     outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX,
+                     latitude_range=RegionRectProcessor.UK_LATITUDES,
+                     longitude_range=RegionRectProcessor.UK_LONGITUDES,
+                     outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX,
                      extract_extra_datasets=DEFAULT_ADD_EXTRA_MEASUREMENTS):
+
+        """ Extract the date from MEDMI server, based on parameters
+
+            Args:
+                date_range:         (list of 2 datetime) The date range of interest
+                latitude_range:     (list of 2 floats) The latitude range of interest
+                longitude_range:    (list of 2 floats) The longitude range of interest
+                outfile_suffix:     (string) The suffix to appended to the end of output file names.
+                extract_extra_datasets: (boolean). Whether to extract the available extra data measurements.
+
+            Returns:
+                Extracted data (pandas dataframe)
+
+        """
 
         self.set_region(latitude_range, longitude_range)
         self._outfile_suffix = outfile_suffix
@@ -171,7 +157,7 @@ class MetExtractor(EnvironmentModule, MetModule, DateRangeProcessor):
 
         with open(self.file_out, 'w') as dfile:
             dfile.write(self._headstring)
-            dfile.write(','.join(self.get_all_columns()) + '\n')
+            dfile.write(','.join(self.get_all_column_headers()) + '\n')
 
             for data in data_result.values():
                 d_date = data['Time']
@@ -290,7 +276,7 @@ class MetExtractorWind(MetExtractor):
         print('saving to file: {}'.format(self.file_out))
         with open(self.file_out, 'w') as dfile:
             dfile.write(self._headstring)
-            dfile.write(','.join(self.get_all_columns()) + '\n')
+            dfile.write(','.join(self.get_all_column_headers()) + '\n')
             for data in datadata.values():
                 # print(data)
                 d_date = data['Time']

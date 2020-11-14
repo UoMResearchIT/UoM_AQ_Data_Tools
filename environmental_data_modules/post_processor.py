@@ -26,6 +26,17 @@ class PostProcessor(EnvironmentModule):
 
 
     def __init__(self, out_dir=EnvironmentModule.DEFAULT_OUT_DIR, verbose=EnvironmentModule.DEFAULT_VERBOSE):
+        """ Initialise instance of the PostProcessor class.
+            Initialises the private class variables
+
+            Args:
+                out_dir: (string) directory to be used for all outputs
+                verbose: (integer) level of verbosity in output.
+
+            Returns:
+                Initialised instance of subclass of PostProcessor
+
+        """
         super(PostProcessor, self).__init__(out_dir, verbose)
 
         self._impute_data = PostProcessor.DEFAULT_IMPUTE_DATA
@@ -37,6 +48,12 @@ class PostProcessor(EnvironmentModule):
         self._min_years = None
         self._imputer = None
 
+    @abstractmethod
+    def process(self, file_in, outfile_suffix='', date_range=None, impute_data=DEFAULT_IMPUTE_DATA,
+                save_to_csv=DEFAULT_SAVE_TO_CSV):
+        raise NotImplementedError("Must override process")
+
+    ### Class properties: Get/Sets ###
 
     @property
     def station_data(self):
@@ -97,7 +114,8 @@ class PostProcessor(EnvironmentModule):
             raise ValueError('min_years must be non-negative.')
         self._min_years = min_years
 
-    #%% station geographic routines
+    ### station geographic routines
+
     def calc_station_distances(self, stations_in, stat_location):
 
         station_distances = pd.DataFrame(index=stations_in.index)
@@ -111,7 +129,7 @@ class PostProcessor(EnvironmentModule):
         return station_distances
 
 
-    # %% function for creating date objects
+    ### function for creating date objects
     def parse_calcs_date(self, date_in):
         return datetime.strptime(date_in, self.DATE_CALCS_FORMAT)
 

@@ -8,10 +8,10 @@ try:
 except:
     pass
 
-from environmental_data_modules import EnvironmentModule, AurnModule, DateYearsProcessor
+from environmental_data_modules import Extractor, AurnModule, DateYearsProcessor
 
 
-class AurnExtractor(EnvironmentModule, AurnModule, DateYearsProcessor):
+class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
     """
         Class used for extracting data from the AURN server.
     """
@@ -24,8 +24,21 @@ class AurnExtractor(EnvironmentModule, AurnModule, DateYearsProcessor):
     BASE_FILE_OUT = '{}/AURN_extracted{}.csv'
 
     def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
-                 out_dir=EnvironmentModule.DEFAULT_OUT_DIR,
-                 verbose=EnvironmentModule.DEFAULT_VERBOSE):
+                 out_dir=Extractor.DEFAULT_OUT_DIR,
+                 verbose=Extractor.DEFAULT_VERBOSE):
+        """ Initialise instance of the AurnExtractor class.
+            Initialises the private class variables
+
+            Args:
+                metadata_filename: filename of the metadata used in Aurn data extraction
+                metadata_url: alternative source of AURN metadata, if metadata_filename is None
+                out_dir: (string) directory to be used for all outputs
+                verbose: (integer) level of verbosity in output.
+
+            Returns:
+                Initialised instance of AurnExtractor
+
+        """
         super(AurnExtractor, self).__init__(out_dir, verbose)
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
         DateYearsProcessor.__init__(self)
@@ -36,7 +49,19 @@ class AurnExtractor(EnvironmentModule, AurnModule, DateYearsProcessor):
                      years=DateYearsProcessor.get_available_years(),
                      site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
-                     outfile_suffix=EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX):
+                     outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX):
+        """ Extract the date from MEDMI server, based on parameters
+
+            Args:
+                years:              (list of integer) The years of interest
+                site_list:          (list of numbers/strings) The site IDs of interest
+                save_to_csv:        (boolean) Whether to save the output dateframes to CSV file(s)
+                outfile_suffix:     (string) The suffix to appended to the end of output file names.
+
+            Returns:
+                Extracted data (pandas dataframe)
+
+        """
 
         self._outfile_suffix = outfile_suffix
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)

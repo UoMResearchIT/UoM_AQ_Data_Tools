@@ -28,8 +28,8 @@ MINYEARS='1'
 USEYEARS='1'
 YEARS="2016 2017"
 VERBOSE=3
-OUTFILE_SUFFIX='2016-2017_no-impute' 
+OUTFILE_SUFFIX='2016-2017_impute'
 
-ARGUMENTS_1="--no_impute_values --metadata_url ${META_DATA_URL} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} -o ${OUT_DIR} -s ${OUTFILE_SUFFIX}  --verbose ${VERBOSE}"
+ARGUMENTS_1="--impute_values --metadata_url ${META_DATA_URL} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} -o ${OUT_DIR} -s ${OUTFILE_SUFFIX}  --verbose ${VERBOSE}"
 
 python AURN_download.py ${ARGUMENTS_1}

@@ -1,45 +1,3 @@
-"""
-
-Script for automated downloading of AURN data for a given date range.
-
-
-Summary of how many sites we will be imputing for data for each species,
-and how many useful site there are for each.
-
-NOXasNO2 has 157 req sites and 118 useful sites
-O3 has 75 req sites and 66 useful sites
-NO2 has 157 req sites and 118 useful sites
-PM2.5 has 81 req sites and 55 useful sites
-PM10 has 77 req sites and 51 useful sites
-SO2 has 27 req sites and 19 useful sites
-
-We will only impute data for sites with > 1 year of data, and only use
-sites with >3.5 years of data for the imputation inputs
-
-
-Full dataset information on NaN's and negative/zero numbers:
-O3 has 2507061 positive values
-O3 has 3139956 NaNs
-O3 has 735 negative or zero values that will be replaced with NaNs
-PM10 has 2287338 positive values
-PM10 has 3352010 NaNs
-PM10 has 8404 negative or zero values that will be replaced with NaNs
-PM2.5 has 2336213 positive values
-PM2.5 has 3280461 NaNs
-PM2.5 has 31078 negative or zero values that will be replaced with NaNs
-NO2 has 4936512 positive values
-NO2 has 707558 NaNs
-NO2 has 3682 negative or zero values that will be replaced with NaNs
-NOXasNO2 has 4939775 positive values
-NOXasNO2 has 707425 NaNs
-NOXasNO2 has 552 negative or zero values that will be replaced with NaNs
-SO2 has 837779 positive values
-SO2 has 4806980 NaNs
-SO2 has 2993 negative or zero values that will be replaced with NaNs
-(note, the NaN count will include sites that we will not be imputing with data)
-
-"""
-
 try:
     import datetime
     import pandas as pd
@@ -83,6 +41,19 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
                  out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
+        """ Initialise instance of the AurnPostProcessor class.
+            Initialises the private class variables
+
+            Args:
+                metadata_filename: filename of the metadata used in Aurn data extraction
+                metadata_url: alternative source of AURN metadata, if metadata_filename is None
+                out_dir: (string) directory to be used for all outputs
+                verbose: (integer) level of verbosity in output.
+
+            Returns:
+                Initialised instance of AurnPostProcessor
+
+        """
         super(AurnPostProcessor, self).__init__(out_dir, verbose)
         AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
         DateRangeProcessor.__init__(self)
@@ -91,8 +62,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         self.min_years_reference = AurnPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
         self.min_years = AurnPostProcessor.DEFAULT_MIN_YEARS
         self.impute_data = False
-        self.imputer = None
-        self.transformer = None
+        self._imputer = None
+        self._transformer = None
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
@@ -118,7 +89,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
     def process(self, in_file, date_range=None,
                 site_list=AurnModule.DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
-                min_years_reference=DEFAULT_MIN_YEARS_REFERENCE, min_years=DEFAULT_MIN_YEARS,
+                min_years_reference=DEFAULT_MIN_YEARS_REFERENCE,
+                min_years=DEFAULT_MIN_YEARS,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
                 random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
@@ -126,6 +98,32 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE,
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV,
                 outfile_suffix=''):
+
+        """ Post process the data extracted from MEDMI server, based on parameters
+
+            Args:
+                in_file:                (str) The file spec of the input file (required)
+                date_range:             (list of 2 datetime) The date range of interest
+                site_list:              (list of string/number) Site IDs of interest
+                emep_filename:          (str) The file spec of the EMEP file to be used to help calculate #Todo Doug
+                min_years_reference:    (float) The minimum number of years of data for any site that  we are going to
+                                            use as a reference site later. (this cannot be less than min_years)
+                min_years:              (float) The minimum number of years of data that a site must have
+                impute_data:            (boolean) Whether to attempt to impute missing data
+                random_state:           #Todo Doug: all of these...
+                transformer_standardize:
+                add_indicator:
+                initial_strategy:
+                max_iter:
+                transformer_method:
+                estimator:
+                save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
+                outfile_suffix:         (str) The suffix to appended to the end of output file names.
+
+            Returns:
+                Processed data (pandas dataframe)
+
+        """
 
         # Process inputs
         if date_range is not None:

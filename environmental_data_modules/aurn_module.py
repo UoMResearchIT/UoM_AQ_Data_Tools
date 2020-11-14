@@ -1,8 +1,8 @@
+from abc import ABCMeta, abstractmethod
 try:
     import wget
     import pyreadr
     from pathlib import Path
-    from abc import ABCMeta, abstractmethod
 except:
     pass
 
@@ -26,6 +26,17 @@ class AurnModule(object):
     DEFAULT_SITE_LIST = None
 
     def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):
+        """ Initialise instance of the MetModule class.
+            Initialises the private class variables with hard-coded / default values
+
+            Args:
+                metadata_filename: filename of the metadata used in Aurn data extraction
+                metadata_url: alternative source of AURN metadata, if metadata_filename is None
+
+            Returns:
+                Initialised instance of subclass of MetModule
+
+        """
         self._metadata = self.load_metadata(metadata_filename, metadata_url)
         self._site_list = AurnModule.DEFAULT_SITE_LIST
 
@@ -39,6 +50,20 @@ class AurnModule(object):
 
     @site_list.setter
     def site_list(self, site_list):
+        """ Set the site_list property.
+            If site_list is None, will use the site lists from the AURN metadata property
+            Otherwise, will check that each site ID in site_list is in the list of all site IDs in the AURN Metadata
+
+            Dependencies:
+                self.metadata
+
+            Args:
+                site_list: list of site identifiers (strings or numbers)
+
+            Returns:
+                None
+
+        """
         all_sites = self.metadata['AURN_metadata'][AurnModule.SITE_ID_AURN_METADATA].unique()
         # get list of sites to process extract_site_data
         if site_list is None:
@@ -47,19 +72,34 @@ class AurnModule(object):
             try:
                 site_list = set(list(site_list))
             except Exception:
-                raise ValueError('Site list must be a list. Input: {}'.format(site_list))
+                raise TypeError('Site list must be a list. Input: {}'.format(site_list))
             error_sites = set(site_list) - set(all_sites)
-            assert len(error_sites) == 0, \
+            assert len(error_sites) == 0, ValueError(
                 "Each site must be contained in available sites (from Aurn metadata: {}. Error sites: {}".format(
-                    all_sites, str(error_sites))
+                    all_sites, str(error_sites)))
             self._site_list = site_list
 
 
-    def load_metadata(self, filename, alt_url=None):
-        # Does the file exist?
-        filename = Path(filename)
-        if filename.is_file():
-            print("Metadata file {} already exists so will use this".format(filename))
+    def load_metadata(self, filename=None, alt_url=None):
+        """ Load the AURN metadata from file or URL.
+            If filename is None, will use the metadata stored at the URL: alt_url
+            Otherwise, will load from URL: alt_url
+
+            Dependencies:
+                Path
+
+            Args:
+                filename: (string) Valid file name of existing AURN metadata R file, or None
+                alt_url: (string) Valid URL pointing to AURN metadata downloadable source, or None
+
+            Returns:
+                None
+
+        """
+        # Has a filname been entered and does the file exist?
+        if filename is not None and Path(filename).is_file():
+            print("Metadata file {} exists so will use this".format(filename))
+            filename = Path(filename)
         elif alt_url:
             # Does the URL alternative exist and does it work
             print("Downloading data file using url {}".format(alt_url))
@@ -70,7 +110,7 @@ class AurnModule(object):
                 raise ValueError('Error obtaining metadata file from {}. {}'.format(alt_url, err))
         else:
             # Neither works
-            raise ValueError('Metadata filename does not exist and no url alternative provided')
+            raise ValueError('Invalid metadata filename and no url alternative provided')
 
         # Read the RData file into a Pandas dataframe
         try:

@@ -1,23 +1,3 @@
-"""
-Created on Tue Sep 22 09:16:40 2020
-
-Unified production script for MEDMI data processing. This will:
-    1) load and clean our dataset
-        a) find duplicated readings
-            i)  filtering out the METAR data by lack of pressure reading
-            ii) retaining the first value where there's no difference in presence of pressure reading
-        b) removing stations identified as unwanted
-            i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,
-                    and as it is unlikely to be useful comparison with participant data, we will remove it
-        c) find and remove the synoptic spot readings (these are single readings per day - so we will
-                     identify all such single readings and remove them, if they are synoptic spot readings or not)
-        (Points (a) and (c) based on pers. comms. with Martyn Sunter, Met Office, July 2020.
-         Point (b) based on data exploration by authors.)
-    2)
-
-@author: mbessdl2
-"""
-
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -66,6 +46,17 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
     def __init__(self, out_dir=DEFAULT_OUT_DIR, station_data_filename=DEFAULT_STATION_DATA_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
+        """ Initialise instance of the MetPostProcessor class.
+            Initialises the private class variables
+
+            Args:
+                out_dir: (string) directory to be used for all outputs
+                verbose: (integer) level of verbosity in output.
+
+            Returns:
+                Initialised instance of MetPostProcessor
+
+        """
         super(MetPostProcessor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
         DateRangeProcessor.__init__(self)
@@ -125,7 +116,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             raise ValueError('reference_num_stations value ({}) must be non-negative.')
         self._reference_num_stations = num_stations
 
-    def process(self, file_in, outfile_suffix='', date_range=None,
+    def process(self, in_file, outfile_suffix='', date_range=None,
                 exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
                 min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
                 min_years=DEFAULT_MIN_YEARS, min_years_reference=DEFAULT_MIN_YEARS_REFERENCE,
@@ -135,6 +126,32 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
                 output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV):
+        """ Post process the data extracted from MEDMI server, based on parameters
+
+            Args:
+                in_file:                (str) The file spec of the input file (required)
+                date_range:             (list of 2 datetime) The date range of interest
+                exclude_site_list:      (list of string/number) Site IDs to be ignored
+                min_years_reference:    (float) The minimum number of years of data for any site that  we are going to
+                                            use as a reference site later. (this cannot be less than min_years)
+                min_years:              (float) The minimum number of years of data that a site must have
+                min_temperature:        (float) The minimum temperature to be used (lower are ignored)
+                reference_num_stations: (int) The number of stations to be used for imputation
+                impute_data:            (boolean) Whether to attempt to impute missing data
+                print_stats:            (boolean) Whether to printout the calculation statistics
+                random_state:           #Todo Doug: all of these...
+                output_distribution:
+                add_indicator:
+                initial_strategy:
+                max_iter:
+                estimator:
+                save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
+                outfile_suffix:         (str) The suffix to appended to the end of output file names.
+
+            Returns:
+                Processed data (pandas dataframe)
+
+        """
 
         if date_range is not None:
             self.date_range = [datetime.strptime(date_range[0], MetPostProcessor.INPUT_DATE_FORMAT),
@@ -159,7 +176,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                                                              random_state=random_state)
 
         print('checking validity of and loading met data file')
-        met_extracted_data = self.load_met_data(file_in)
+        met_extracted_data = self.load_met_data(in_file)
 
         if self.verbose > 1: print('Metadata before dropping/filtering: \n {}'.format(met_extracted_data))
 
@@ -210,7 +227,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     def load_met_data(self, file_in):
         print('    load data file')
         try:
-            met_data = pd.read_csv(file_in, usecols=self.get_all_columns(), skiprows=self._skip_input_rows,
+            met_data = pd.read_csv(file_in, usecols=self.get_all_column_headers(), skiprows=self._skip_input_rows,
                                    engine='python', sep=',\s*', na_values='None')
         except Exception as err:
             raise ValueError('Error reading specified file: {}. {}'.format(file_in, err))
