@@ -44,8 +44,6 @@ class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
         self._base_file_out = MetExtractor.BASE_FILE_OUT
         self._temp_file_out = ''
         self._extra_datasets = []
-        self._columns_base = MetExtractor.COLUMNS_BASE
-        self._columns_specific = []
 
     @staticmethod
     def get_source_ref_from_name(name):

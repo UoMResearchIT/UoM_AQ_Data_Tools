@@ -134,7 +134,7 @@ class DateYearsProcessor(DatesProcessor):
         Class used for processing list of years
     """
 
-    START_YEAR = 2016
+    AVAILABLE_START_YEAR = 2016
 
     def __init__(self):
         self.__years = None
@@ -192,7 +192,7 @@ class DateYearsProcessor(DatesProcessor):
             Returns:
                 The first available year (int)
         """
-        return DateYearsProcessor.START_YEAR
+        return DateYearsProcessor.AVAILABLE_START_YEAR
 
     @staticmethod
     def get_available_end():
