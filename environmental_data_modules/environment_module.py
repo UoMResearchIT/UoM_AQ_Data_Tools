@@ -1,88 +1,52 @@
 from abc import ABCMeta, abstractmethod
 import os, errno
-from datetime import datetime
-
 
 class EnvironmentModule:
+    """
+        Abstract class, parent of classes used for extracting data from AURN/MEDMI servers and post-processing.
+    """
     __metaclass__ = ABCMeta
+
+    # Define defaults
     DEFAULT_OUT_FILE_SUFFIX = ''
-    DEFAULT_OUT_DIR = 'met_extracted_data'
-    DEFAULT_DATE_RANGE = ['2016-01-01_00', '2019-12-31_23']
-    UK_LATITUDES = [48., 60.]
-    UK_LONGITUDES = [-11., 3.]
+    DEFAULT_OUT_DIR = 'out_dir'
     DEFAULT_VERBOSE = 0
-    DEFAULT_DATE_RANGE_FORMAT = '%Y-%m-%d_%H'
-    LONGITUDE_RANGE = [-180., 360.]
-    LATITUDE_RANGE = [-90., 90.]
-    DEFAULT_COLS_BASE = ['date', 'siteID']
 
 
-    def __init__(self, dir_name=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
-        self.out_dir = dir_name
+    def __init__(self, out_dir=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
+        # Todo - What are the verbose limits? 0..n
+
+        """ Initialise instance of the EnvironmentModule class.
+            Args:
+                out_dir: (string) directory to be used for all outputs
+                verbose: (integer) level of verbosity in output.
+
+            Returns:
+                Initialised instance of subclass of EnvironmentModule
+
+        """
+        self.out_dir = out_dir
         self.verbose = verbose
-        self.latitude_range = EnvironmentModule.UK_LATITUDES
-        self.longitude_range = EnvironmentModule.UK_LONGITUDES
-        self._date_range_format = EnvironmentModule.DEFAULT_DATE_RANGE_FORMAT
+        self._base_file_out = None
         self._file_out = None
-        self._cols_base = EnvironmentModule.DEFAULT_COLS_BASE
-        self._cols_specific = []
+        self._outfile_suffix = EnvironmentModule.DEFAULT_OUT_FILE_SUFFIX
 
+    ### Static methods ###
 
     @staticmethod
     def all_subclasses(cls):
         return set(cls.__subclasses__()).union(
             [s for c in cls.__subclasses__() for s in EnvironmentModule.all_subclasses(c)])
 
-    @property
-    def date_range(self):
-        return self.__date_range
-
-    @date_range.setter
-    def date_range(self, range):
-        # Example input: ['2017-1-1_0', '2017-06-30_23']
-        try:
-            datetime_1 = datetime.strptime(range[0], self._date_range_format)
-            datetime_2 = datetime.strptime(range[1], self._date_range_format)
-        except ValueError as err:
-            raise err
-        if datetime_1 >= datetime_2:
-            raise ValueError('Start date is not earlier than end date.')
-        self.__date_range = [datetime_1, datetime_2]
+    ### Class properties: Get/Sets ###
 
     @property
-    def latitude_range(self):
-        return self.__latitude_range
-
-    @latitude_range.setter
-    def latitude_range(self, range):
-        try:
-            val_1 = float(range[0])
-            val_2 = float(range[1])
-        except ValueError as err:
-            raise err
-        if not ((EnvironmentModule.LATITUDE_RANGE[0] <= val_1) and (val_1 <= EnvironmentModule.LATITUDE_RANGE[1])):
-            raise ValueError('Latitude first value falls outside global range')
-        if not ((EnvironmentModule.LATITUDE_RANGE[0] <= val_2) and (val_2 <= EnvironmentModule.LATITUDE_RANGE[1])):
-            raise ValueError('Latitude last value falls outside global range')
-        self.__latitude_range = [val_1, val_2]
+    def outfile_suffix_string(self):
+        return '_' + self._outfile_suffix if len(self._outfile_suffix.strip()) > 0 else ''
 
     @property
-    def longitude_range(self):
-        return self.__longitude_range
-
-    @longitude_range.setter
-    def longitude_range(self, range):
-        try:
-            val_1 = float(range[0])
-            val_2 = float(range[1])
-        except ValueError as err:
-            raise err
-        if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_1 <= EnvironmentModule.LONGITUDE_RANGE[1]):
-            raise ValueError('Longitude first value falls outside global range')
-        if not (EnvironmentModule.LONGITUDE_RANGE[0] <= val_2 <= EnvironmentModule.LONGITUDE_RANGE[1]):
-            raise ValueError('Longitude last value falls outside global range')
-        self.__longitude_range = [val_1, val_2]
-        
+    def base_file_out(self):
+        return self._base_file_out
 
     @property
     def out_dir(self):
@@ -100,7 +64,6 @@ class EnvironmentModule:
             if e.errno != errno.EEXIST:
                 raise ValueError("Directory name {} cannot be created.".format(dir_name))
         self.__out_dir = dir_name
-        
 
     @property
     def verbose(self):
@@ -113,7 +76,6 @@ class EnvironmentModule:
         except ValueError as err:
             raise err
         self.__verbose = max(0, verbose)
-        
 
     @property
     def file_out(self):
@@ -128,9 +90,3 @@ class EnvironmentModule:
         #Todo check if filename is createable
         self._file_out = filename
 
-    def set_region(self, latitude_range, longitude_range):
-        self.latitude_range = latitude_range
-        self.longitude_range = longitude_range
-
-    def get_all_cols(self):
-        return self._cols_base + self._cols_specific

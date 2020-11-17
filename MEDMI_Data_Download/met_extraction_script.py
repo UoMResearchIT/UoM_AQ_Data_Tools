@@ -29,9 +29,9 @@ if __name__ == '__main__':
     # Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
                         help="start and end dates. (array - first two values only). \
-                            Expected date format: {} \n Default: {}".format(
-                            MetExtractor.DEFAULT_DATE_RANGE_FORMAT.replace('%', ''),
-                            ' '.join(MetExtractor.DEFAULT_DATE_RANGE)))
+                            Expected date format: {} \n Default: [{}, {}]".format(
+                            MetExtractor.INPUT_DATE_FORMAT.replace('%', ''),
+                            MetExtractor.get_available_start(), MetExtractor.get_available_end()))
 
 
     # Latitude / longitude
@@ -91,8 +91,8 @@ if __name__ == '__main__':
             raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
         print('Using date range: [{}]'.format(','.join(date_range)))
     else:
-        print('No date_range provided, so using default: [{}]'.format(','.join(MetExtractor.DEFAULT_DATE_RANGE)))
-        date_range = MetExtractor.DEFAULT_DATE_RANGE
+        print('No date_range provided, so using default: [{}]'.format(','.join(MetExtractor.get_available_dates())))
+        date_range = MetExtractor.get_available_dates()
 
     if args.latitude_range:
         if len(args.latitude_range) >= 2:

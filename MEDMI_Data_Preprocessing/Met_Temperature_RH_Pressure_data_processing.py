@@ -1,3 +1,23 @@
+"""
+Created on Tue Sep 22 09:16:40 2020
+
+Unified production script for MEDMI data processing. This will:
+    1) load and clean our dataset
+        a) find duplicated readings
+            i)  filtering out the METAR data by lack of pressure reading
+            ii) retaining the first value where there's no difference in presence of pressure reading
+        b) removing stations identified as unwanted
+            i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,
+                    and as it is unlikely to be useful comparison with participant data, we will remove it
+        c) find and remove the synoptic spot readings (these are single readings per day - so we will
+                     identify all such single readings and remove them, if they are synoptic spot readings or not)
+        (Points (a) and (c) based on pers. comms. with Martyn Sunter, Met Office, July 2020.
+         Point (b) based on data exploration by authors.)
+    2)
+
+@author: mbessdl2
+"""
+
 import argparse
 import sys
 sys.path.append("..")
@@ -36,13 +56,13 @@ if __name__ == '__main__':
     ## Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
                         help="start and end dates. (array - first two values only). \
-                            Expected date format: {} \n Default: {}".format(
-                            MetPostProcessor.DEFAULT_DATE_RANGE_FORMAT.replace('%', ''),
-                            ' '.join(MetPostProcessor.DEFAULT_DATE_RANGE)))
+                            Expected date format: {} \n Default: [{}, {}]".format(
+                            MetPostProcessor.INPUT_DATE_FORMAT.replace('%', ''),
+                            MetPostProcessor.get_available_start(), MetPostProcessor.get_available_end()))
 
     ## Calculation parameters
     parser.add_argument("--min_years", "-y", type=float, help="minimum number of years of data that a site must have")
-    parser.add_argument("--ref_num_years", "-u", type=float, help="minimum number of years of data for any site that \
+    parser.add_argument("--min_years_ref", "-u", type=float, help="minimum number of years of data for any site that \
         we are going to use as a reference site later (if less than min_years, will set to min_years)")
     parser.add_argument("--ref_num_stations", "-r", type=int, help="number of stations to be used for imputation")
     parser.add_argument("--min_temp", "-m", type=int, help="Minimum temperature to be used (lower are ignored) \
@@ -50,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument("--exclude_sites", "-x", metavar='X', dest="exclude_sites", type=str, nargs='+',
                         help="the measurement sites to be excluded. Default is zero sites.")
 
+    # Imput values
     parser.add_argument("--impute_values", "-i", dest="impute_values", action='store_true',
                         help="impute missing values (default).")
     parser.add_argument("--no_impute_values", dest="impute_values", action='store_false',
@@ -105,8 +126,8 @@ if __name__ == '__main__':
             raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
         print('Using date range: [{}]'.format(','.join(date_range)))
     else:
-        print('No date_range provided, so using default: [{}]'.format(','.join(MetPostProcessor.DEFAULT_DATE_RANGE)))
-        date_range = MetPostProcessor.DEFAULT_DATE_RANGE
+        print('No date_range provided, so using default: [{}]'.format(','.join(MetPostProcessor.get_available_dates())))
+        date_range = MetPostProcessor.get_available_dates()
 
     if args.min_years:
         min_years = args.min_years
@@ -115,13 +136,13 @@ if __name__ == '__main__':
         print('No min_years provided, so using default: '.format(MetPostProcessor.DEFAULT_MIN_YEARS))
         min_years = MetPostProcessor.DEFAULT_MIN_YEARS
 
-    if args.ref_num_years:
-        reference_num_years = max(args.ref_num_years, min_years)
+    if args.min_years_ref:
+        min_years_ref = max(args.min_years_ref, min_years)
         print('Reference number of years (minimum number of years of data for any site that we are going to use as a \
-            reference site later; this cannot be less than min_years):', reference_num_years)
+            reference site later; this cannot be less than min_years):', min_years_ref)
     else:
-        print('No useful_num_years provided, so using default: {}'.format(MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS))
-        useful_num_years = MetPostProcessor.DEFAULT_REFERENCE_NUM_YEARS
+        print('No min_years_ref provided, so using default: {}'.format(MetPostProcessor.DEFAULT_MIN_YEARS_REFERENCE))
+        min_years_ref = MetPostProcessor.DEFAULT_MIN_YEARS_REFERENCE
 
     if args.ref_num_stations:
         reference_num_stations = args.ref_num_stations
@@ -146,7 +167,7 @@ if __name__ == '__main__':
         exclude_site_list = []
 
     print('Impute values: {}'.format(args.impute_values))
-    print('Print stats: {}'.format(args.impute_values))
+    print('Print stats: {}'.format(args.print_stats))
 
     if args.verbose:
         verbose = max(args.verbose, 0)
@@ -155,9 +176,9 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(MetPostProcessor.DEFAULT_VERBOSE)))
         verbose = MetPostProcessor.DEFAULT_VERBOSE
 
-    post_processor = MetPostProcessor(out_dir, stations_filename=stations_filename, verbose=verbose)
-    post_processor.post_process(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
+    post_processor = MetPostProcessor(out_dir, station_data_filename=stations_filename, verbose=verbose)
+    post_processor.process(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
                                 exclude_site_list=exclude_site_list,
                                 min_temperature=min_temperature, reference_num_stations=reference_num_stations,
-                                min_years=min_years, reference_num_years=reference_num_years,
+                                min_years=min_years, min_years_reference=min_years_ref,
                                 impute_data=args.impute_values, print_stats=args.print_stats)
