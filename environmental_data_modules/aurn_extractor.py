@@ -5,6 +5,7 @@ try:
     import datetime
     import pandas as pd
     import numpy as np
+    from urllib.parse import urljoin
 except:
     pass
 
@@ -15,9 +16,6 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
     """
         Class used for extracting data from the AURN server.
     """
-
-    # Define 'absolute' constants
-    SPECIES_LIST = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
 
     # Define defaults
     DEFAULT_SAVE_TO_CSV = True
@@ -74,7 +72,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
         # apply some filtering of negative and zero values
 
-        for species in AurnExtractor.SPECIES_LIST:
+        for species in AurnExtractor.SPECIES_LIST_EXTRACTED:
             print('filtering {}:'.format(species))
             try:
                 print('\t{} has {} positive values'.format(species,
@@ -87,7 +85,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 print('\t{} has  no values'.format(species))
 
         # Put column names in correct order
-        hourly_dataframe = hourly_dataframe[list(AurnModule.EXTRACTED_FILE_COLS)]
+        hourly_dataframe = hourly_dataframe[list(AurnModule.NEW_FILE_COLS)]
 
         if self.verbose > 1: print('hourly_dataframe: \n {}'.format(hourly_dataframe))
         if save_to_csv:
@@ -134,24 +132,19 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
             # return the full hourly dataset
             final_dataframe = final_dataframe.append(full_hourly_dataframe)
 
-            # Todo Doug: should this be removed
-            # postprocessing the data set, to get daily data
-            # final_dataframe = final_dataframe.append(postprocess_data(full_hourly_dataframe,site))
-
             if save_to_csv is True:
                 # Now save the full hourly dataframe as a .csv file
                 full_hourly_dataframe.to_csv(os.path.join(self.out_dir, site + '.csv'), index=False, header=True)
 
         return final_dataframe
 
-        # functions for downloading data
-
     def define_years_to_download(self, subset_df, years):
 
         # Check to see if your requested years will work and if not, change it to do this.
         # Create two new columns of datetimes for earliest and latest
         datetime_start = pd.to_datetime(subset_df['start_date'].values, format='%Y/%m/%d').year
-        # Problem with the end date is it could be ongoing. In which case, convert that entry into a date and to_datetime
+        # Problem with the end date is it could be ongoing. In which case, convert that entry into a date
+        # and to_datetime
         now = datetime.datetime.now()
         datetime_end_temp = subset_df['end_date'].values
         step = 0
@@ -168,7 +161,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         years_process = []
 
         for year in years:
-            if (year <= latest_year and year >= earliest_year):
+            if year <= latest_year and year >= earliest_year:
                 years_process.append(year)
 
         return years_process
@@ -179,8 +172,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
         for year in years:
             try:
-                downloaded_file = site + "_" + str(year) + ".RData"
-                download_url = "https://uk-air.defra.gov.uk/openair/R_data/" + downloaded_file
+                downloaded_file = "{}_{}.RData".format(site, str(year))
+                download_url = urljoin(AurnExtractor.DEFAULT_DOWNLOAD_RDATA_URL, downloaded_file)
                 print("\tdownloading file {}".format(download_url))
 
                 # Check to see if file exists or not. Special case for current year as updates on hourly basis
@@ -188,12 +181,11 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 if os.path.exists(filename_path):
                     print("\t\tData file already exists, will use this")
                 else:
-                    print("\t\tDownloading data file for ", station_name, " in ", str(year))
+                    print("\t\tDownloading data file for {} in {}".format(station_name, str(year)))
                     wget.download(download_url, out=str(self.out_dir))
 
                 # Read the RData file into a Pandas dataframe
                 downloaded_data = pyreadr.read_r(str(filename_path))
-                # Drop non-required fields
 
                 # Append to dataframe list
                 downloaded_site_data.append(downloaded_data[site + "_" + str(year)])
@@ -203,30 +195,20 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         return downloaded_site_data
 
     def load_sort_data(self, downloaded_site_data):
-
         final_dataframe = pd.concat(downloaded_site_data, axis=0, ignore_index=True)
-
-        final_dataframe['datetime'] = pd.to_datetime(final_dataframe['date'])
-        final_dataframe = final_dataframe.sort_values(by='datetime', ascending=True)
-        # final_dataframe=final_dataframe.set_index('datetime')
+        final_dataframe[AurnModule.DATE_NEW] = pd.to_datetime(final_dataframe['date'])
+        final_dataframe.drop(columns=['date'], inplace=True)
+        final_dataframe = final_dataframe.sort_values(by=AurnModule.DATE_NEW, ascending=True)
 
         return final_dataframe
 
-    def tidy_hourly_data(self, hourly_dataframe, site):
-
-        columns_of_interest = ['datetime', 'O3', 'NO2', 'SO2', 'NOXasNO2', 'PM2.5', 'PM10']
+    def tidy_hourly_data(self, hourly_dataframe, site_name):
+        columns_of_interest = [AurnModule.DATE_NEW] + AurnExtractor.SPECIES_LIST_EXTRACTED
         ds_columns = hourly_dataframe.columns
 
         # retain the data we are interested in (as not all datasets have all variables)
         columns_to_retain = set(columns_of_interest) & set(ds_columns)
-        working_dataframe = hourly_dataframe[columns_to_retain]
-
-        working_dataframe = working_dataframe.rename(columns={'datetime': 'Date'})
-
-        # add the site as a new column, and set as part of multiindex with the date
-        # site_name = "{} [AQ]".format(site)
-        site_name = "{}".format(site)
-
-        working_dataframe[AurnModule.SITE_ID_EXTRACTED] = site_name
+        working_dataframe = hourly_dataframe[columns_to_retain].copy()
+        working_dataframe.loc[:, AurnModule.SITE_ID_EXTRACTED] = site_name
 
         return working_dataframe

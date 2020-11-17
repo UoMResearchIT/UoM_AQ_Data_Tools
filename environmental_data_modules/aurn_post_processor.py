@@ -144,7 +144,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         try:
             hourly_dataframe = pd.read_csv(in_file,
                                            sep=',',
-                                           usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.EXTRACTED_FILE_COLS),
+                                           usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.NEW_FILE_COLS),
                                            index_col=AurnModule.INDEX_EXTRACTED,
                                            parse_dates=['Date'])
         except Exception as err:

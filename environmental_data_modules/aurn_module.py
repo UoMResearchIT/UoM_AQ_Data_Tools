@@ -14,15 +14,20 @@ class AurnModule(object):
     """
     __metaclass__ = ABCMeta
 
+    SPECIES_LIST_EXTRACTED = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
     INDEX_EXTRACTED = 'index'
     SITE_ID_EXTRACTED = 'siteID'
-    SITE_ID_NEW = 'SiteID'
     SITE_ID_AURN_METADATA = 'site_id'
-    EXTRACTED_FILE_COLS = ['Date', 'SiteID', 'O3', 'NO2', 'NOXasNO2', 'SO2', 'PM2.5', 'PM10']
+    DATE_EXTRACTED = 'date'
+
+    SITE_ID_NEW = 'SiteID'
+    DATE_NEW = 'Date'
+    NEW_FILE_COLS = [DATE_NEW, SITE_ID_NEW] + SPECIES_LIST_EXTRACTED
 
     # Define defaults
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"
-    DEFAULT_METADATA_URL = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
+    DEFAULT_DOWNLOAD_RDATA_URL = "https://uk-air.defra.gov.uk/openair/R_data/"
+    DEFAULT_METADATA_URL = '{}/{}'.format(DEFAULT_DOWNLOAD_RDATA_URL, DEFAULT_METADATA_FILE)
     DEFAULT_SITE_LIST = None
 
     def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):

@@ -15,7 +15,8 @@ Unified production script for MEDMI data processing. This will:
          Point (b) based on data exploration by authors.)
     2)
 
-@author: mbessdl2
+@author:    Douglas Lowe and Ann Gledson
+            Research IT, University of Manchester
 """
 
 import argparse

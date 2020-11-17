@@ -1,3 +1,26 @@
+"""
+Created on Tue Sep 22 09:16:40 2020
+
+Unified production script for MEDMI data extraction. Must be run on the MEDMI server.  To use these script(s),
+it is neccessary to log onto the MEDMI ssh server. Details of how to do this can be obtained from the
+MEDMI website: https://www.data-mashup.org.uk/contact-us/
+and following the instructions for: connect to the server using an SSH client.
+Alternatively, email: health at metoffice dot gov dot uk
+
+Copy this script to the ssh server. Then run it using python (simply python [script name] [params/options])
+and use the --help command to get the full set of parameters/options.
+
+    This will:
+    1) Extract weathr and pollen data from the MEDMI server, given the inputs:
+        a) Location: expressed as latitude and longitude ranges
+        b) Dates: expressed as a date range (start to end)
+        c) Required measurements
+    ToDo: Doug ++?
+
+@author:    Douglas Lowe and Ann Gledson
+            Research IT, University of Manchester
+"""
+
 import argparse
 import sys
 sys.path.append("..")
