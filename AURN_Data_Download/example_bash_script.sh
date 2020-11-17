@@ -26,10 +26,11 @@ SITES="BARN BAR2 BAR3 BIL BIR BRAD BDMA CHS6 CHLG CHS7 DYAG DCST FEA HSAW HM HUL
 MID NEWC NCA3 REDC ROTH SCUN SCN2 SHBR SHE2 SHDG SHE SOTR EAGL YARM SUND SUN2 SUNR YK10 YK11"
 MINYEARS='1'
 USEYEARS='1'
-YEARS="2016 2017"
+#YEARS="2016 2017"
+YEARS="2010 2011"
 VERBOSE=3
-OUTFILE_SUFFIX='2016-2017_impute'
+OUTFILE_SUFFIX='2016-2017_no-impute'
 
-ARGUMENTS_1="--impute_values --metadata_url ${META_DATA_URL} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} -o ${OUT_DIR} -s ${OUTFILE_SUFFIX}  --verbose ${VERBOSE}"
+ARGUMENTS_1="--no_impute_values --metadata_url ${META_DATA_URL} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --years ${YEARS} --sites ${SITES} -o ${OUT_DIR} -s ${OUTFILE_SUFFIX}  --verbose ${VERBOSE}"
 
 python AURN_download.py ${ARGUMENTS_1}

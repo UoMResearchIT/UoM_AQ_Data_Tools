@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
+Created on Tue Sep 22 09:16:40 2020
 
 Script for automated downloading of AURN data for a given date range.
-
-
 Summary of how many sites we will be imputing for data for each species,
 and how many useful site there are for each.
 
@@ -16,9 +15,9 @@ PM2.5 has 81 req sites and 55 useful sites
 PM10 has 77 req sites and 51 useful sites
 SO2 has 27 req sites and 19 useful sites
 
+Todo: Doug following needs updating
 We will only impute data for sites with > 1 year of data, and only use
 sites with >3.5 years of data for the imputation inputs
-
 
 Full dataset information on NaN's and negative/zero numbers:
 O3 has 2507061 positive values
@@ -40,6 +39,9 @@ SO2 has 837779 positive values
 SO2 has 4806980 NaNs
 SO2 has 2993 negative or zero values that will be replaced with NaNs
 (note, the NaN count will include sites that we will not be imputing with data)
+
+@author:    Douglas Lowe and Ann Gledson
+            Research IT, University of Manchester
 
 """
 

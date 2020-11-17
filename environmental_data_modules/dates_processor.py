@@ -15,7 +15,7 @@ class DateRangeProcessor(DatesProcessor):
         Class used for processing date ranges (with a start and end date)
     """
     INPUT_DATE_FORMAT = '%Y-%m-%d_%H'
-    AVAILABLE_START_DATE = datetime(2016, 1, 1, 0)
+    AVAILABLE_START_DATE = datetime(2010, 1, 1, 0)
 
     def __init__(self):
         """ Initialise instance of the DateRangeProcessor class.
@@ -86,7 +86,7 @@ class DateRangeProcessor(DatesProcessor):
         # Todo: Doug, when is best available end date to set, based on now() ? If it depends on Met or Aurn, we'll need
         #  to sub-type this class
         #  Currently set to end of previous year.
-        return datetime(cur_year - 1, 12, 31, 23)
+        return datetime(cur_year, 12, 31, 23)
 
     def set_start_date(self, date_start):
         """ Sets the start date of interest
@@ -134,7 +134,7 @@ class DateYearsProcessor(DatesProcessor):
         Class used for processing list of years
     """
 
-    AVAILABLE_START_YEAR = 2016
+    AVAILABLE_START_YEAR = 2010
 
     def __init__(self):
         self.__years = None
@@ -205,4 +205,4 @@ class DateYearsProcessor(DatesProcessor):
         # Todo: Doug, when is best available end date to set, based on now() ? If it depends on Met or Aurn, we'll need
         #  to sub-type this class
         #  Currently set to previous year.
-        return cur_year-1
+        return cur_year
