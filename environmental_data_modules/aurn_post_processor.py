@@ -277,18 +277,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         return required_site_list, useful_site_list
 
-    def get_station_distances(self, stations_in, site_in, useful_sites_in):
-
-        station_location = stations_in.loc[site_in]['Latitude'], stations_in.loc[site_in]['Longitude']
-        station_distances = self.calc_station_distances(stations_in=stations_in.loc[useful_sites_in],
-                                                   stat_location=station_location)
-
-        # sort by distance, then drop any station which is the same location as our site of interest
-        station_distances = station_distances.sort_values(by='Distance', ascending=True)
-        station_distances[station_distances.Distance == 0] = np.nan
-        station_distances = station_distances.dropna()
-
-        return station_distances
 
     def postprocess_data(self, input_dataframe, site):
 
@@ -414,7 +402,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 # get list of neighbouring sites for each of the chemical species of interest
                 for spc in spc_list:
                     if self.verbose > 1: print('3. Species: ', spc)
-                    station_distances = self.get_station_distances(self.station_data, site, use_sites[spc])
+                    station_distances = self.get_station_distances(site, use_sites[spc])
                     if self.verbose > 1: print('4. Station number:', station_number)
                     if self.verbose > 1: print('5. distances:', station_distances)
                     if self.verbose > 1: print('6.', len(station_distances))
