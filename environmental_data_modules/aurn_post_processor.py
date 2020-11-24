@@ -194,50 +194,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     # functions for station indentifying
 
-    def return_closest_station(self, station_distances):
-
-        stat_info = station_distances.idxmin(axis=0)
-        station_data = station_distances.loc[stat_info[0]]
-
-        return station_data.name, station_data[0]
-
-    def get_closest_station_data(self, stations_centre, station_distances, station_id, station_number):
-
-        for ii in range(0, station_number):
-            stat_string = 'Station' + str(ii + 1)
-            dist_string = 'Distance' + str(ii + 1)
-
-            new_info = self.return_closest_station(station_distances)
-            if (new_info[1] == 0):
-                station_distances = station_distances.drop(index=new_info[0])
-                new_info = self.return_closest_station(station_distances=station_distances)
-
-            stations_centre.loc[station_id, stat_string] = new_info[0]
-            stations_centre.loc[station_id, dist_string] = new_info[1]
-
-            station_distances = station_distances.drop(index=new_info[0])
-
-        return stations_centre
-
-    def proc_all_stations(self, stations_centre, stations_input, station_number):
-
-        for ii in range(0, station_number):
-            stat_string = 'Station' + str(ii + 1)
-            dist_string = 'Distance' + str(ii + 1)
-            stations_centre[stat_string] = ''
-            stations_centre[dist_string] = np.nan
-
-        for index, row in stations_centre.iterrows():
-            print('processing station ', index)
-            stat_location = (row['Latitude'], row['Longitude'])
-            station_distances = self.calc_station_distances(stations_in=stations_input, stat_location=stat_location)
-            stations_centre = self.get_closest_station_data(stations_centre=stations_centre, \
-                                                       station_distances=station_distances, \
-                                                       station_id=index, \
-                                                       station_number=station_number)
-
-        return stations_centre
-
     def station_listing(self, grouped_data_in):
         '''
         arguments:
