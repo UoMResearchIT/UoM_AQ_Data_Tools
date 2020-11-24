@@ -225,6 +225,21 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
 
     def load_met_data(self, file_in):
+        '''
+        Loading the meteorological dataset.
+        
+        Parameters:
+            file_in: Path object for the file to be read in
+        
+        Uses:
+            self.get_all_column_headers
+            self._skip_input_rows
+        
+        Returns:
+            met_data: Pandas dataframe containing meteorological dataset. 
+                      This will include corrected date strings.
+        '''
+    
         print('    load data file')
         try:
             met_data = pd.read_csv(file_in, usecols=self.get_all_column_headers(), skiprows=self._skip_input_rows,
@@ -242,6 +257,19 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     #%% function for writing out some information about the data count stats
 
     def print_data_count_stats(self, dc_in):
+        '''
+        This prints the daily data count statistics. It will output the total number
+        of days with data (this should be equal to full time period requested for the
+        dataset), then print out the count of days containing a set number of data 
+        values (between 0 and 48) for each of the specified variables.
+        
+        Parameters:
+            dc_in: Pandas dataframe containing met data grouped by date (at 1 day frequency)
+            
+        Uses:
+            self.COLUMNS_SPECIFIC: list of strings for selecting columns to output 
+                                   (and the order for these to be output!)
+        '''
 
         print('total temperature daily data count is: {}'.format(dc_in.count().values[0]))
         print('# data points per day, total daily data point counts')
@@ -256,6 +284,18 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     #%% functions for finding and removing unwanted data
 
     def find_and_drop_duplicates_and_unwanted_stations(self, met_data_in, exlude_stations):
+        '''
+        This cleans the meteorological dataset, to remove duplicated measurements, and
+        to remove unwanted stations from the dataset.
+        
+        Parameters:
+            met_data_in: pandas dataframe containing full dataset
+            exlude_stations: list of station numbers to exclude from final dataset
+        
+        Returns:
+            met_data_in: cleaned pandas dataframe
+            
+        '''
         # Pull out all duplicated values
         met_duplicates = met_data_in[met_data_in.duplicated(subset=['date', 'siteID'], keep=False)]
 
@@ -292,6 +332,21 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         return met_data_in.drop(index=indexes_to_drop)
 
     def drop_single_daily_measurement_stations(self, met_data_in):
+        '''
+        Searches the dataset to find stations which *only* have single measurements each
+        daily, and removes these stations. Stations which have a mix of single daily 
+        measurements, and days with multiple measurements, are kept.
+        
+        Parameters:
+            met_data_in: full hourly dataset
+            
+        Uses:
+            self._print_stats
+        
+        Returns:
+            met_data_reduced: cleaned hourly dataset
+        
+        '''
         # group the data by date, and count the readings per day
         tempgroups = met_data_in.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
         data_counts = tempgroups.count()
@@ -344,20 +399,25 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     def station_listing(self, met_extracted_data, var_string):
         #Todo Doug: can this be merged with station_listing() in aurn_post_processor (and put in to post_processor)
         '''
-        arguments:
+        This function lists the stations which fulfil two requirements:
+            1) those that meet minimum data count for inclusion in the dataset
+            2) those that meet minimum data count for use as a reference station
+        
+        Parameters:
             var_string:
-                label for variable of interest
-
-        other dependancies:
+                label for variable of interest, used to select column containing data of interest
             met_extracted_data:
-                measurement data set
-            self.min_years (default 1):
-                minimum number of years of data that a site must have
-            self.min_years_reference (default 3.5):
-                minimum number of years of data for any site that we
-                are going to use as a reference site later
+                Pandas dataframe containing hourly dataset
 
-        returns:
+        Uses:
+            self.min_years (default 1):
+                minimum number of years of data that a site must have to be included 
+                in the final dataset.
+            self.min_years_reference (default 3.5):
+                minimum number of years of data for any site that is going to be used 
+                as a reference site.
+
+        Returns:
             required_site_list:
                 list of sites with a data count > min_years
             reference_site_list:
@@ -384,6 +444,23 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
 
     def list_required_and_reference_sites(self, met_data_in):
+        '''
+        This function creates the lists of required sites, and reference sites, for the 
+        final dataset.
+        
+        Parameters:
+            met_data_in: pandas dataframe containing hourly dataset
+            
+        Returns:
+            met_data_filtered: pandas dataframe containing hourly dataset for only 
+                               the required station datasets
+            reference_sites: list of the siteID's for our reference sites (composite 
+                             list made up from the measurement specific lists below)
+            req_sites_temp: list of required sites for temperature data
+            req_sites_pres: list of required sites for pressure data
+            req_sites_dewpoint: list of required sites for dewpoint temperature data
+        
+        '''
         print('    get the lists of required and reference stations for each measurement variable')
         req_sites_temp, reference_sites_temp = self.station_listing(met_data_in, 'temperature')
         req_sites_pres, reference_sites_pres = self.station_listing(met_data_in, 'pressure')
@@ -402,6 +479,25 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     #%% functions for calculating RH from temperature and dew point temperature data
 
     def rh_calculations(self, met_data_in, met_data_temp, met_data_dewpoint):
+        '''
+        This function calculates the relative humidity data, using the metpy
+        relative_humidity_from_dewpoint function.
+        
+        Parameters:
+            met_data_in: pandas dataframe, containing full met dataset, including original
+                         RH data, for comparison with calculated values
+            met_data_temp: pandas dataframe, containing temperature data
+            met_data_dewpoint: pandas dataframe, containing dewpoint temperature data
+            
+        Uses:
+            self.verbose
+            self._print_stats
+            
+        Returns:
+            met_data_out: pandas dataframe, containing the relative humidity data, including
+            a flag to indicate imputed data (where either temperature and/or dewpoint temperature
+            were imputed)
+        '''
         # merge the two input datasets, dropping indexes which are not in both
         met_data_all = met_data_temp.merge(met_data_dewpoint, how='inner', left_index=True, right_index=True)
         if self.verbose > 1: print('Met data in: {}'.format(met_data_all))
@@ -432,6 +528,26 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     #%% functions for imputation of the datasets
 
     def transform_and_impute_data(self, df_in):
+        '''
+        
+        Function for organising the transformation and imputation of the datasets.
+        The input dataset is processed to remove missing variables (e.g. where a
+        station has temperature data, but no pressure data, the pressure column will be
+        removed before imputation) before transformation & imputation. Afterwards the 
+        returned dataset has the missing variables readded, so that it has the same
+        shape as the original dataset.
+        
+        Parameters:
+            df_in: pandas dataframe, containing hourly dataset for imputation
+        
+        Uses:
+            self.transformer
+            self.imputer
+        
+        Returns:
+            df_out: pandas dataframe, containing imputed dataset, same shape as 
+            input dataframe
+        '''
         # copy the input array, and note the columns
         df_work = df_in.copy(deep=True)
         cols = df_in.columns
@@ -469,6 +585,26 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         return df_out
 
     def get_full_datasets(self, met_extracted_data, req_sites_list, useful_sites_list, station_list_string, var_string):
+        '''
+        Parameters:
+            met_extracted_data: meteorological dataset, without any index
+            req_sites_list: list of stations we require in the final output
+            useful_sites_list: list of stations to use as reference sites
+            station_list_string: list of strings used to identify reference stations in
+                                 the working dataset
+            var_string: string identifying the variable we are working on
+            
+        Uses:
+            self.start
+            self.end
+            self.reference_num_stations
+        
+        Returns:
+            full_data_out: pandas dataset containing imputed variable data, plus the 
+                           {variable}.flag data, indicating which data points are 
+                           imputed (0=original, 1=imputed)
+        '''
+
         date_index = pd.date_range(start=self.start, end=self.end,
                                    freq='1H', name='date')
 
@@ -527,6 +663,29 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
     def organise_data_imputation(self, met_extracted_data, reference_sites, req_sites_temp, req_sites_pres,
                                  req_sites_dewpoint):
+        '''
+        Function for organising the imputation of the datasets. This runs the 
+        'get_full_datasets' function for each of the variables of interest.
+        
+        Parameters:
+            met_extracted_data: pandas dataframe, meteorological dataset, with no index
+            reference_sites: list of sites to use for references
+            req_sites_temp: list of sites to retain for temperature data
+            req_sites_pres: list of sites to retain for pressure data
+            req_sites_dewpoint: list of sites to retain for dewpoint temperature data
+        
+        Uses:
+            self.reference_num_stations
+        
+        Returns:
+            met_data_out_temp: pandas dataframe, containing temperature data and flag to 
+                               indicate imputed data
+            met_data_out_pressure: pandas dataframe, containing pressure data and flag to 
+                                   indicate imputed data
+            met_data_out_dewpoint: pandas dataframe, containing dewpoint temperature data 
+                                   and flag to indicate imputed data
+        '''
+
 
         station_list = ['station{}'.format(x+1) for x in range(0, self.reference_num_stations)]
 
@@ -545,6 +704,22 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
     def sort_datasets(self, met_extracted_data, req_sites_list, var_string):
+        '''
+        Function for creating the hourly dataset when we are not imputing any data.
+        
+        Parameters:
+            met_extracted_data: pandas dataframe, containing met data, without index
+            req_sites_list: list of the required sites
+            var_string: string identifying the variable want to create dataset for
+        
+        Uses:
+            self.start
+            self.end
+        
+        Returns:
+            full_data_out: pandas dataframe, containing variable data, and flag indicating
+                           imputed data (all 0 in this case)
+        '''
         # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
         # Todo Doug: check OK.
         start_date = max(met_extracted_data['date'].min(), self.start)
@@ -591,6 +766,24 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         return full_data_out
 
     def organise_data(self, met_extracted_data, req_sites_temp, req_sites_pres, req_sites_dewpoint):
+        '''
+        Function for organising the creation of the datasets when no imputation is involved. 
+        This runs the 'sort_datasets' function for each of the variables of interest.
+        
+        Parameters:
+            met_extracted_data: pandas dataframe, meteorological dataset, with no index
+            req_sites_temp: list of sites to retain for temperature data
+            req_sites_pres: list of sites to retain for pressure data
+            req_sites_dewpoint: list of sites to retain for dewpoint temperature data
+                
+        Returns:
+            met_data_out_temp: pandas dataframe, containing temperature data and flag to 
+                               indicate imputed data
+            met_data_out_pressure: pandas dataframe, containing pressure data and flag to 
+                                   indicate imputed data
+            met_data_out_dewpoint: pandas dataframe, containing dewpoint temperature data 
+                                   and flag to indicate imputed data
+        '''
         print('sorting temperature data')
         met_data_out_temp = self.sort_datasets(met_extracted_data, req_sites_temp, 'temperature')
         print('sorting pressure data')
@@ -601,6 +794,22 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
     def remove_low_temperature_data(self, met_data_in):
+        '''
+        Function for removing datapoints with very low temperature data. Removes both 
+        temperature and dew point temperature data where the temperature data is below 
+        the minimum value.
+        
+        Parameters:
+            met_data_in: pandas dataframe containing meteorological data
+        
+        Uses:
+            self.min_temperature
+        
+        Returns:
+            met_data_in: as above, without the removed data
+        '''
+        
+        
         md_cold = met_data_in[met_data_in['temperature'] < self.min_temperature]
 
         if len(md_cold) > 0:
@@ -613,6 +822,26 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         return met_data_in
 
     def extract_mean_max(self, ts_in, var_in_string, var_out_string):
+        '''
+        Function for calculating the daily mean and maximum values, as well as the
+        fractional flag variable (indicating the number of imputed datapoints in that day).
+        
+        Designed for reading in hourly data. Could, in theory, be used for any frequency
+        of measurement, and still return mean and max, but will require data with a regular
+        sampling period.
+        
+        Parameters:
+            ts_in: pandas dataframe, containing hourly data for the given variable
+            var_in_string: string for input variable
+            var_out_string: string to use for output variable
+            
+        Returns:
+            out_data: pandas dataframe, containing daily mean and max data for the variable,
+                      as well as the flag indicating fraction of data which is imputed (0-1).
+        
+        '''
+        
+        
         temp_groups = ts_in.groupby([pd.Grouper(level="date", freq='1D'), 'siteID'])
         out_data = pd.DataFrame()
 
@@ -624,6 +853,23 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
 
     def combine_and_organise_mean_max(self, met_data_in, met_data_temp, met_data_pres, met_data_rh):
+        '''
+        Function for organising the calculation of daily mean, max, and flag data.
+        
+        Also corrects the variable names, and the station ID's, to match what is expected
+        for the final dataset.
+        
+        Parameters:
+            met_data_in: not used?
+            met_data_temp: hourly temperature dataset
+            met_data_pres: hourly pressure dataset
+            met_data_rh: hourly relative humidity dataset
+        
+        Returns:
+            combined_data: daily dataset, containing mean, max, and flag fraction for 
+                           all datasets
+        
+        '''
 
         met_groups_rh = self.extract_mean_max(met_data_rh, 'rel_hum', 'RelativeHumidity')
         met_groups_temp = self.extract_mean_max(met_data_temp, 'temperature', 'Temperature')
