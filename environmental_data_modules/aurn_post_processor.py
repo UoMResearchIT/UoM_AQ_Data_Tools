@@ -194,50 +194,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     # functions for station indentifying
 
-    def return_closest_station(self, station_distances):
-
-        stat_info = station_distances.idxmin(axis=0)
-        station_data = station_distances.loc[stat_info[0]]
-
-        return station_data.name, station_data[0]
-
-    def get_closest_station_data(self, stations_centre, station_distances, station_id, station_number):
-
-        for ii in range(0, station_number):
-            stat_string = 'Station' + str(ii + 1)
-            dist_string = 'Distance' + str(ii + 1)
-
-            new_info = self.return_closest_station(station_distances)
-            if (new_info[1] == 0):
-                station_distances = station_distances.drop(index=new_info[0])
-                new_info = self.return_closest_station(station_distances=station_distances)
-
-            stations_centre.loc[station_id, stat_string] = new_info[0]
-            stations_centre.loc[station_id, dist_string] = new_info[1]
-
-            station_distances = station_distances.drop(index=new_info[0])
-
-        return stations_centre
-
-    def proc_all_stations(self, stations_centre, stations_input, station_number):
-
-        for ii in range(0, station_number):
-            stat_string = 'Station' + str(ii + 1)
-            dist_string = 'Distance' + str(ii + 1)
-            stations_centre[stat_string] = ''
-            stations_centre[dist_string] = np.nan
-
-        for index, row in stations_centre.iterrows():
-            print('processing station ', index)
-            stat_location = (row['Latitude'], row['Longitude'])
-            station_distances = self.calc_station_distances(stations_in=stations_input, stat_location=stat_location)
-            stations_centre = self.get_closest_station_data(stations_centre=stations_centre, \
-                                                       station_distances=station_distances, \
-                                                       station_id=index, \
-                                                       station_number=station_number)
-
-        return stations_centre
-
     def station_listing(self, grouped_data_in):
         '''
         arguments:
@@ -277,18 +233,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         return required_site_list, useful_site_list
 
-    def get_station_distances(self, stations_in, site_in, useful_sites_in):
-
-        station_location = stations_in.loc[site_in]['Latitude'], stations_in.loc[site_in]['Longitude']
-        station_distances = self.calc_station_distances(stations_in=stations_in.loc[useful_sites_in],
-                                                   stat_location=station_location)
-
-        # sort by distance, then drop any station which is the same location as our site of interest
-        station_distances = station_distances.sort_values(by='Distance', ascending=True)
-        station_distances[station_distances.Distance == 0] = np.nan
-        station_distances = station_distances.dropna()
-
-        return station_distances
 
     def postprocess_data(self, input_dataframe, site):
 
@@ -414,7 +358,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 # get list of neighbouring sites for each of the chemical species of interest
                 for spc in spc_list:
                     if self.verbose > 1: print('3. Species: ', spc)
-                    station_distances = self.get_station_distances(self.station_data, site, use_sites[spc])
+                    station_distances = self.get_station_distances(site, use_sites[spc])
                     if self.verbose > 1: print('4. Station number:', station_number)
                     if self.verbose > 1: print('5. distances:', station_distances)
                     if self.verbose > 1: print('6.', len(station_distances))

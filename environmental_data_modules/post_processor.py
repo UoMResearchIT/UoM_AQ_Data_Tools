@@ -129,6 +129,21 @@ class PostProcessor(EnvironmentModule):
         return station_distances
 
 
+    def get_station_distances(self, site_in, useful_sites_in):
+
+        station_location = (self.station_data.loc[site_in]['Latitude'], self.station_data.loc[site_in]['Longitude'])
+        station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in], \
+                                                   stat_location=station_location)
+
+        # sort by distance, then drop any station which is the same location as our site of interest
+        station_distances = station_distances.sort_values(by='Distance',ascending=True)
+        station_distances[station_distances.Distance==0]=np.nan
+        station_distances = station_distances.dropna()
+
+        return station_distances
+
+
+
     ### function for creating date objects
     def parse_calcs_date(self, date_in):
         return datetime.strptime(date_in, self.DATE_CALCS_FORMAT)
