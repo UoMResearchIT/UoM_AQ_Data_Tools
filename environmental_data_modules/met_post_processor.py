@@ -228,8 +228,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         '''
         Loading the meteorological dataset.
         
-        Parameters:
-            file_in: Path object for the file to be read in
+        Args:
+            file_in (Path object): path for the file that is to be read in
         
         Uses:
             self.get_all_column_headers
@@ -238,6 +238,13 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         Returns:
             met_data: Pandas dataframe containing meteorological dataset. 
                       This will include corrected date strings.
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
         '''
     
         print('    load data file')
@@ -263,9 +270,18 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         dataset), then print out the count of days containing a set number of data 
         values (between 0 and 48) for each of the specified variables.
         
-        Parameters:
-            dc_in: Pandas dataframe containing met data grouped by date (at 1 day frequency)
-            
+        Args:
+            dc_in: Pandas groupby dataframe containing met data, 
+                    grouped by site and date (at 1 day frequency)
+                Required index:
+                    'siteID'      (string) ID string for site
+                    'date'        (datetime object) date of measurement set
+                Required columns:
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+
         Uses:
             self.COLUMNS_SPECIFIC: list of strings for selecting columns to output 
                                    (and the order for these to be output!)
@@ -288,12 +304,20 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         This cleans the meteorological dataset, to remove duplicated measurements, and
         to remove unwanted stations from the dataset.
         
-        Parameters:
-            met_data_in: pandas dataframe containing full dataset
-            exlude_stations: list of station numbers to exclude from final dataset
+        Args:
+            met_data_in: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+
+            exlude_stations: (list, strings) station numbers to exclude from final dataset
         
         Returns:
-            met_data_in: cleaned pandas dataframe
+            met_data_in: cleaned pandas dataframe, with same data structure as 'met_data_in'
             
         '''
         # Pull out all duplicated values
@@ -337,14 +361,21 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         daily, and removes these stations. Stations which have a mix of single daily 
         measurements, and days with multiple measurements, are kept.
         
-        Parameters:
-            met_data_in: full hourly dataset
+        Args:
+            met_data_in: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
             
         Uses:
-            self._print_stats
+            self._print_stats (logical)
         
         Returns:
-            met_data_reduced: cleaned hourly dataset
+            met_data_reduced: cleaned pandas dataframe, with same data structure as 'met_data_in'
         
         '''
         # group the data by date, and count the readings per day
@@ -403,25 +434,31 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             1) those that meet minimum data count for inclusion in the dataset
             2) those that meet minimum data count for use as a reference station
         
-        Parameters:
-            var_string:
-                label for variable of interest, used to select column containing data of interest
-            met_extracted_data:
-                Pandas dataframe containing hourly dataset
+        Args:
+            var_string (string): label for variable of interest, used to 
+                                 select column containing data of interest
+            met_extracted_data: hourly met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
 
         Uses:
-            self.min_years (default 1):
+            self.min_years (float, default 1):
                 minimum number of years of data that a site must have to be included 
                 in the final dataset.
-            self.min_years_reference (default 3.5):
+            self.min_years_reference (float, default 3.5):
                 minimum number of years of data for any site that is going to be used 
                 as a reference site.
 
         Returns:
-            required_site_list:
-                list of sites with a data count > min_years
-            reference_site_list:
-                list of sites with a data count > useful_num_years
+            required_site_list (list, string or int):
+                                 sites with a data count > min_years
+            reference_site_list (list, string or int):
+                                 sites with a data count > useful_num_years
         '''
 
         site_list_interior = met_extracted_data['siteID'].unique()
@@ -448,17 +485,24 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         This function creates the lists of required sites, and reference sites, for the 
         final dataset.
         
-        Parameters:
-            met_data_in: pandas dataframe containing hourly dataset
+        Args:
+            met_data_in: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
             
         Returns:
-            met_data_filtered: pandas dataframe containing hourly dataset for only 
+            met_data_filtered: pandas dataframe, as above, containing hourly dataset for only 
                                the required station datasets
-            reference_sites: list of the siteID's for our reference sites (composite 
-                             list made up from the measurement specific lists below)
-            req_sites_temp: list of required sites for temperature data
-            req_sites_pres: list of required sites for pressure data
-            req_sites_dewpoint: list of required sites for dewpoint temperature data
+            reference_sites: (list, string or int) the siteID's for our reference sites 
+                             (composite list made up from the measurement specific lists below)
+            req_sites_temp: (list, string or int) required sites for temperature data
+            req_sites_pres: (list, string or int) required sites for pressure data
+            req_sites_dewpoint: (list, string or int) required sites for dewpoint temperature data
         
         '''
         print('    get the lists of required and reference stations for each measurement variable')
@@ -483,20 +527,44 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         This function calculates the relative humidity data, using the metpy
         relative_humidity_from_dewpoint function.
         
-        Parameters:
-            met_data_in: pandas dataframe, containing full met dataset, including original
-                         RH data, for comparison with calculated values
-            met_data_temp: pandas dataframe, containing temperature data
-            met_data_dewpoint: pandas dataframe, containing dewpoint temperature data
+        Args:
+            met_data_in: met data as a pandas.DataFrame, used for original RH dataset
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            met_data_temp: temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'temperature'    (float): temperature
+                    'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            met_data_dewpoint: dewpoint temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'dewpoint'    (float): dewpoint temperature
+                    'dewpoint.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
             
         Uses:
-            self.verbose
-            self._print_stats
+            self.verbose (int)
+            self._print_stats (logical)
             
         Returns:
-            met_data_out: pandas dataframe, containing the relative humidity data, including
-            a flag to indicate imputed data (where either temperature and/or dewpoint temperature
-            were imputed)
+            met_data_out: relative humidity data as pandas.Dataframe 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'rel_hum'    (float): relative humidity
+                    'rel_hum.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed),
+                                         data is marked as imputed if at least one of temperature or
+                                         relative humidity has been imputed.
         '''
         # merge the two input datasets, dropping indexes which are not in both
         met_data_all = met_data_temp.merge(met_data_dewpoint, how='inner', left_index=True, right_index=True)
@@ -537,22 +605,30 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         returned dataset has the missing variables readded, so that it has the same
         shape as the original dataset.
         
-        Parameters:
-            df_in: pandas dataframe, containing hourly dataset for imputation
-        
+        Args:
+            df_in: pandas dataframe, containing hourly datasets for imputation
+                Required Index:
+                    'date'        (datetime object) date/time of measurement
+                Required columns:
+                    '[var_string]'  (float): met data for the site of interest
+                Optional columns (repeated [self.reference_num_stations] times):
+                    '[station_list_string]' (float): met data for selected reference sites
+                    
         Uses:
             self.transformer
             self.imputer
         
         Returns:
             df_out: pandas dataframe, containing imputed dataset, same shape as 
-            input dataframe
+                    input dataframe. Missing data for all stations will be imputed
+                    and returned, but only the data for '[var_string]' is retained
+                    in the end. 
         '''
         # copy the input array, and note the columns
         df_work = df_in.copy(deep=True)
         cols = df_in.columns
 
-        # find missing datasets to remove
+        # find missing datasets to remove (if any)
         # also we note the columns that will be saved, and their order, for transferring data back!
         col_remove = []
         col_save = []
@@ -586,13 +662,23 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
     def get_full_datasets(self, met_extracted_data, req_sites_list, useful_sites_list, station_list_string, var_string):
         '''
-        Parameters:
-            met_extracted_data: meteorological dataset, without any index
-            req_sites_list: list of stations we require in the final output
-            useful_sites_list: list of stations to use as reference sites
-            station_list_string: list of strings used to identify reference stations in
-                                 the working dataset
-            var_string: string identifying the variable we are working on
+        Function for the imputation and building of the full hourly datasets.
+        
+        Args:
+            met_extracted_data: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            
+            req_sites_list (list, string or int): sites to retain for data
+            useful_sites_list (list, string or int): sites to be used as reference sites
+            station_list_string (list, string or int): strings used to identify 
+                                 reference stations in the working dataset (not site specific)
+            var_string     (string): name of the variable to sort dataset for
             
         Uses:
             self.start
@@ -600,9 +686,13 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             self.reference_num_stations
         
         Returns:
-            full_data_out: pandas dataset containing imputed variable data, plus the 
-                           {variable}.flag data, indicating which data points are 
-                           imputed (0=original, 1=imputed)
+            full_data_out: selected meteorological data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    '[var_string]'    (float): met variable data
+                    '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
         '''
 
         date_index = pd.date_range(start=self.start, end=self.end,
@@ -667,12 +757,20 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         Function for organising the imputation of the datasets. This runs the 
         'get_full_datasets' function for each of the variables of interest.
         
-        Parameters:
-            met_extracted_data: pandas dataframe, meteorological dataset, with no index
-            reference_sites: list of sites to use for references
-            req_sites_temp: list of sites to retain for temperature data
-            req_sites_pres: list of sites to retain for pressure data
-            req_sites_dewpoint: list of sites to retain for dewpoint temperature data
+        Args:
+            met_extracted_data: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            
+            reference_sites (list, string or int): sites to use for reference when imputing datasets
+            req_sites_temp (list, string or int): sites to retain for temperature data
+            req_sites_pres (list, string or int): sites to retain for pressure data
+            req_sites_dewpoint (list, string or int): sites to retain for dewpoint temperature data
         
         Uses:
             self.reference_num_stations
@@ -707,18 +805,31 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         '''
         Function for creating the hourly dataset when we are not imputing any data.
         
-        Parameters:
-            met_extracted_data: pandas dataframe, containing met data, without index
-            req_sites_list: list of the required sites
-            var_string: string identifying the variable want to create dataset for
+        Args:
+            met_extracted_data: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            
+            req_sites_list (list, string or int): sites to retain for data
+            var_string     (string): name of the variable to sort dataset for
         
         Uses:
             self.start
             self.end
         
         Returns:
-            full_data_out: pandas dataframe, containing variable data, and flag indicating
-                           imputed data (all 0 in this case)
+            full_data_out: selected meteorological data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    '[var_string]'    (float): met variable data
+                    '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
         '''
         # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
         # Todo Doug: check OK.
@@ -770,19 +881,44 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         Function for organising the creation of the datasets when no imputation is involved. 
         This runs the 'sort_datasets' function for each of the variables of interest.
         
-        Parameters:
-            met_extracted_data: pandas dataframe, meteorological dataset, with no index
-            req_sites_temp: list of sites to retain for temperature data
-            req_sites_pres: list of sites to retain for pressure data
-            req_sites_dewpoint: list of sites to retain for dewpoint temperature data
+        Args:
+            met_extracted_data: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            
+            req_sites_temp (list, string or int): sites to retain for temperature data
+            req_sites_pres (list, string or int): sites to retain for pressure data
+            req_sites_dewpoint (list, string or int): sites to retain for dewpoint temperature data
                 
         Returns:
-            met_data_out_temp: pandas dataframe, containing temperature data and flag to 
-                               indicate imputed data
-            met_data_out_pressure: pandas dataframe, containing pressure data and flag to 
-                                   indicate imputed data
-            met_data_out_dewpoint: pandas dataframe, containing dewpoint temperature data 
-                                   and flag to indicate imputed data
+            met_data_out_temp: temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'temperature'    (float): temperature
+                    'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            
+            met_data_out_pressure: pressure data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'pressure'    (float): pressure
+                    'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            
+            met_data_out_dewpoint: dewpoint temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'dewpoint'    (float): dewpoint temperature
+                    'dewpoint.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
         '''
         print('sorting temperature data')
         met_data_out_temp = self.sort_datasets(met_extracted_data, req_sites_temp, 'temperature')
@@ -799,11 +935,18 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         temperature and dew point temperature data where the temperature data is below 
         the minimum value.
         
-        Parameters:
-            met_data_in: pandas dataframe containing meteorological data
+        Args:
+            met_data_in: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
         
         Uses:
-            self.min_temperature
+            self.min_temperature (float): minimum temperature to use
         
         Returns:
             met_data_in: as above, without the removed data
@@ -830,15 +973,29 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         of measurement, and still return mean and max, but will require data with a regular
         sampling period.
         
-        Parameters:
+        Args:
             ts_in: pandas dataframe, containing hourly data for the given variable
-            var_in_string: string for input variable
-            var_out_string: string to use for output variable
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    '[var_in_string]'    (float): met variable
+                    '[var_in_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            
+            var_in_string  (string): input variable name (e.g. 'temperature')
+            var_out_string (string): output variable name (e.g. 'Temperature')
             
         Returns:
             out_data: pandas dataframe, containing daily mean and max data for the variable,
                       as well as the flag indicating fraction of data which is imputed (0-1).
-        
+                Required MultiIndex:
+                    'time_stamp'   (datetime object): date (only) (e.g. 2017-06-01)
+                    'sensor_name'           (string): ID string for site (e.g. '3 [WEATHER]')
+                Required columns:
+                    '[var_out_string].max'     (float): daily maximum value
+                    '[var_out_string].mean'    (float): daily mean value
+                    '[var_out_string].flag'    (float): flag to indicate fraction of imputed data 
+                                                   (1 = fully imputed, 0 = no imputed values were used)
         '''
         
         
@@ -859,15 +1016,52 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         Also corrects the variable names, and the station ID's, to match what is expected
         for the final dataset.
         
-        Parameters:
+        Args:
             met_data_in: not used?
-            met_data_temp: hourly temperature dataset
-            met_data_pres: hourly pressure dataset
-            met_data_rh: hourly relative humidity dataset
+            met_data_temp: hourly temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'temperature'    (float): temperature
+                    'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            
+            met_data_pressure: hourly pressure data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'pressure'    (float): pressure
+                    'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            met_data_rh: hourly relative humidity data as pandas.Dataframe 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'rel_hum'    (float): relative humidity
+                    'rel_hum.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed),
+
         
         Returns:
-            combined_data: daily dataset, containing mean, max, and flag fraction for 
-                           all datasets
+            combined_data: daily dataset, for all measurements, as pandas.Dataframe
+                Required MultiIndex:
+                    'time_stamp'   (datetime object): date (only) (e.g. 2017-06-01)
+                    'sensor_name'           (string): ID string for site (e.g. '3 [WEATHER]')
+                Required columns:
+                    'Temperature.max'     (float): daily maximum value
+                    'Temperature.mean'    (float): daily mean value
+                    'Temperature.flag'    (float): flag to indicate fraction of imputed data 
+                                                   (1 = fully imputed, 0 = no imputed values were used)
+                    'RelativeHumidity.max'     (float): daily maximum value
+                    'RelativeHumidity.mean'    (float): daily mean value
+                    'RelativeHumidity.flag'    (float): flag to indicate fraction of imputed data 
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                    'Pressure.max'     (float): daily maximum value
+                    'Pressure.mean'    (float): daily mean value
+                    'Pressure.flag'    (float): flag to indicate fraction of imputed data 
+                                                (1 = fully imputed, 0 = no imputed values were used)
+                                        
+            
         
         '''
 
