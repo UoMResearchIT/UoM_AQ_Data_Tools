@@ -101,8 +101,8 @@ class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
         self._outfile_suffix = outfile_suffix
 
         if date_range is not None:
-            self.date_range = [datetime.strptime(date_range[0], DateRangeProcessor.INPUT_DATE_FORMAT),
-                               datetime.strptime(date_range[1], DateRangeProcessor.INPUT_DATE_FORMAT)]
+            self.date_range = [date_range[0],
+                               date_range[1]]
         else:
             self.date_range = [self.get_available_start(), self.get_available_end()]
 
