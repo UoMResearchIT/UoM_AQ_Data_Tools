@@ -114,8 +114,9 @@ if __name__ == '__main__':
             raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
         print('Using date range: [{}]'.format(','.join(date_range)))
     else:
-        print('No date_range provided, so using default: [{}]'.format(','.join(MetExtractor.get_available_dates())))
-        date_range = MetExtractor.get_available_dates()
+        print('No date_range provided, so using default: [{}, {}]'.format(MetExtractor.get_available_start(),
+                                                                         MetExtractor.get_available_end()))
+        date_range = [MetExtractor.get_available_start(), MetExtractor.get_available_end()]
 
     if args.latitude_range:
         if len(args.latitude_range) >= 2:
