@@ -139,18 +139,33 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 reference_num_stations: (int) The number of stations to be used for imputation
                 impute_data:            (boolean) Whether to attempt to impute missing data
                 print_stats:            (boolean) Whether to printout the calculation statistics
-                random_state:           #Todo Doug: all of these...
-                output_distribution:
-                add_indicator:
-                initial_strategy:
-                max_iter:
-                estimator:
+                random_state:           (int) (IterativeImputer & QuantileTransformer) seed for pseudo random number generator
+                output_distribution:    (str) (QuantileTransformer) Marginal distribution for the transformed data
+                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
+                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
+                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
+                estimator:              (IterativeImputer) estimator method to be used
                 save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:         (str) The suffix to appended to the end of output file names.
 
             Returns:
-                Processed data (pandas dataframe)
-
+                met_data_daily: daily dataset, for all measurements, as pandas.Dataframe
+                    Required MultiIndex:
+                        'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
+                        'sensor_name'          (string): ID string for site (e.g. '3 [WEATHER]')
+                    Required columns:
+                        'Temperature.max'       (float): daily maximum value
+                        'Temperature.mean'      (float): daily mean value
+                        'Temperature.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'RelativeHumidity.max'  (float): daily maximum value
+                        'RelativeHumidity.mean' (float): daily mean value
+                        'RelativeHumidity.flag' (float): flag to indicate fraction of imputed data
+                                                            (1 = fully imputed, 0 = no imputed values were used)
+                        'Pressure.max'          (float): daily maximum value
+                        'Pressure.mean'         (float): daily mean value
+                        'Pressure.flag'         (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
         """
 
         if date_range is not None:
@@ -213,15 +228,15 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         met_data_rh = self.rh_calculations(met_extracted_data, met_data_temp, met_data_dewpoint)
 
         # calculate the daily max and mean for each station
-        met_data_hourly = self.combine_and_organise_mean_max(
+        met_data_daily = self.combine_and_organise_mean_max(
             met_extracted_data, met_data_temp, met_data_pres, met_data_rh)
 
         if save_to_csv:
             # write data to file
             if self.verbose > 1: print('Writing to file: {}'.format(self.file_out.format(outfile_suffix)))
-            met_data_hourly.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
+            met_data_daily.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
-        return met_data_hourly
+        return met_data_daily
 
 
     def load_met_data(self, file_in):
