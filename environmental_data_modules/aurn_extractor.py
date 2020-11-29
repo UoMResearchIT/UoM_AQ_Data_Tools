@@ -48,7 +48,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                      site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
                      outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX):
-        """ Extract the date from MEDMI server, based on parameters
+        """ Extracts the AURN data for the given years and sites from the Rdata files
+            downloaded from the AURN server.
 
             Args:
                 years:              (list of integer) The years of interest
@@ -57,8 +58,18 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 outfile_suffix:     (string) The suffix to appended to the end of output file names.
 
             Returns:
-                Extracted data (pandas dataframe)
-
+                hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
         """
 
         self._outfile_suffix = outfile_suffix
@@ -96,6 +107,23 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         return hourly_dataframe
 
     def extract_site_data(self, save_to_csv):
+
+        """ Organises the downloading and extraction of the AURN dataset.
+
+            Returns:
+                hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+        """
 
         final_dataframe = pd.DataFrame()
 
@@ -140,6 +168,18 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
     def define_years_to_download(self, subset_df, years):
 
+        """ Checks what years of data are available for the selected station.
+        
+            Args:
+                subset_df: AURN metadata for given station, as a pandas.Dataframe
+                    Required Columns:
+                        start_date   (str): YYYY-MM-DD, starting date for measurements
+                        end_date     (str): end date, or 'ongoing'
+                         
+            Returns:
+                years_process  (list of ints): the years to process data for this site
+        """
+
         # Check to see if your requested years will work and if not, change it to do this.
         # Create two new columns of datetimes for earliest and latest
         datetime_start = pd.to_datetime(subset_df['start_date'].values, format='%Y/%m/%d').year
@@ -168,6 +208,17 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
     def download_and_open_datafiles(self, site, station_name, years):
 
+        """ Downloads and opens the AURN datafiles
+        
+            Args:
+                site           (str): siteID, used in the file names
+                station_name   (str): used for diagnostic messages
+                years (list of ints): list of the years to download
+                         
+            Returns:
+                downloaded_site_data   (list): list of the dataframes that have been downloaded
+        """
+
         downloaded_site_data = []
 
         for year in years:
@@ -195,6 +246,27 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         return downloaded_site_data
 
     def load_sort_data(self, downloaded_site_data):
+        """ sorts the AURN data, combining them into a single dataframe, and converting
+            the date strings into datetime objects.
+        
+            Args:
+                downloaded_site_data   (list): list of the dataframes that have been downloaded
+
+            Returns:
+                final_dataframe: hourly dataset, for the given site, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+                        (extra columns, for other pollutants)
+        """
+
         final_dataframe = pd.concat(downloaded_site_data, axis=0, ignore_index=True)
         final_dataframe[AurnModule.DATE_NEW] = pd.to_datetime(final_dataframe['date'])
         final_dataframe.drop(columns=['date'], inplace=True)
@@ -203,6 +275,36 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         return final_dataframe
 
     def tidy_hourly_data(self, hourly_dataframe, site_name):
+        """ Removes any unneeded pollutant data, and adds a column with the siteID.
+        
+            Args:
+                hourly_dataframe: hourly dataset, for the given site, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+                        (extra columns, for other pollutants)
+
+            Returns:
+                working_dataframe: hourly dataset, for the given site, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+        """
         columns_of_interest = [AurnModule.DATE_NEW] + AurnExtractor.SPECIES_LIST_EXTRACTED
         ds_columns = hourly_dataframe.columns
 
