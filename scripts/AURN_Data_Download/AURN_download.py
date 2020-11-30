@@ -46,7 +46,7 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 """
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 import argparse
 
 
@@ -62,20 +62,13 @@ if __name__ == '__main__':
     parser.add_argument("--metadata_filename", "-f", type=str,
                         help="filename of the AURN metadata in RData format (.RData). " \
                              "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
-    parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--years", "-y", metavar='Y', type=int, nargs='+', help="the years to be processed. Must be \
         in (and defaults to) {}".format('[' + ", ".join([str(int) for int in AurnExtractor.get_available_years()]) + ']'))
-    parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
-    parser.add_argument("--min_years_ref", "-u", type=int, help="minimum number of years of data for any site that \
-        we are going to use as a reference site later. (this cannot be less than min_years)")
     parser.add_argument("--sites", "-i", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
     parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.set_defaults(save_to_csv=True)
-    parser.add_argument("--impute_values",dest="impute_values",action='store_true',help="impute missing values (default).")
-    parser.add_argument("--no_impute_values",dest="impute_values",action='store_false',help="don't impute missing values.")
-    parser.set_defaults(impute_values=True)
 
     # output directory/file names
     parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
@@ -106,37 +99,12 @@ if __name__ == '__main__':
         print("No metadata_filename provided, so using default: '{}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
         metadata_filename = AurnPostProcessor.DEFAULT_METADATA_FILE
 
-    if args.emep_filename:
-        emep_filename = args.emep_filename
-        if not emep_filename.is_file():
-            print('{} does not exist, so not using emep data'.format(emep_filename))
-            emep_filename = None
-    else:
-        print('No emep_filename provided, so not using emep data')
-        emep_filename = None
-
     if args.years:
         years = args.years
         print('Years selected:', years)
     else:
         print('No years provided, so using default: [{}]'.format(", ".join([str(int) for int in AVAILABLE_YEARS])))
         years = AVAILABLE_YEARS
-
-    if args.min_years:
-        min_years = args.min_years
-        print('Min years (minimum number of years of data that a site must have):', min_years)
-    else:
-        print('No min_years provided, so using default: 0.4 * number of years: 0.4*{}={}'
-              .format(len(years), 0.4*len(years)))
-        min_years = 0.4*len(years)
-
-    if args.min_years_ref:
-        min_years_ref = max(args.min_years_ref, min_years)
-        print('Minimum years ref:', min_years_ref)
-    else:
-        min_years_ref = max(min_years, 0.8 * len(years))
-        print('No min_years_ref provided, so using default: max(min_years, 0.8*number of years): \
-         Max({}, 0.8*{}={})'.format(min_years, len(years), max(min_years, 0.8*len(years))))
 
     if args.sites:
         site_list = args.sites
@@ -146,7 +114,6 @@ if __name__ == '__main__':
         site_list = None
 
     print('Save to csv: {}'.format(args.save_to_csv))
-    print('Impute values: {}'.format(args.impute_values))
 
     if args.outdir_name:
         outdir_name = args.outdir_name
@@ -177,15 +144,3 @@ if __name__ == '__main__':
                            site_list=site_list,
                            save_to_csv=args.save_to_csv,
                            outfile_suffix=outfile_suffix)
-
-    processor = AurnPostProcessor(metadata_filename=metadata_filename,
-                                  metadata_url=metadata_url,
-                                  out_dir=outdir_name, verbose=verbose)
-    processor.process(  in_file=extractor.file_out,
-                        outfile_suffix= outfile_suffix,
-                        site_list=site_list,
-                        emep_filename=emep_filename,
-                        min_years=min_years,
-                        min_years_reference=min_years_ref,
-                        impute_data=args.impute_values,
-                        save_to_csv=args.save_to_csv)
