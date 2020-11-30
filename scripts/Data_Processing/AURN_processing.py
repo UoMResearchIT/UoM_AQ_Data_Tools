@@ -160,19 +160,16 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(AurnPostProcessor.DEFAULT_VERBOSE)))
         verbose = AurnPostProcessor.DEFAULT_VERBOSE
 
-#     extractor = AurnExtractor(metadata_filename=metadata_filename,
-#                               metadata_url=metadata_url,
-#                               out_dir=outdir_name, verbose=verbose)
-#     extractor.extract_data(
-#                            years=years,
-#                            site_list=site_list,
-#                            save_to_csv=args.save_to_csv,
-#                            outfile_suffix=outfile_suffix)
+    extractor = AurnExtractor(metadata_filename=metadata_filename,
+                               metadata_url=metadata_url,
+                               out_dir=outdir_name, verbose=verbose)
+
+    file_extracted = extractor._base_file_out.format(extractor.out_dir, '_'+outfile_suffix)
 
     processor = AurnPostProcessor(metadata_filename=metadata_filename,
                                   metadata_url=metadata_url,
                                   out_dir=outdir_name, verbose=verbose)
-    processor.process(  in_file=extractor.file_out,
+    processor.process(  in_file=file_extracted,
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
                         emep_filename=emep_filename,
