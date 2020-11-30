@@ -117,7 +117,25 @@ class PostProcessor(EnvironmentModule):
     ### station geographic routines
 
     def calc_station_distances(self, stations_in, stat_location):
-
+        """
+        Calculates the distances between stations.
+        
+        Args:
+            stations_in: pandas.Dataframe containing station locations
+                Required Index:
+                    SiteID   (str): identifiers for the stations
+                Required Columns:
+                    Latitude (float):
+                    Longitude (float):
+            stat_location (tuple, float): (latitude, longitude) of station of interest
+        
+        Returns:
+            station_distances: pandas.Dataframe containing (sorted) list of distances to stations
+                Required Index:
+                    SiteID   (str): identifiers for the stations
+                Required Columns:
+                    Distance (float): distance to listed station from station of interest, in km 
+        """
         station_distances = pd.DataFrame(index=stations_in.index)
         station_distances['Distance'] = np.nan
 
@@ -130,6 +148,22 @@ class PostProcessor(EnvironmentModule):
 
 
     def get_station_distances(self, site_in, useful_sites_in):
+        """
+        Obtains the distances between stations, determining which are closest to our
+        station of interest.
+        
+        Args:
+            site_in               (str):  siteID for our station of interest
+            useful_sites_in (list, str):  siteID's for our reference stations
+        
+        Returns:
+            station_distances: pandas.Dataframe containing (sorted) list of distances to stations
+                               these will be sorted by distance, with the station of interest removed
+                Required Index:
+                    SiteID   (str): identifiers for the stations
+                Required Columns:
+                    Distance (float): distance to listed station from station of interest, in km 
+        """
 
         station_location = (self.station_data.loc[site_in]['Latitude'], self.station_data.loc[site_in]['Longitude'])
         station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in], \

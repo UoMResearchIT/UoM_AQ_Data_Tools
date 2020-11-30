@@ -99,8 +99,16 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV,
                 outfile_suffix=''):
 
-        """ Post process the data extracted from MEDMI server, based on parameters
-
+        """ Post process the data extracted from the AURN dataset, based on the parameters given.
+            Some parameters are passed to the sklearn routines, IterativeImputer and PowerTransformer.
+            Where this is being done it is noted below. For further documentation on how these
+            functions work, and what the parameters denote, please refer to the sklearn documentation.
+            
+            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
+            PowerTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
+            
+            
+            
             Args:
                 in_file:                (str) The file spec of the input file (required)
                 date_range:             (list of 2 datetime) The date range of interest
@@ -110,19 +118,46 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                             use as a reference site later. (this cannot be less than min_years)
                 min_years:              (float) The minimum number of years of data that a site must have
                 impute_data:            (boolean) Whether to attempt to impute missing data
-                random_state:           #Todo Doug: all of these...
-                transformer_standardize:
-                add_indicator:
-                initial_strategy:
-                max_iter:
-                transformer_method:
-                estimator:
+                random_state:           (int) (IterativeImputer) seed for pseudo random number generator
+                transformer_standardize:(boolean) (PowerTransformer) apply zero-mean, unit-variance normalization
+                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
+                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
+                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
+                transformer_method:     (str) (PowerTransformer) power transform method to use
+                estimator:              (IterativeImputer) estimator method to be used
                 save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:         (str) The suffix to appended to the end of output file names.
 
             Returns:
-                Processed data (pandas dataframe)
-
+                daily_dataframe: daily dataset, for all measurements, as pandas.Dataframe
+                    Required MultiIndex:
+                        'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
+                        'sensor_name'          (string): ID string for site (e.g. 'LIN3 [AQ]')
+                    Required columns:
+                        'O3.max'       (float): daily maximum value
+                        'O3.mean'      (float): daily mean value
+                        'O3.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM10.max'       (float): daily maximum value
+                        'PM10.mean'      (float): daily mean value
+                        'PM10.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM2.5.max'       (float): daily maximum value
+                        'PM2.5.mean'      (float): daily mean value
+                        'PM2.5.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NO2.max'       (float): daily maximum value
+                        'NO2.mean'      (float): daily mean value
+                        'NO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NOXasNO2.max'       (float): daily maximum value
+                        'NOXasNO2.mean'      (float): daily mean value
+                        'NOXasNO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'SO2.max'       (float): daily maximum value
+                        'SO2.mean'      (float): daily mean value
+                        'SO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
         """
 
         # Process inputs
@@ -177,7 +212,26 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         return daily_dataframe
 
     def load_emep_data(self, filename):
-        # load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
+        """
+        load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
+        
+        Args:
+            filename (str): location of the EMEP file. This should be empty if there is no EMEP data
+        
+        Returns:
+            emep_dataframe: pandas Dataframe, containing the EMEP model data. If no EMEP data
+                            is to be used then this will be an empty Dataframe.
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+        """
         if filename is not None:
             filename = Path(filename)
             print('reading emep file')
@@ -192,28 +246,29 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         else:
             return pd.DataFrame()
 
-    # functions for station indentifying
-
     def station_listing(self, grouped_data_in):
-        '''
-        arguments:
-            grouped_data_in:
-                measurement site data grouped by 24 hour period
-                this will be pre-filtered according to what level of
-                data you want to keep (so it will be a count of the
-                days which meet that criteria)
-            min_years (default 1):
-                minimum number of years of data that a site must have
-            min_years_reference (default 3.5):
-                minimum number of years of data for any site that we
-                are going to use as a reference site later
-
-        returns:
-            required_site_list:
+        """
+        Calculates the lists of required sites (those with more data than the minimum required data)
+        and reference sites (those with more data than that required for reference purposes).
+        
+        The requirements for data are defined as the number of days which have at least one reading.
+        self.min_years - this is the requirement for the required sites
+        self.min_years_reference - this is the requirement for the reference sites
+        
+        Args:
+            grouped_data_in: pandas series object
+                Required MultiIndex:
+                    SiteID: (level 0)
+                    Date: (level 1)
+                Required data:
+                    daily count of measurement data (should be in range 0-24 for hourly data)
+                    
+        Returns:
+            required_site_list (list of strings):
                 list of sites with a data count > min_years
-            useful_site_list:
+            useful_site_list (list of strings):
                 list of sites with a data count > min_years_reference
-        '''
+        """
 
         site_list_interior = grouped_data_in.index.levels[0]
 
@@ -232,7 +287,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 useful_site_list.append(site)
 
         return required_site_list, useful_site_list
-
 
     def postprocess_data(self, input_dataframe, site):
 
@@ -263,8 +317,49 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         return data_out
 
-    #  testing the reshaping code
     def transform_and_impute_data(self, df_in):
+        """
+        Function for organising the transformation of the dataset, then imputing missing
+        data, before detransforming the data and returning it.
+        
+        Args:
+            df_in: pandas dataframe containing the datasets to impute
+                Required Index:
+                    date (datetime64 objects): date / time for each reading
+                Optional Columns: Measurement data at the site for which we are imputing
+                                  the data. Only those pollutants which have been measured
+                                  at this site will be included.
+                    O3       (float): 
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                Reference Columns: Reference data at the X nearest sites to the 
+                                   measurement being processed. All datasets will be
+                                   included, even for those pollutants which were not
+                                   included in the optional columns above. So, if
+                                   we use 5 reference stations, this will give 30 (5*6)
+                                   columns of reference data. If EMEP data is being used
+                                   then these are added for EMEP data too, but only at 
+                                   the station of interest (so only another 6 columns are
+                                   added). 
+                    O3_[siteID]       (float): 
+                    PM10_[siteID]     (float):
+                    PM2.5_[siteID]    (float):
+                    NO2_[siteID]      (float):
+                    NOXasNO2_[siteID] (float):
+                    SO2_[siteID]      (float):
+             
+        Returns:
+            df_out: pandas dataframe, containing the same datasets as above, but including
+                    the imputed data too. All imputed data is included (including that for
+                    the reference sites) - it is the task of the calling function to only
+                    retain the imputed data for our station of interest, and to discard 
+                    the rest of the imputed data.
+        """
+        
+        
         # copy the input array, and note the columns
         df_work = df_in.copy(deep=True)
         cols = df_in.columns
@@ -307,6 +402,53 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         return df_out
 
     def postprocess_organisation(self, hourly_dataframe):
+        """ Organisation of the postprocessing of the AURN data.
+        
+            Args:
+                hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+
+            Returns:
+                final_dataframe: daily dataset, for all measurements, as pandas.Dataframe
+                    Required MultiIndex:
+                        'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
+                        'sensor_name'          (string): ID string for site (e.g. 'LIN3 [AQ]')
+                    Required columns:
+                        'O3.max'       (float): daily maximum value
+                        'O3.mean'      (float): daily mean value
+                        'O3.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM10.max'       (float): daily maximum value
+                        'PM10.mean'      (float): daily mean value
+                        'PM10.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM2.5.max'       (float): daily maximum value
+                        'PM2.5.mean'      (float): daily mean value
+                        'PM2.5.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NO2.max'       (float): daily maximum value
+                        'NO2.mean'      (float): daily mean value
+                        'NO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NOXasNO2.max'       (float): daily maximum value
+                        'NOXasNO2.mean'      (float): daily mean value
+                        'NOXasNO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'SO2.max'       (float): daily maximum value
+                        'SO2.mean'      (float): daily mean value
+                        'SO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+        """
 
         final_dataframe = pd.DataFrame()
         site_list_internal = hourly_dataframe["SiteID"].unique()
@@ -425,9 +567,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 final_dataframe = final_dataframe.append(temp_dataframe)
 
         return final_dataframe
-
-
-    #  testing the reshaping code
 
     def test_preprocess_code(self, df_in, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
 
