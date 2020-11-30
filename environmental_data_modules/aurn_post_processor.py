@@ -223,22 +223,25 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     def station_listing(self, grouped_data_in):
         '''
-        arguments:
-            grouped_data_in:
-                measurement site data grouped by 24 hour period
-                this will be pre-filtered according to what level of
-                data you want to keep (so it will be a count of the
-                days which meet that criteria)
-            min_years (default 1):
-                minimum number of years of data that a site must have
-            min_years_reference (default 3.5):
-                minimum number of years of data for any site that we
-                are going to use as a reference site later
-
-        returns:
-            required_site_list:
+        Calculates the lists of required sites (those with more data than the minimum required data)
+        and reference sites (those with more data than that required for reference purposes).
+        
+        The requirements for data are defined as the number of days which have at least one reading.
+        self.min_years - this is the requirement for the required sites
+        self.min_years_reference - this is the requirement for the reference sites
+        
+        Args:
+            grouped_data_in: pandas series object
+                Required MultiIndex:
+                    SiteID: (level 0)
+                    Date: (level 1)
+                Required data:
+                    daily count of measurement data (should be in range 0-24 for hourly data)
+                    
+        Returns:
+            required_site_list (list of strings):
                 list of sites with a data count > min_years
-            useful_site_list:
+            useful_site_list (list of strings):
                 list of sites with a data count > min_years_reference
         '''
 
