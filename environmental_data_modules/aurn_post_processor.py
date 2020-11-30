@@ -246,161 +246,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         else:
             return pd.DataFrame()
 
-    def station_listing(self, grouped_data_in):
-        """
-        Calculates the lists of required sites (those with more data than the minimum required data)
-        and reference sites (those with more data than that required for reference purposes).
-        
-        The requirements for data are defined as the number of days which have at least one reading.
-        self.min_years - this is the requirement for the required sites
-        self.min_years_reference - this is the requirement for the reference sites
-        
-        Args:
-            grouped_data_in: pandas series object
-                Required MultiIndex:
-                    SiteID: (level 0)
-                    Date: (level 1)
-                Required data:
-                    daily count of measurement data (should be in range 0-24 for hourly data)
-                    
-        Returns:
-            required_site_list (list of strings):
-                list of sites with a data count > min_years
-            useful_site_list (list of strings):
-                list of sites with a data count > min_years_reference
-        """
-
-        site_list_interior = grouped_data_in.index.levels[0]
-
-        required_site_list = []
-        useful_site_list = []
-
-        for site in site_list_interior:
-            try:
-                date_num = len(grouped_data_in.loc[(site,),])
-            except:
-                date_num = 0
-            if date_num > self.min_years * 365:
-                required_site_list.append(site)
-                print('\t{} has {} years of data'.format(site, date_num / 365))
-            if date_num > self.min_years_reference * 365:
-                useful_site_list.append(site)
-
-        return required_site_list, useful_site_list
-
-    def postprocess_data(self, input_dataframe, site):
-
-        working_dataframe = input_dataframe.drop(columns=AurnModule.SITE_ID_NEW)
-        tempgroups = working_dataframe.groupby(pd.Grouper(key='Date', freq='1D'))
-
-        data_counts = tempgroups.count()
-        data_max = tempgroups.max()
-        data_mean = tempgroups.mean()
-
-        cols_old = data_counts.columns
-
-        cols_counts = dict((key, key + '_count') for key in cols_old.values)
-        cols_max = dict((key, key + '_max') for key in cols_old.values)
-        cols_mean = dict((key, key + '_mean') for key in cols_old.values)
-
-        data_counts = data_counts.rename(columns=cols_counts)
-        data_max = data_max.rename(columns=cols_max)
-        data_mean = data_mean.rename(columns=cols_mean)
-
-        data_out = data_mean.join([data_max, data_counts])
-
-        # add the site as a new column, and set as part of multiindex with the date
-        site_name = "{} [AQ]".format(site)
-
-        data_out['SiteID'] = site_name
-        data_out = data_out.reset_index(drop=False).set_index(['Date', 'SiteID'])
-
-        return data_out
-
-    def transform_and_impute_data(self, df_in):
-        """
-        Function for organising the transformation of the dataset, then imputing missing
-        data, before detransforming the data and returning it.
-        
-        Args:
-            df_in: pandas dataframe containing the datasets to impute
-                Required Index:
-                    date (datetime64 objects): date / time for each reading
-                Optional Columns: Measurement data at the site for which we are imputing
-                                  the data. Only those pollutants which have been measured
-                                  at this site will be included.
-                    O3       (float): 
-                    PM10     (float):
-                    PM2.5    (float):
-                    NO2      (float):
-                    NOXasNO2 (float):
-                    SO2      (float):
-                Reference Columns: Reference data at the X nearest sites to the 
-                                   measurement being processed. All datasets will be
-                                   included, even for those pollutants which were not
-                                   included in the optional columns above. So, if
-                                   we use 5 reference stations, this will give 30 (5*6)
-                                   columns of reference data. If EMEP data is being used
-                                   then these are added for EMEP data too, but only at 
-                                   the station of interest (so only another 6 columns are
-                                   added). 
-                    O3_[siteID]       (float): 
-                    PM10_[siteID]     (float):
-                    PM2.5_[siteID]    (float):
-                    NO2_[siteID]      (float):
-                    NOXasNO2_[siteID] (float):
-                    SO2_[siteID]      (float):
-             
-        Returns:
-            df_out: pandas dataframe, containing the same datasets as above, but including
-                    the imputed data too. All imputed data is included (including that for
-                    the reference sites) - it is the task of the calling function to only
-                    retain the imputed data for our station of interest, and to discard 
-                    the rest of the imputed data.
-        """
-        
-        
-        # copy the input array, and note the columns
-        df_work = df_in.copy(deep=True)
-        cols = df_in.columns
-
-        # find missing datasets to remove
-        # also we note the columns that will be saved, and their order, for transferring data back!
-        col_remove = []
-        col_save = []
-        for col in cols:
-            if all(df_work[col].isna()):
-                col_remove.append(col)
-            else:
-                col_save.append(col)
-        df_work = df_work.drop(columns=col_remove)
-
-        if self.verbose > 2: print('df_work input to power transformer: \n {}'.format(df_work))
-        # power transformer fitting and transforming
-        self.transformer.fit(df_work.dropna())
-        if self.verbose > 2: print('Power transformer: Completed data fitting. Beginning power transformation')
-        np_out = self.transformer.transform(df_work)
-        if self.verbose > 2: print('Power transformer: Completed transformation. Beginning imputation')
-
-        # impute the missing values in this new dataframe
-        self.imputer.fit(np_out)
-        if self.verbose > 2: print('Imputer: Completed imputation fitting. Beginning imputer tranformation')
-        imp_out = self.imputer.transform(np_out)
-        if self.verbose > 2: print('Imputer Completed transformation. Beginning inverse transformation')
-
-        # apply the inverse transformation for our datasets (leaving out the indicator flags)
-        np_inv = self.transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
-        if self.verbose > 2: print('Imputer Completed inverse transformation. Beginning copying and tranforming values')
-
-        # copy the transformed values to a new dataframe
-        df_out = df_in.copy(deep=True)
-        for pos, col in enumerate(col_save):
-            pos_out = list(cols).index(col)
-            df_out.iloc[:, pos_out] = np_inv[:, pos]
-        if self.verbose > 1: print('Imputation: copied transformed values into new dataframe')
-
-        return df_out
-
     def postprocess_organisation(self, hourly_dataframe):
         """ Organisation of the postprocessing of the AURN data.
         
@@ -567,6 +412,119 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 final_dataframe = final_dataframe.append(temp_dataframe)
 
         return final_dataframe
+
+    def transform_and_impute_data(self, df_in):
+        """
+        Function for organising the transformation of the dataset, then imputing missing
+        data, before detransforming the data and returning it.
+        
+        Args:
+            df_in: pandas dataframe containing the datasets to impute
+                Required Index:
+                    date (datetime64 objects): date / time for each reading
+                Optional Columns: Measurement data at the site for which we are imputing
+                                  the data. Only those pollutants which have been measured
+                                  at this site will be included.
+                    O3       (float): 
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                Reference Columns: Reference data at the X nearest sites to the 
+                                   measurement being processed. All datasets will be
+                                   included, even for those pollutants which were not
+                                   included in the optional columns above. So, if
+                                   we use 5 reference stations, this will give 30 (5*6)
+                                   columns of reference data. If EMEP data is being used
+                                   then these are added for EMEP data too, but only at 
+                                   the station of interest (so only another 6 columns are
+                                   added). 
+                    O3_[siteID]       (float): 
+                    PM10_[siteID]     (float):
+                    PM2.5_[siteID]    (float):
+                    NO2_[siteID]      (float):
+                    NOXasNO2_[siteID] (float):
+                    SO2_[siteID]      (float):
+             
+        Returns:
+            df_out: pandas dataframe, containing the same datasets as above, but including
+                    the imputed data too. All imputed data is included (including that for
+                    the reference sites) - it is the task of the calling function to only
+                    retain the imputed data for our station of interest, and to discard 
+                    the rest of the imputed data.
+        """
+        
+        
+        # copy the input array, and note the columns
+        df_work = df_in.copy(deep=True)
+        cols = df_in.columns
+
+        # find missing datasets to remove
+        # also we note the columns that will be saved, and their order, for transferring data back!
+        col_remove = []
+        col_save = []
+        for col in cols:
+            if all(df_work[col].isna()):
+                col_remove.append(col)
+            else:
+                col_save.append(col)
+        df_work = df_work.drop(columns=col_remove)
+
+        if self.verbose > 2: print('df_work input to power transformer: \n {}'.format(df_work))
+        # power transformer fitting and transforming
+        self.transformer.fit(df_work.dropna())
+        if self.verbose > 2: print('Power transformer: Completed data fitting. Beginning power transformation')
+        np_out = self.transformer.transform(df_work)
+        if self.verbose > 2: print('Power transformer: Completed transformation. Beginning imputation')
+
+        # impute the missing values in this new dataframe
+        self.imputer.fit(np_out)
+        if self.verbose > 2: print('Imputer: Completed imputation fitting. Beginning imputer tranformation')
+        imp_out = self.imputer.transform(np_out)
+        if self.verbose > 2: print('Imputer Completed transformation. Beginning inverse transformation')
+
+        # apply the inverse transformation for our datasets (leaving out the indicator flags)
+        np_inv = self.transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
+        if self.verbose > 2: print('Imputer Completed inverse transformation. Beginning copying and tranforming values')
+
+        # copy the transformed values to a new dataframe
+        df_out = df_in.copy(deep=True)
+        for pos, col in enumerate(col_save):
+            pos_out = list(cols).index(col)
+            df_out.iloc[:, pos_out] = np_inv[:, pos]
+        if self.verbose > 1: print('Imputation: copied transformed values into new dataframe')
+
+        return df_out
+
+    def postprocess_data(self, input_dataframe, site):
+
+        working_dataframe = input_dataframe.drop(columns=AurnModule.SITE_ID_NEW)
+        tempgroups = working_dataframe.groupby(pd.Grouper(key='Date', freq='1D'))
+
+        data_counts = tempgroups.count()
+        data_max = tempgroups.max()
+        data_mean = tempgroups.mean()
+
+        cols_old = data_counts.columns
+
+        cols_counts = dict((key, key + '_count') for key in cols_old.values)
+        cols_max = dict((key, key + '_max') for key in cols_old.values)
+        cols_mean = dict((key, key + '_mean') for key in cols_old.values)
+
+        data_counts = data_counts.rename(columns=cols_counts)
+        data_max = data_max.rename(columns=cols_max)
+        data_mean = data_mean.rename(columns=cols_mean)
+
+        data_out = data_mean.join([data_max, data_counts])
+
+        # add the site as a new column, and set as part of multiindex with the date
+        site_name = "{} [AQ]".format(site)
+
+        data_out['SiteID'] = site_name
+        data_out = data_out.reset_index(drop=False).set_index(['Date', 'SiteID'])
+
+        return data_out
 
     def test_preprocess_code(self, df_in, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
 
