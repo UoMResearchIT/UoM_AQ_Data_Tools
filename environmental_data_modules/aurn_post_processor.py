@@ -110,19 +110,46 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                             use as a reference site later. (this cannot be less than min_years)
                 min_years:              (float) The minimum number of years of data that a site must have
                 impute_data:            (boolean) Whether to attempt to impute missing data
-                random_state:           #Todo Doug: all of these...
-                transformer_standardize:
-                add_indicator:
-                initial_strategy:
-                max_iter:
-                transformer_method:
-                estimator:
+                random_state:           (int) (IterativeImputer) seed for pseudo random number generator
+                transformer_standardize:(boolean) (PowerTransformer) apply zero-mean, unit-variance normalization
+                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
+                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
+                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
+                transformer_method:     (str) (PowerTransformer) power transform method to use
+                estimator:              (IterativeImputer) estimator method to be used
                 save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:         (str) The suffix to appended to the end of output file names.
 
             Returns:
-                Processed data (pandas dataframe)
-
+                daily_dataframe: daily dataset, for all measurements, as pandas.Dataframe
+                    Required MultiIndex:
+                        'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
+                        'sensor_name'          (string): ID string for site (e.g. 'LIN3 [AQ]')
+                    Required columns:
+                        'O3.max'       (float): daily maximum value
+                        'O3.mean'      (float): daily mean value
+                        'O3.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM10.max'       (float): daily maximum value
+                        'PM10.mean'      (float): daily mean value
+                        'PM10.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM2.5.max'       (float): daily maximum value
+                        'PM2.5.mean'      (float): daily mean value
+                        'PM2.5.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NO2.max'       (float): daily maximum value
+                        'NO2.mean'      (float): daily mean value
+                        'NO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NOXasNO2.max'       (float): daily maximum value
+                        'NOXasNO2.mean'      (float): daily mean value
+                        'NOXasNO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'SO2.max'       (float): daily maximum value
+                        'SO2.mean'      (float): daily mean value
+                        'SO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
         """
 
         # Process inputs
@@ -307,6 +334,53 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         return df_out
 
     def postprocess_organisation(self, hourly_dataframe):
+        """ Organisation of the postprocessing of the AURN data.
+        
+            Args:
+                hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+
+            Returns:
+                final_dataframe: daily dataset, for all measurements, as pandas.Dataframe
+                    Required MultiIndex:
+                        'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
+                        'sensor_name'          (string): ID string for site (e.g. 'LIN3 [AQ]')
+                    Required columns:
+                        'O3.max'       (float): daily maximum value
+                        'O3.mean'      (float): daily mean value
+                        'O3.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM10.max'       (float): daily maximum value
+                        'PM10.mean'      (float): daily mean value
+                        'PM10.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'PM2.5.max'       (float): daily maximum value
+                        'PM2.5.mean'      (float): daily mean value
+                        'PM2.5.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NO2.max'       (float): daily maximum value
+                        'NO2.mean'      (float): daily mean value
+                        'NO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'NOXasNO2.max'       (float): daily maximum value
+                        'NOXasNO2.mean'      (float): daily mean value
+                        'NOXasNO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+                        'SO2.max'       (float): daily maximum value
+                        'SO2.mean'      (float): daily mean value
+                        'SO2.flag'      (float): flag to indicate fraction of imputed data
+                                                        (1 = fully imputed, 0 = no imputed values were used)
+        """
 
         final_dataframe = pd.DataFrame()
         site_list_internal = hourly_dataframe["SiteID"].unique()
