@@ -295,33 +295,23 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                                         (1 = fully imputed, 0 = no imputed values were used)
         """
 
+        # do some analysis of the data, getting data counts, remove sites which don't meet our required data count
+        hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal = self.list_required_and_reference_sites(hourly_dataframe)
+
         final_dataframe = pd.DataFrame()
-        site_list_internal = hourly_dataframe["SiteID"].unique()
-
         date_index = pd.date_range(start=self.start, end=self.end, freq='1H')
-        hourly_dataframe_internal = hourly_dataframe.set_index('Date')
 
-        # do some analysis of the data, getting data counts
-        tempgroups = hourly_dataframe.groupby(['SiteID', pd.Grouper(key='Date', freq='1D')])
-        daily_hour_counts = tempgroups.count()
-        spc_list = daily_hour_counts.columns.values
-
+        # get the list of required sites from what is available, and what was requested
+        site_list_internal = set(site_list_internal).intersection(self.site_list)
+        # Set the number of reference stations to request
+        ref_station_numbers = [len(reference_sites[x]) for x in reference_sites.keys()] 
+        station_number = min([5] + [len(ref_station_numbers) - 1])
+        
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
+        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+        
         # imputation of the values requires more preprocessing and work...
         if self.impute_data:
-            # Set station number
-            station_number = min(5, len(site_list_internal) - 1)
-
-            req_sites = {}
-            use_sites = {}
-
-            for spc in spc_list:
-                print('site day counts for {}'.format(spc))
-                req_days_counts = daily_hour_counts[spc]
-                req_days_counts = req_days_counts[req_days_counts > 0]
-                req_sites[spc], use_sites[spc] = self.station_listing(req_days_counts)
-                print('VERBOSE: ', self.verbose)
-                if self.verbose > 0: print('\t\treq sites {}:'.format(spc), req_sites[spc])
-                if self.verbose > 0: print('\t\tuse sites {}:'.format(spc), use_sites[spc])
 
             if not self._emep_data.empty:
                 if self.verbose > 0: print('Loading EMEP data')
@@ -334,7 +324,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 # get list of chemical species that we need to impute for this site (including Date info)
                 req_spc = []
                 for spc in spc_list:
-                    if site in req_sites[spc]:
+                    if site in required_sites[spc]:
                         req_spc.append(spc)
 
                 # copy these to a new dataframe
@@ -345,7 +335,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 # get list of neighbouring sites for each of the chemical species of interest
                 for spc in spc_list:
                     if self.verbose > 1: print('3. Species: ', spc)
-                    station_distances = self.get_station_distances(site, use_sites[spc])
+                    station_distances = self.get_station_distances(site, reference_sites[spc])
                     if self.verbose > 1: print('4. Station number:', station_number)
                     if self.verbose > 1: print('5. distances:', station_distances)
                     if self.verbose > 1: print('6.', len(station_distances))
@@ -412,6 +402,65 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 final_dataframe = final_dataframe.append(temp_dataframe)
 
         return final_dataframe
+
+    def list_required_and_reference_sites(self, data_in):
+        """
+        This function creates the lists of required sites, and reference sites, for the 
+        final dataset.
+        
+        Args:
+            data_in: hourly dataset, for all measurements, as pandas.Dataframe
+                Index: none
+                Required Columns:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+            
+        Returns:
+            met_data_filtered: pandas dataframe, as above, containing hourly dataset for only 
+                               the required station datasets
+            reference_sites: (dict, keys are species):
+                            items: (list of strings) the siteID's for our reference sites for each `spc` 
+            required_sites: (dict, keys are species):
+                            items: (list of strings) required sites for `spc`
+            combined_req_site_list: (list, strings) a single list of required sites
+        
+        """
+        print('    get the lists of required and reference stations for each measurement variable')
+        tempgroups = data_in.groupby(['SiteID', pd.Grouper(key='Date', freq='1D')])
+        daily_hour_counts = tempgroups.count()
+        spc_list = daily_hour_counts.columns.values
+        
+        required_sites = {}
+        reference_sites = {}
+        combined_req_site_list = []
+        
+        for spc in spc_list:
+            print('site day counts for {}'.format(spc))
+            req_days_counts = daily_hour_counts[spc]
+            req_days_counts = req_days_counts[req_days_counts > 0]
+            required_sites[spc], reference_sites[spc] = self.station_listing(req_days_counts)
+            combined_req_site_list = combined_req_site_list + required_sites[spc]
+
+            print('VERBOSE: ', self.verbose)
+            if self.verbose > 0: print('\t\treq sites {}:'.format(spc), required_sites[spc])
+            if self.verbose > 0: print('\t\tuse sites {}:'.format(spc), reference_sites[spc])
+
+        # get a list of all sites which are required for at least one measurement set
+        combined_req_site_list = list(dict.fromkeys(combined_req_site_list))
+        print('there are {} required sites, and {} reference sites'.format(len(required_sites), len(reference_sites)))
+        data_filtered = data_in[data_in['SiteID'].isin(combined_req_site_list)]
+
+        return data_filtered, reference_sites, required_sites, combined_req_site_list
+
+
+
 
     def transform_and_impute_data(self, df_in):
         """
