@@ -2,7 +2,7 @@ try:
     import os
     import wget
     import pyreadr
-    import datetime
+    from datetime import datetime
     import pandas as pd
     import numpy as np
     from urllib.parse import urljoin
@@ -185,7 +185,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         datetime_start = pd.to_datetime(subset_df['start_date'].values, format='%Y/%m/%d').year
         # Problem with the end date is it could be ongoing. In which case, convert that entry into a date
         # and to_datetime
-        now = datetime.datetime.now()
+        now = datetime.now()
         datetime_end_temp = subset_df['end_date'].values
         step = 0
         for i in datetime_end_temp:
