@@ -176,6 +176,47 @@ class PostProcessor(EnvironmentModule):
 
         return station_distances
 
+    def station_listing(self, grouped_data_in):
+        """
+        Calculates the lists of required sites (those with more data than the minimum required data)
+        and reference sites (those with more data than that required for reference purposes).
+        
+        The requirements for data are defined as the number of days which have at least one reading.
+        self.min_years - this is the requirement for the required sites
+        self.min_years_reference - this is the requirement for the reference sites
+        
+        Args:
+            grouped_data_in: pandas series object
+                Required MultiIndex:
+                    SiteID: (level 0)
+                    Date: (level 1)
+                Required data:
+                    daily count of measurement data (should be in range 0-24 for hourly data)
+                    
+        Returns:
+            required_site_list (list of strings):
+                list of sites with a data count > min_years
+            useful_site_list (list of strings):
+                list of sites with a data count > min_years_reference
+        """
+
+        site_list_interior = grouped_data_in.index.levels[0]
+
+        required_site_list = []
+        useful_site_list = []
+
+        for site in site_list_interior:
+            try:
+                date_num = len(grouped_data_in.loc[(site,),])
+            except:
+                date_num = 0
+            if date_num > self.min_years * 365:
+                required_site_list.append(site)
+                print('\t{} has {} years of data'.format(site, date_num / 365))
+            if date_num > self.min_years_reference * 365:
+                useful_site_list.append(site)
+
+        return required_site_list, useful_site_list
 
 
     ### function for creating date objects

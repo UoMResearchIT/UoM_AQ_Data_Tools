@@ -439,58 +439,6 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
         return met_data_reduced
 
-    def station_listing(self, met_extracted_data, var_string):
-        #Todo Doug: can this be merged with station_listing() in aurn_post_processor (and put in to post_processor)
-        """
-        This function lists the stations which fulfil two requirements:
-            1) those that meet minimum data count for inclusion in the dataset
-            2) those that meet minimum data count for use as a reference station
-        
-        Args:
-            var_string (string): label for variable of interest, used to 
-                                 select column containing data of interest
-            met_extracted_data: hourly met data as a pandas.DataFrame
-                Required columns:
-                    'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
-                    'temperature' (float): temperature
-                    'rel_hum'     (float): relative humidity
-                    'pressure'    (float): pressure
-                    'dewpoint'    (float): dewpoint temperature
-
-        Uses:
-            self.min_years (float, default 1):
-                minimum number of years of data that a site must have to be included 
-                in the final dataset.
-            self.min_years_reference (float, default 3.5):
-                minimum number of years of data for any site that is going to be used 
-                as a reference site.
-
-        Returns:
-            required_site_list (list, string or int):
-                                 sites with a data count > min_years
-            reference_site_list (list, string or int):
-                                 sites with a data count > useful_num_years
-        """
-
-        site_list_interior = met_extracted_data['siteID'].unique()
-
-        required_site_list = []
-        reference_site_list = []
-
-        for site in site_list_interior:
-            metsite = met_extracted_data[met_extracted_data['siteID'] == site]
-            try:
-                measurement_num = len(metsite[metsite[var_string].notna()])
-            except:
-                measurement_num = 0
-            if measurement_num > self.min_years*365*24:
-                required_site_list.append(site)
-            if measurement_num > self.min_years_reference*365*24:
-                reference_site_list.append(site)
-
-        return required_site_list, reference_site_list
-
     def list_required_and_reference_sites(self, met_data_in):
         """
         This function creates the lists of required sites, and reference sites, for the 
@@ -517,19 +465,28 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         
         """
         print('    get the lists of required and reference stations for each measurement variable')
-        req_sites_temp, reference_sites_temp = self.station_listing(met_data_in, 'temperature')
-        req_sites_pres, reference_sites_pres = self.station_listing(met_data_in, 'pressure')
-        req_sites_dewpoint, reference_sites_dewpoint = self.station_listing(met_data_in, 'dewpoint')
+        tempgroups = met_data_in.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+        daily_hour_counts = tempgroups.count()
+        spc_list = daily_hour_counts.columns.values
+        
+        req_sites = {}
+        use_sites = {}
+        
+        for spc in spc_list:
+            print('site day counts for {}'.format(spc))
+            req_days_counts = daily_hour_counts[spc]
+            req_days_counts = req_days_counts[req_days_counts > 0]
+            req_sites[spc], use_sites[spc] = self.station_listing(req_days_counts)
 
         # find a unified list of useful sites for all our measurements
-        reference_sites = [x for x in reference_sites_dewpoint if x in reference_sites_pres]
+        reference_sites = [x for x in use_sites['dewpoint'] if x in use_sites['pressure']]
 
         # get a list of all sites which are required for at least one measurement set
-        required_sites = list(dict.fromkeys(req_sites_temp + req_sites_pres + req_sites_dewpoint))
+        required_sites = list(dict.fromkeys(req_sites['temperature'] + req_sites['pressure'] + req_sites['dewpoint']))
         print('there are {} required sites, and {} reference sites'.format(len(required_sites), len(reference_sites)))
         met_data_filtered = met_data_in[met_data_in['siteID'].isin(required_sites)]
 
-        return met_data_filtered, reference_sites, req_sites_temp, req_sites_pres, req_sites_dewpoint
+        return met_data_filtered, reference_sites, req_sites['temperature'], req_sites['pressure'], req_sites['dewpoint']
 
     def rh_calculations(self, met_data_in, met_data_temp, met_data_dewpoint):
         """
