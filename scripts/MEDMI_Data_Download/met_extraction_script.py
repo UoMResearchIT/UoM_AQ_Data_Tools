@@ -23,7 +23,7 @@ and use the --help command to get the full set of parameters/options.
 
 import argparse
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 from environmental_data_modules import MetExtractor
 
 if __name__ == '__main__':
