@@ -175,20 +175,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         self.station_data = self.metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
         if self.verbose > 1: print('Station data: \n {}'.format(self.station_data))
 
-        # Read in hourly dataframe file
-        try:
-            hourly_dataframe = pd.read_csv(in_file,
-                                           sep=',',
-                                           usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.NEW_FILE_COLS),
-                                           index_col=AurnModule.INDEX_EXTRACTED,
-                                           parse_dates=['Date'])
-        except Exception as err:
-            raise ValueError('Unable to read Met extracted data file {}. {}'.format(in_file, err))
-
-        if self.verbose > 1:
-            print('Hourly dataframe: \n {}'.format(hourly_dataframe))
-            print('Hourly dataframe data types: \n {}'.format(hourly_dataframe.dtypes))
-
         if impute_data:
             # set the imputer options (if we are using them)
             self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
@@ -199,17 +185,154 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         # set the power transform options
         self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
-        # pull out the daily mean and max values for the site list
-        # postprocessing the data set, to get daily data
-        daily_dataframe = self.postprocess_organisation(hourly_dataframe)
-        # sort the data
-        daily_dataframe = daily_dataframe.sort_index()
+        # load and prepare the hourly dataset
+        hourly_dataframe = self.load_aurn_data(in_file)
+
+        print('filter for minimum data lengths, and reduce dataset to only stations of interest')
+        hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal = \
+            self.list_required_and_reference_sites(hourly_dataframe)
+        # get the list of required sites from what is available, and what was requested
+        site_list_internal = set(site_list_internal).intersection(self.site_list)
+
+        if len(hourly_dataframe_filtered.index) == 0:
+            print('Exiting post-processing: Metadata is empty after initial filtering processes')
+            return
+
+        if self.impute_data:
+            print('imputation of data, returning hourly data')
+            hourly_dataframe = self.organise_data_imputation(
+                hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal)
+        else:
+            print('sorting data (no imputation), returning hourly data')
+            hourly_dataframe = self.organise_data(hourly_dataframe_filtered, site_list_internal)
+
+        # calculate the daily max and mean for each station
+        daily_dataframe = self.combine_and_organise_mean_max(hourly_dataframe)
 
         if save_to_csv:
             # write this dataset to file
             daily_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
         return daily_dataframe
+
+    def combine_and_organise_mean_max(self, hourly_dataframe):
+        """
+        Combine and organise the daily mean, maximum, and count information.
+        
+        Args:
+            hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                Required Index:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                    imputed O3       (int): flag indicating imputed data (0=original,1=imputed)
+                    imputed PM10     (int):
+                    imputed PM2.5    (int):
+                    imputed NO2      (int):
+                    imputed NOXasNO2 (int):
+                    imputed SO2      (int):
+            
+        Returns:
+            final_dataframe: daily dataset, for all measurements, as pandas.Dataframe
+                Required MultiIndex:
+                    'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
+                    'sensor_name'          (string): ID string for site (e.g. 'LIN3 [AQ]')
+                Required columns:
+                    'O3.max'       (float): daily maximum value
+                    'O3.mean'      (float): daily mean value
+                    'O3.flag'      (float): flag to indicate fraction of imputed data
+                                                    (1 = fully imputed, 0 = no imputed values were used)
+                    'PM10.max'       (float): daily maximum value
+                    'PM10.mean'      (float): daily mean value
+                    'PM10.flag'      (float): flag to indicate fraction of imputed data
+                                                    (1 = fully imputed, 0 = no imputed values were used)
+                    'PM2.5.max'       (float): daily maximum value
+                    'PM2.5.mean'      (float): daily mean value
+                    'PM2.5.flag'      (float): flag to indicate fraction of imputed data
+                                                    (1 = fully imputed, 0 = no imputed values were used)
+                    'NO2.max'       (float): daily maximum value
+                    'NO2.mean'      (float): daily mean value
+                    'NO2.flag'      (float): flag to indicate fraction of imputed data
+                                                    (1 = fully imputed, 0 = no imputed values were used)
+                    'NOXasNO2.max'       (float): daily maximum value
+                    'NOXasNO2.mean'      (float): daily mean value
+                    'NOXasNO2.flag'      (float): flag to indicate fraction of imputed data
+                                                    (1 = fully imputed, 0 = no imputed values were used)
+                    'SO2.max'       (float): daily maximum value
+                    'SO2.mean'      (float): daily mean value
+                    'SO2.flag'      (float): flag to indicate fraction of imputed data
+                                                    (1 = fully imputed, 0 = no imputed values were used)
+        """
+
+
+        #### group by date and site
+        daily_grouped_data = hourly_dataframe.groupby([pd.Grouper(level="Date", freq='1D'), 'SiteID'])
+        spc_list = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2'] # TODO Doug - make this check database columns! 
+        
+        
+        #### loop by spc through grouped data, and calculate the mean, max, and flag values
+        for spc in spc_list:
+            temp_dataframe = pd.DataFrame()
+            temp_dataframe['{}_mean'.format(spc)] = daily_grouped_data.mean()[spc]
+            temp_dataframe['{}_max'.format(spc)] = daily_grouped_data.max()[spc]
+            temp_dataframe['{}_flag'.format(spc)] = daily_grouped_data.mean()['{}_flag'.format(spc)]
+            try:
+                final_dataframe = final_dataframe.merge(temp_dataframe, how='outer', left_index=True, right_index=True)
+            except:
+                final_dataframe = temp_dataframe.copy()
+
+        #### rename the sites, to include AQ flag
+        final_dataframe.index = final_dataframe.index.set_levels(
+                    ['{} [AQ]'.format(x) for x in final_dataframe.index.levels[1]], level=1)
+
+        #### rename the index columns
+        final_dataframe.index.rename(['time_stamp', 'sensor_name'], inplace=True)
+
+        #### return output dataframe
+        return(final_dataframe)
+
+    def load_aurn_data(self, file_in):
+        """
+        Loading the AURN dataset.
+        
+        Args:
+            file_in (Path object or string): path for the file to be read in
+            
+        Returns:
+            hourly_dataframe:  hourly dataset, for all measurements, as pandas.Dataframe
+                    Index: none
+                    Required Columns:
+                        Date   (datetime object):
+                        SiteID          (string):
+                    Optional Columns:
+                        O3       (float):
+                        PM10     (float):
+                        PM2.5    (float):
+                        NO2      (float):
+                        NOXasNO2 (float):
+                        SO2      (float):
+        """
+        # Read in hourly dataframe file
+        try:
+            hourly_dataframe = pd.read_csv(file_in,
+                                           sep=',',
+                                           usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.NEW_FILE_COLS),
+                                           index_col=AurnModule.INDEX_EXTRACTED,
+                                           parse_dates=['Date'])
+        except Exception as err:
+            raise ValueError('Unable to read Met extracted data file {}. {}'.format(file_in, err))
+
+        if self.verbose > 1:
+            print('Hourly dataframe: \n {}'.format(hourly_dataframe))
+            print('Hourly dataframe data types: \n {}'.format(hourly_dataframe.dtypes))
+            
+        return(hourly_dataframe)
 
     def load_emep_data(self, filename):
         """
@@ -245,163 +368,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 raise ValueError('EMEP file does not contain an \'NOx\' column')
         else:
             return pd.DataFrame()
-
-    def postprocess_organisation(self, hourly_dataframe):
-        """ Organisation of the postprocessing of the AURN data.
-        
-            Args:
-                hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
-                    Index: none
-                    Required Columns:
-                        Date   (datetime object):
-                        SiteID          (string):
-                    Optional Columns:
-                        O3       (float):
-                        PM10     (float):
-                        PM2.5    (float):
-                        NO2      (float):
-                        NOXasNO2 (float):
-                        SO2      (float):
-
-            Returns:
-                final_dataframe: daily dataset, for all measurements, as pandas.Dataframe
-                    Required MultiIndex:
-                        'time_stamp'  (datetime object): date (only) (e.g. 2017-06-01)
-                        'sensor_name'          (string): ID string for site (e.g. 'LIN3 [AQ]')
-                    Required columns:
-                        'O3.max'       (float): daily maximum value
-                        'O3.mean'      (float): daily mean value
-                        'O3.flag'      (float): flag to indicate fraction of imputed data
-                                                        (1 = fully imputed, 0 = no imputed values were used)
-                        'PM10.max'       (float): daily maximum value
-                        'PM10.mean'      (float): daily mean value
-                        'PM10.flag'      (float): flag to indicate fraction of imputed data
-                                                        (1 = fully imputed, 0 = no imputed values were used)
-                        'PM2.5.max'       (float): daily maximum value
-                        'PM2.5.mean'      (float): daily mean value
-                        'PM2.5.flag'      (float): flag to indicate fraction of imputed data
-                                                        (1 = fully imputed, 0 = no imputed values were used)
-                        'NO2.max'       (float): daily maximum value
-                        'NO2.mean'      (float): daily mean value
-                        'NO2.flag'      (float): flag to indicate fraction of imputed data
-                                                        (1 = fully imputed, 0 = no imputed values were used)
-                        'NOXasNO2.max'       (float): daily maximum value
-                        'NOXasNO2.mean'      (float): daily mean value
-                        'NOXasNO2.flag'      (float): flag to indicate fraction of imputed data
-                                                        (1 = fully imputed, 0 = no imputed values were used)
-                        'SO2.max'       (float): daily maximum value
-                        'SO2.mean'      (float): daily mean value
-                        'SO2.flag'      (float): flag to indicate fraction of imputed data
-                                                        (1 = fully imputed, 0 = no imputed values were used)
-        """
-
-        # do some analysis of the data, getting data counts, remove sites which don't meet our required data count
-        hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal = self.list_required_and_reference_sites(hourly_dataframe)
-
-        final_dataframe = pd.DataFrame()
-        date_index = pd.date_range(start=self.start, end=self.end, freq='1H')
-
-        # get the list of required sites from what is available, and what was requested
-        site_list_internal = set(site_list_internal).intersection(self.site_list)
-        # Set the number of reference stations to request
-        ref_station_numbers = [len(reference_sites[x]) for x in reference_sites.keys()] 
-        station_number = min([5] + [len(ref_station_numbers) - 1])
-        
-        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
-        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
-        
-        # imputation of the values requires more preprocessing and work...
-        if self.impute_data:
-
-            if not self._emep_data.empty:
-                if self.verbose > 0: print('Loading EMEP data')
-                emep_dataframe_internal = self._emep_data.set_index('Date')
-
-            if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
-            for site in site_list_internal:
-                if self.verbose > 1: print('2. Site: ', site)
-
-                # get list of chemical species that we need to impute for this site (including Date info)
-                req_spc = []
-                for spc in spc_list:
-                    if site in required_sites[spc]:
-                        req_spc.append(spc)
-
-                # copy these to a new dataframe
-                working_hourly_dataframe = pd.DataFrame([], index=date_index)
-                working_hourly_dataframe[req_spc] = \
-                    hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][req_spc]
-
-                # get list of neighbouring sites for each of the chemical species of interest
-                for spc in spc_list:
-                    if self.verbose > 1: print('3. Species: ', spc)
-                    station_distances = self.get_station_distances(site, reference_sites[spc])
-                    if self.verbose > 1: print('4. Station number:', station_number)
-                    if self.verbose > 1: print('5. distances:', station_distances)
-                    if self.verbose > 1: print('6.', len(station_distances))
-                    for ii in range(0, min(station_number, len(station_distances))):
-                        if self.verbose > 1: print('7. ii', ii)
-                        station_code = station_distances.index[ii]
-                        working_hourly_dataframe['{}_{}'.format(spc, station_code)] = \
-                            hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == station_code][spc]
-
-                # get EMEP predictions of chemical species of interest (if needed)
-                if self.verbose > 1: print('EMEP data: {}'.format(self._emep_data))
-                if not self._emep_data.empty:
-                    if self.verbose > 0: print('Using EMEP data')
-                    for spc in spc_list:
-                        working_hourly_dataframe['{}_{}'.format(spc, 'EMEP')] = \
-                            emep_dataframe_internal[emep_dataframe_internal['SiteID'] == site][spc]
-
-                # run the imputation process
-                imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe)
-
-                # copy imputed data of interest into original dataframe
-                for spc in spc_list:
-                    working_hourly_dataframe['imputed {}'.format(spc)] = 0
-                    if spc in req_spc:
-                        working_hourly_dataframe['imputed {}'.format(spc)] = working_hourly_dataframe[spc].isna() * 1
-                        working_hourly_dataframe[spc] = imputed_hourly_dataframe[spc]
-                    else:
-                        working_hourly_dataframe[spc] = np.nan
-
-                # postprocess the new datasets, to get daily mean and max, and populate final dataframe
-                daily_grouped_data = working_hourly_dataframe.groupby(pd.Grouper(freq='1D'))
-                temp_dataframe = pd.DataFrame()
-                for spc in spc_list:
-                    temp_dataframe['{}.mean'.format(spc)] = daily_grouped_data.mean()[spc]
-                    temp_dataframe['{}.max'.format(spc)] = daily_grouped_data.max()[spc]
-                    if spc in req_spc:
-                        temp_dataframe['{}.flag'.format(spc)] = daily_grouped_data.mean()['imputed {}'.format(spc)]
-                    else:
-                        temp_dataframe['{}.flag'.format(spc)] = 0.0
-                    temp_dataframe['sensor_name'] = '{} [AQ]'.format(site)
-
-                temp_dataframe = temp_dataframe.rename_axis('time_stamp', axis=0).set_index('sensor_name', append=True)
-                final_dataframe = final_dataframe.append(temp_dataframe)
-
-        else:  # simpler post processing of data
-            for site in site_list_internal:
-                # select our subset of metadata for this station
-                station_name = self.station_data.loc[site]['site_name']
-                print("processing site {} ({})".format(site, station_name))
-
-                working_hourly_dataframe = pd.DataFrame([], index=date_index)
-                working_hourly_dataframe = hourly_dataframe_internal[hourly_dataframe_internal["SiteID"] == site]
-
-                # postprocessing the data set, to get daily data
-                daily_grouped_data = working_hourly_dataframe.groupby(pd.Grouper(freq='1D'))
-                temp_dataframe = pd.DataFrame()
-                for spc in spc_list:
-                    temp_dataframe['{}.mean'.format(spc)] = daily_grouped_data.mean()[spc]
-                    temp_dataframe['{}.max'.format(spc)] = daily_grouped_data.max()[spc]
-                    temp_dataframe['{}.flag'.format(spc)] = 0.0
-                    temp_dataframe['sensor_name'] = '{} [AQ]'.format(site)
-
-                temp_dataframe = temp_dataframe.rename_axis('time_stamp', axis=0).set_index('sensor_name', append=True)
-                final_dataframe = final_dataframe.append(temp_dataframe)
-
-        return final_dataframe
 
     def list_required_and_reference_sites(self, data_in):
         """
@@ -459,8 +425,185 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         return data_filtered, reference_sites, required_sites, combined_req_site_list
 
+    def organise_data_imputation(self, hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal): 
+        """
+        Function for organising the imputation of the datasets. This runs the 
+        'transform_and_impute_data' function for each of the variables of interest.
+        
+        Args:
+            hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
+                Index: none
+                Required Columns:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+            reference_sites (list, string or int): sites to use for reference when imputing datasets
+            required_sites: (dict, keys are species):
+                            items: (list of strings) required sites for `spc`
+            site_list_internal (list, string or int): combined list of sites to retain
+        
+        Returns:
+            output_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                Required Index:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                    O3_flag       (int): flag indicating imputed data (0=original,1=imputed)
+                    PM10_flag     (int):
+                    PM2.5_flag    (int):
+                    NO2_flag      (int):
+                    NOXasNO2_flag (int):
+                    SO2_flag      (int):
+        """
+
+        output_dataframe = pd.DataFrame()
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+
+        # Set the number of reference stations to request
+        ref_station_numbers = [len(reference_sites[x]) for x in reference_sites.keys()] 
+        station_number = min([5] + [len(ref_station_numbers) - 1])
+        
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
+        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
 
 
+        if not self._emep_data.empty:
+            if self.verbose > 0: print('Loading EMEP data')
+            emep_dataframe_internal = self._emep_data.set_index('Date')
+
+        if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
+        for site in site_list_internal:
+            if self.verbose > 1: print('2. Site: ', site)
+
+            # get list of chemical species that we need to impute for this site (including Date info)
+            req_spc = []
+            for spc in spc_list:
+                if site in required_sites[spc]:
+                    req_spc.append(spc)
+
+            # copy these to a new dataframe
+            working_hourly_dataframe = pd.DataFrame([], index=date_index)
+            working_hourly_dataframe[req_spc] = \
+                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][req_spc]
+            copy_hourly_dataframe = working_hourly_dataframe.copy()
+            copy_hourly_dataframe['SiteID'] = site
+
+            # get list of neighbouring sites for each of the chemical species of interest
+            for spc in spc_list:
+                if self.verbose > 1: print('3. Species: ', spc)
+                station_distances = self.get_station_distances(site, reference_sites[spc])
+                if self.verbose > 1: print('4. Station number:', station_number)
+                if self.verbose > 1: print('5. distances:', station_distances)
+                if self.verbose > 1: print('6.', len(station_distances))
+                for ii in range(0, min(station_number, len(station_distances))):
+                    if self.verbose > 1: print('7. ii', ii)
+                    station_code = station_distances.index[ii]
+                    working_hourly_dataframe['{}_{}'.format(spc, station_code)] = \
+                        hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == station_code][spc]
+
+            # get EMEP predictions of chemical species of interest (if needed)
+            if self.verbose > 1: print('EMEP data: {}'.format(self._emep_data))
+            if not self._emep_data.empty:
+                if self.verbose > 0: print('Using EMEP data')
+                for spc in spc_list:
+                    working_hourly_dataframe['{}_{}'.format(spc, 'EMEP')] = \
+                        emep_dataframe_internal[emep_dataframe_internal['SiteID'] == site][spc]
+
+            # run the imputation process
+            imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe)
+
+            # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
+            for spc in spc_list:
+                copy_hourly_dataframe['{}_flag'.format(spc)] = 0
+                if spc in req_spc:
+                    copy_hourly_dataframe['{}_flag'.format(spc)] = copy_hourly_dataframe[spc].isna() * 1
+                    copy_hourly_dataframe[spc] = imputed_hourly_dataframe[spc]
+                else:
+                    copy_hourly_dataframe[spc] = np.nan
+
+            output_dataframe = output_dataframe.append(copy_hourly_dataframe)
+
+        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        return(output_dataframe)
+
+    def organise_data(self, hourly_dataframe_filtered, site_list_internal): 
+        """
+        Function for organising the required datasets. This mirrors the imputation function.
+        
+        Args:
+            hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
+                Index: none
+                Required Columns:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+            site_list_internal (list, string or int): combined list of sites to retain
+        
+        Returns:
+            hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                Required Index:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                    O3_flag       (int): flag indicating imputed data (0=original,1=imputed)
+                    PM10_flag     (int):
+                    PM2.5_flag    (int):
+                    NO2_flag      (int):
+                    NOXasNO2_flag (int):
+                    SO2_flag      (int):
+        """
+
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+        output_dataframe = pd.DataFrame()
+
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
+        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+
+        if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
+        for site in site_list_internal:
+            if self.verbose > 1: print('2. Site: ', site)
+
+            # create new dataframe, with the dates that we are interested in
+            working_hourly_dataframe = pd.DataFrame([], index=date_index)
+            working_hourly_dataframe['SiteID'] = site
+
+            # copy these to a new dataframe
+            working_hourly_dataframe[spc_list] = \
+                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][spc_list]
+
+            # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
+            for spc in spc_list:
+                working_hourly_dataframe['{}_flag'.format(spc)] = 0
+
+            # append data to the output dataframe
+            output_dataframe = output_dataframe.append(working_hourly_dataframe)
+
+        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        return(output_dataframe)
 
     def transform_and_impute_data(self, df_in):
         """
@@ -545,69 +688,3 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         if self.verbose > 1: print('Imputation: copied transformed values into new dataframe')
 
         return df_out
-
-    def postprocess_data(self, input_dataframe, site):
-
-        working_dataframe = input_dataframe.drop(columns=AurnModule.SITE_ID_NEW)
-        tempgroups = working_dataframe.groupby(pd.Grouper(key='Date', freq='1D'))
-
-        data_counts = tempgroups.count()
-        data_max = tempgroups.max()
-        data_mean = tempgroups.mean()
-
-        cols_old = data_counts.columns
-
-        cols_counts = dict((key, key + '_count') for key in cols_old.values)
-        cols_max = dict((key, key + '_max') for key in cols_old.values)
-        cols_mean = dict((key, key + '_mean') for key in cols_old.values)
-
-        data_counts = data_counts.rename(columns=cols_counts)
-        data_max = data_max.rename(columns=cols_max)
-        data_mean = data_mean.rename(columns=cols_mean)
-
-        data_out = data_mean.join([data_max, data_counts])
-
-        # add the site as a new column, and set as part of multiindex with the date
-        site_name = "{} [AQ]".format(site)
-
-        data_out['SiteID'] = site_name
-        data_out = data_out.reset_index(drop=False).set_index(['Date', 'SiteID'])
-
-        return data_out
-
-    def test_preprocess_code(self, df_in, spc_zero_process=['O3', 'NO2', 'NOXasNO2'], min_value=0.01):
-
-        # define the species which we will convert <=0 values to a minimum value
-        # spc_zero_process = ['O3','NO2','NOXasNO2']
-        # min_value = 0.01
-
-        # copy the input array, and note the columns
-        df_work = df_in.copy(deep=True)
-        cols = df_in.columns
-
-        # find missing datasets to remove, and clean up negative and zero values
-        # also we note the columns that will be saved, for transferring data back!
-        col_remove = []
-        col_save = []
-        for col in cols:
-            if all(df_work[col].isna()):
-                col_remove.append(col)
-            else:
-                col_save.append(col)
-                if (col in spc_zero_process):
-                    df_work[col][df_work[col] <= 0.0] = min_value
-                else:
-                    df_work[col][df_work[col] <= 0.0] = np.nan
-        df_work = df_work.drop(columns=col_remove)
-
-        # power transformer fitting and transforming
-        self.transformer.fit(df_work.dropna())
-        np_out = self.transformer.transform(df_work)
-
-        # copy the transformed values to a new dataframe
-        df_out = df_in.copy(deep=True)
-        for pos, col in enumerate(col_save):
-            pos_out = list(cols).index(col)
-            df_out.iloc[:, pos_out] = np_out[:, pos]
-
-        return self.transformer, df_out
