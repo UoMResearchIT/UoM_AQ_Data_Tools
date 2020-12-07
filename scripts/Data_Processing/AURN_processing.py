@@ -62,6 +62,15 @@ if __name__ == '__main__':
     parser.add_argument("--metadata_filename", "-f", type=str,
                         help="filename of the AURN metadata in RData format (.RData). " \
                              "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
+
+    ## Dates
+    parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
+                        help="start and end dates. (array - first two values only). \
+                            Expected date format: {} \n Default: [{}, {}]".format(
+                            AurnPostProcessor.INPUT_DATE_FORMAT.replace('%', ''),
+                            AurnPostProcessor.get_available_start(), AurnPostProcessor.get_available_end()))
+
+
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
     parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
     parser.add_argument("--min_years_ref", "-u", type=int, help="minimum number of years of data for any site that \
@@ -112,6 +121,20 @@ if __name__ == '__main__':
     else:
         print('No emep_filename provided, so not using emep data')
         emep_filename = None
+
+
+    if args.date_range:
+        if len(args.date_range) >= 2:
+            if len(args.date_range) > 2:
+                print('Warning: You have input more than 2 dates, only the first 2 will be used.')
+            date_range = args.date_range[0:2]
+        else:
+            raise ValueError('Unable to obtain 2 dates from input --date_range: {}'.format(str(args.date_range)))
+        print('Using date range: [{}]'.format(','.join(date_range)))
+    else:
+        print('No date_range provided, so using default: [{}]'.format(','.join(AurnPostProcessor.get_available_dates())))
+        date_range = AurnPostProcessor.get_available_dates()
+
 
     if args.min_years:
         min_years = args.min_years
@@ -170,6 +193,7 @@ if __name__ == '__main__':
                                   metadata_url=metadata_url,
                                   out_dir=outdir_name, verbose=verbose)
     processor.process(  in_file=file_extracted,
+                        date_range=date_range,
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
                         emep_filename=emep_filename,

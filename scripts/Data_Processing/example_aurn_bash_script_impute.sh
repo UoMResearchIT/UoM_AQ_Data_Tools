@@ -26,9 +26,10 @@ SITES="BARN BAR2 BAR3 BIL BIR BRAD BDMA CHS6"
 MINYEARS='1'
 USEYEARS='1'
 VERBOSE=3
+DATE_RANGE="2016-01-01_00 2019-12-31_23"
 INFILE_SUFFIX='2016-2017'
 OUTFILE_SUFFIX='2016-2017_imputed'
 
-ARGUMENTS_1="--impute_values --metadata_url ${META_DATA_URL} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --sites ${SITES} -o ${OUT_DIR} -s ${INFILE_SUFFIX} --verbose ${VERBOSE}"
+ARGUMENTS_1="--impute_values --metadata_url ${META_DATA_URL} --date_range ${DATE_RANGE} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --sites ${SITES} -o ${OUT_DIR} -s ${INFILE_SUFFIX} --verbose ${VERBOSE}"
 
 python AURN_processing.py ${ARGUMENTS_1}
