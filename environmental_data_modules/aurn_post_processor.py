@@ -42,7 +42,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
     def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
                  out_dir=DEFAULT_OUT_DIR, verbose=PostProcessor.DEFAULT_VERBOSE):
         """ Initialise instance of the AurnPostProcessor class.
-            Initialises the private class variables, and the 
+            Initialises the private class variables
 
             Args:
                 metadata_filename: filename of the metadata used in Aurn data extraction
@@ -64,9 +64,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         self.impute_data = False
         self._imputer = None
         self._transformer = None
-
-
-
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
