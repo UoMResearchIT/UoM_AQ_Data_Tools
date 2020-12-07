@@ -136,7 +136,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
             print("processing site {} ({})".format(site, station_name))
 
             # get the list of years of data for this station
-            years_process = self.define_years_to_download(subset_df, self.years)
+            years_process = self.define_years_to_download(subset_df)
 
             # if the list of years is empty, then skip this site
             if not years_process:
@@ -166,7 +166,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
         return final_dataframe
 
-    def define_years_to_download(self, subset_df, years):
+    def define_years_to_download(self, subset_df):
 
         """ Checks what years of data are available for the selected station.
         
@@ -175,7 +175,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                     Required Columns:
                         start_date   (str): YYYY-MM-DD, starting date for measurements
                         end_date     (str): end date, or 'ongoing'
-                         
+                
             Returns:
                 years_process  (list of ints): the years to process data for this site
         """
@@ -200,7 +200,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         # now create list of years to process
         years_process = []
 
-        for year in years:
+        for year in self.years:
             if year <= latest_year and year >= earliest_year:
                 years_process.append(year)
 
@@ -246,7 +246,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         return downloaded_site_data
 
     def load_sort_data(self, downloaded_site_data):
-        """ sorts the AURN data, combining them into a single dataframe, and converting
+        """ Sorts the AURN data, combining these into a single dataframe, and converting
             the date strings into datetime objects.
         
             Args:
