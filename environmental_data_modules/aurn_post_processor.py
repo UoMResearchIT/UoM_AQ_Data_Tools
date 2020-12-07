@@ -92,6 +92,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                  max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
                  transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
         """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
+            Parameters are passed to the sklearn routines. For further documentation on how these functions work, 
+            and what the parameters denote, please refer to the sklearn documentation.
 
             IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
             PowerTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
@@ -129,11 +131,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 outfile_suffix=''):
 
         """ Post process the data extracted from the AURN dataset, based on the parameters given.
-            Some parameters are passed to the sklearn routines, IterativeImputer and PowerTransformer.
-            Where this is being done it is noted below. For further documentation on how these
-            functions work, and what the parameters denote, please refer to the sklearn documentation.
-            
-            
             
             Args:
                 in_file:                (str) The file spec of the input file (required)

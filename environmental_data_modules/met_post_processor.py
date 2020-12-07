@@ -121,6 +121,9 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
                 output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,):
         """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
+            Parameters are passed to the sklearn routines. Where this is being done it is noted below. 
+            For further documentation on how these functions work, and what the parameters denote, 
+            please refer to the sklearn documentation.
 
             IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
             QuantileTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
@@ -156,10 +159,6 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA, print_stats=PostProcessor.DEFAULT_PRINT_STATS,
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV):
         """ Post process the data extracted from the MEDMI dataset, based on the parameters given.
-            Some parameters are passed to the sklearn routines, IterativeImputer and QuantileTransformer.
-            Where this is being done it is noted below. For further documentation on how these
-            functions work, and what the parameters denote, please refer to the sklearn documentation.
-            
             
             Args:
                 in_file:                (str) The file spec of the input file (required)
