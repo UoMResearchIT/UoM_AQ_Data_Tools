@@ -180,11 +180,10 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 years_process  (list of ints): the years to process data for this site
         """
 
-        # Check to see if your requested years will work and if not, change it to do this.
-        # Create two new columns of datetimes for earliest and latest
+        # extract starting years for measurement site (for all pollutants measured there)
         datetime_start = pd.to_datetime(subset_df['start_date'].values, format='%Y/%m/%d').year
-        # Problem with the end date is it could be ongoing. In which case, convert that entry into a date
-        # and to_datetime
+        # extract the end years for measurement site (for all pollutants measured there)- 
+        # if this is given as 'ongoing' then use the current year
         now = datetime.now()
         datetime_end_temp = subset_df['end_date'].values
         step = 0
@@ -194,10 +193,12 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
             step += 1
         datetime_end = pd.to_datetime(datetime_end_temp).year
 
+        # get single values for start and end years
         earliest_year = np.min(datetime_start)
         latest_year = np.max(datetime_end)
 
-        # now create list of years to process
+        # compare years requested with years available, to create a list of years that
+        # can actually be processed for this site
         years_process = []
 
         for year in self.years:
