@@ -336,7 +336,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     def load_emep_data(self, filename):
         """
-        load the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
+        Loads the EMEP model data, or create an empty dataframe (required for logic checks in the workflow)
         
         Args:
             filename (str): location of the EMEP file. This should be empty if there is no EMEP data
@@ -627,7 +627,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                    measurement being processed. All datasets will be
                                    included, even for those pollutants which were not
                                    included in the optional columns above. So, if
-                                   we use 5 reference stations, this will give 30 (5*6)
+                                   5 reference stations are used, this will give 30 (5*6)
                                    columns of reference data. If EMEP data is being used
                                    then these are added for EMEP data too, but only at 
                                    the station of interest (so only another 6 columns are
@@ -643,7 +643,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             df_out: pandas dataframe, containing the same datasets as above, but including
                     the imputed data too. All imputed data is included (including that for
                     the reference sites) - it is the task of the calling function to only
-                    retain the imputed data for our station of interest, and to discard 
+                    retain the imputed data for the station of interest, and to discard 
                     the rest of the imputed data.
         """
         
