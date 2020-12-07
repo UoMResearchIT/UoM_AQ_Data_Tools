@@ -116,23 +116,50 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             raise ValueError('reference_num_stations value ({}) must be non-negative.')
         self._reference_num_stations = num_stations
 
+    def impute_method_setup(self, random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
+                initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
+                max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
+                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,):
+        """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
+
+            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
+            QuantileTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
+            
+            Args:
+                random_state:           (int) (IterativeImputer & QuantileTransformer) seed for pseudo random number generator
+                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
+                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
+                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
+                estimator:              (str) (IterativeImputer) estimator method to be used
+                output_distribution:    (str) (QuantileTransformer) Marginal distribution for the transformed data
+
+             Returns: None
+        """
+
+        # set the imputer options (if we are using them)
+        self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
+                                        initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
+                                        estimator=estimator)
+
+
+        # set the power transform options
+        self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
+                                                             random_state=random_state)
+
+
+
+
     def process(self, in_file, outfile_suffix='', date_range=None,
                 exclude_site_list=DEFAULT_EXCLUDE_STATION_LIST,
                 min_temperature=DEFAULT_MIN_TEMPERATURE, reference_num_stations=DEFAULT_REFERENCE_NUMBER_STATIONS,
                 min_years=DEFAULT_MIN_YEARS, min_years_reference=DEFAULT_MIN_YEARS_REFERENCE,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA, print_stats=PostProcessor.DEFAULT_PRINT_STATS,
-                random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
-                initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
-                max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV):
         """ Post process the data extracted from the MEDMI dataset, based on the parameters given.
             Some parameters are passed to the sklearn routines, IterativeImputer and QuantileTransformer.
             Where this is being done it is noted below. For further documentation on how these
             functions work, and what the parameters denote, please refer to the sklearn documentation.
             
-            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
-            QuantileTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
             
             Args:
                 in_file:                (str) The file spec of the input file (required)
@@ -145,12 +172,6 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 reference_num_stations: (int) The number of stations to be used for imputation
                 impute_data:            (boolean) Whether to attempt to impute missing data
                 print_stats:            (boolean) Whether to printout the calculation statistics
-                random_state:           (int) (IterativeImputer & QuantileTransformer) seed for pseudo random number generator
-                output_distribution:    (str) (QuantileTransformer) Marginal distribution for the transformed data
-                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
-                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
-                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
-                estimator:              (IterativeImputer) estimator method to be used
                 save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:         (str) The suffix to appended to the end of output file names.
 
@@ -186,15 +207,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         self.min_years_reference = min_years_reference
         self.file_out = MetPostProcessor.BASE_FILE_OUT.format(self.out_dir, outfile_suffix)
         self._print_stats = print_stats
-        if impute_data:
-            self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
-                                       initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
-                                       estimator=estimator)
-        self.impute_data = impute_data
 
-        # set the power transform options
-        self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
-                                                             random_state=random_state)
+        self.impute_data = impute_data
 
         print('checking validity of and loading met data file')
         met_extracted_data = self.load_met_data(in_file)

@@ -192,6 +192,9 @@ if __name__ == '__main__':
     processor = AurnPostProcessor(metadata_filename=metadata_filename,
                                   metadata_url=metadata_url,
                                   out_dir=outdir_name, verbose=verbose)
+    
+    processor.impute_method_setup()
+    
     processor.process(  in_file=file_extracted,
                         date_range=date_range,
                         outfile_suffix= outfile_suffix,

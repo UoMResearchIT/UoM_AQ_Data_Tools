@@ -4,7 +4,7 @@ FILE_IN_TEST='inputs/Anns_for_Doug_tests/temp_extras-rel_hum-pressure-dewpoint_J
 FILE_IN="inputs/temp_extras-rel_hum-pressure-dewpoint_midlands.csv"
 OUT_DIR='met_postprocessing'
 OUTFILE_SUFFIX='_midlands'
-STATIONS_FILENAME="../station_data/station_data_clean.csv"
+STATIONS_FILENAME="../../station_data/station_data_clean.csv"
 
 DATE_RANGE="2017-01-01_00 2017-12-31_23"
 MIN_YEARS=0.04  # 1
