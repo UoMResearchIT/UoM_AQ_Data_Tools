@@ -432,6 +432,7 @@ class AurnImputationTest(AurnPostProcessor):
                 
                     sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc))
                     pdf_pages.savefig(sns_plot.fig)
+                    plt.close()
                     
         
         #print('...analysis of hourly imputed data is work in progress...')
@@ -523,8 +524,9 @@ class AurnImputationTest(AurnPostProcessor):
                         data_combined['{}_{}'.format(spc,stat)] = data_reference
                         data_combined['{}_{} (imputed)'.format(spc,stat)] = data_imputed
                 
-                    sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y='{}_{} (imputed)'.format(spc,stat))
-                    pdf_pages.savefig(sns_plot.fig)
+                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y='{}_{} (imputed)'.format(spc,stat))
+                        pdf_pages.savefig(sns_plot.fig)
+                        plt.close()
 
 
 
