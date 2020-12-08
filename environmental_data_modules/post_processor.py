@@ -144,7 +144,7 @@ class PostProcessor(EnvironmentModule):
         station_distances['Distance'] = np.nan
 
         for index, row in stations_in.iterrows():
-            new_location = (row['Latitude'],row['Longitude'])
+            new_location = (row['latitude'], row['longitude'])
 
             station_distances.loc[index]['Distance'] = distance.distance(stat_location,new_location).km
 
@@ -169,7 +169,7 @@ class PostProcessor(EnvironmentModule):
                     Distance (float): distance to listed station from station of interest, in km 
         """
 
-        station_location = (self.station_data.loc[site_in]['Latitude'], self.station_data.loc[site_in]['Longitude'])
+        station_location = (self.station_data.loc[site_in]['latitude'], self.station_data.loc[site_in]['longitude'])
         station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in], \
                                                    stat_location=station_location)
 

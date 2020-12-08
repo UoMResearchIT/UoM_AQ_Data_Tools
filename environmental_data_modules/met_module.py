@@ -7,7 +7,7 @@ class MetModule(object):
     """
     __metaclass__ = ABCMeta
 
-    COLUMNS_BASE = ['date', 'siteID']
+    COLUMNS_BASE = ['timestamp', 'site_id']
 
     def __init__(self):
         """ Initialise instance of the MetModule class.

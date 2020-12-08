@@ -103,8 +103,8 @@ if __name__ == '__main__':
         years = args.years
         print('Years selected:', years)
     else:
-        print('No years provided, so using default: [{}]'.format(", ".join([str(int) for int in AVAILABLE_YEARS])))
-        years = AVAILABLE_YEARS
+        print('No years provided, so using default: [{}]'.format(", ".join([str(int) for int in AurnExtractor.get_available_years()])))
+        years = AurnExtractor.get_available_years()
 
     if args.sites:
         site_list = args.sites

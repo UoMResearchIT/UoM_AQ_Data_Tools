@@ -78,9 +78,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             print('Loading stations data metadata')
         try:
             station_data = raw_data.drop_duplicates()
-            station_data = station_data.rename(
-                columns={"site_id": "SiteID", "latitude": "Latitude", "longitude": "Longitude"})
-            station_data = station_data.set_index('SiteID')
+            station_data = station_data.set_index('site_id')
         except Exception as err:
             raise ValueError('Unable to get correct site data from Metadata input file. Check metadata file content.')
 
