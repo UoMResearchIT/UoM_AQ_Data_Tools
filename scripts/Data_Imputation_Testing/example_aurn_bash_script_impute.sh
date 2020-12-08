@@ -30,7 +30,10 @@ VERBOSE=3
 DATE_RANGE="2016-01-01_00 2019-12-31_23"
 INFILE_SUFFIX='2016-2017'
 OUTFILE_SUFFIX='2016-2017_imputed'
+DATA_LOSS_POS='start' 
 
-ARGUMENTS_1="--metadata_url ${META_DATA_URL} --date_range ${DATE_RANGE} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --sites ${SITES} -o ${OUT_DIR} -s ${INFILE_SUFFIX} --verbose ${VERBOSE}"
+ARGUMENTS_1="--data_loss_position ${DATA_LOSS_POS} --metadata_url ${META_DATA_URL} --date_range ${DATE_RANGE} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --sites ${SITES} -o ${OUT_DIR} -s ${INFILE_SUFFIX} --verbose ${VERBOSE}"
+
+#echo ${ARGUMENTS_1}
 
 python AURN_impute_testing.py ${ARGUMENTS_1}

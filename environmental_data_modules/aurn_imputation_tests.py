@@ -8,6 +8,12 @@ try:
     from sklearn.impute import IterativeImputer
     from sklearn.linear_model import BayesianRidge
     from sklearn import preprocessing
+    
+    from sklearn.metrics import mean_squared_error as mse
+    import seaborn as sns
+    sns.set_theme()
+    from matplotlib.backends.backend_pdf import PdfPages
+    import matplotlib.pyplot as plt
 except:
     pass
 
@@ -165,7 +171,10 @@ class AurnImputationTest(AurnPostProcessor):
             return
 
         print('data preparation, to create the test dataset for imputation')
-        hourly_test_dataframe = self.data_preparation(hourly_dataframe_filtered,site_list_internal)
+        hourly_test_dataframe = self.data_preparation(hourly_dataframe_filtered, 
+                                               reference_sites, site_list_internal)
+
+#        return
 
         print('imputation of data, returning hourly data')
         hourly_imputed_dataframe = self.organise_data_imputation(
@@ -259,7 +268,7 @@ class AurnImputationTest(AurnPostProcessor):
         # success! return the filtered dataframe, and our lists of sites
         return hourly_dataframe_filtered, reference_sites_out, required_sites, site_working_list
 
-    def data_preparation(self, hourly_dataframe, site_list_internal):
+    def data_preparation(self, hourly_dataframe, reference_sites, site_list_internal):
         """
         Prepare test data for imputation, by removing the specified amount of data from the test sites.
         
@@ -276,6 +285,9 @@ class AurnImputationTest(AurnPostProcessor):
                     NO2      (float):
                     NOXasNO2 (float):
                     SO2      (float):
+            reference_sites: (dict, keys are species):
+                            items: (list of strings) the siteID's for our reference sites for each `spc`
+                                                     minus the sites in the `site_working` list
             site_list_internal: (list, strings) a single list of required sites
         
         Returns:
@@ -294,36 +306,37 @@ class AurnImputationTest(AurnPostProcessor):
         
         """
         
-        list_of_indexes_to_drop = []
+        # get list of reference sites, which should exclude the sites for testing
+        reference_site_list = []
+        for spc in self.species_list:
+            reference_site_list = reference_site_list + reference_sites[spc]
+        reference_site_list = list(dict.fromkeys(reference_site_list))
         
-        for site in hourly_dataframe['SiteID'].unique():
-            if site in site_list_internal:
-                print('  filtering site {}'.format(site))
-                working_dataframe = hourly_dataframe[hourly_dataframe['SiteID']==site]
-                working_index = list(working_dataframe.sort_values(by='Date').index.values)
-                data_length = len(working_index)
-                if self.data_loss_position == 'end':
-                    start_point = int(np.ceil(data_length * (1-self.data_lost)))
-                    end_point = data_length
-                    data_indexes = working_index[start_point:end_point]
-                elif self.data_loss_position == 'middle':
-                    half_data_retain = (1-self.data_lost)/2
-                    start_point = int(np.floor(data_length * half_data_retain))
-                    end_point = data_length - start_point
-                    data_indexes = working_index[0:start_point]
-                    data_indexes = data_indexes + working_index[end_point:data_length]
-                elif self.data_loss_position == 'start':
-                    start_point = 0
-                    end_point = int(np.floor(data_length * self.data_lost))
-                    data_indexes = working_index[start_point:end_point]
-                else:
-                    print('{} data loss method not implemented yet, keeping all data'.format(self.data_loss_position))
-                    data_indexes = []
-                print('start_date = {}'.format(working_dataframe.iloc[working_index[start_point]]['Date']))
-                print('end_date = {}'.format(working_dataframe.iloc[working_index[end_point-1]]['Date']))
-                list_of_indexes_to_drop = list_of_indexes_to_drop + data_indexes
+        # create dataframe with reference sites only
+        hourly_dataframe_out = hourly_dataframe[hourly_dataframe['SiteID'].isin(reference_site_list)]
+        
+        for site in site_list_internal:
+            print('  filtering site {}'.format(site))
+            working_dataframe = hourly_dataframe[hourly_dataframe['SiteID']==site].copy()
+            data_length = len(working_dataframe)
+            print('index length is {}'.format(data_length))
+            if self.data_loss_position == 'end':
+                start_point = 0
+                end_point = int(np.floor(data_length * self.data_lost))
+            elif self.data_loss_position == 'middle':
+                half_data_retain = (1-self.data_lost)/2
+                start_point = int(np.floor(data_length * half_data_retain))
+                end_point = data_length - start_point
+            elif self.data_loss_position == 'start':
+                start_point = int(np.ceil(data_length * (1-self.data_lost)))
+                end_point = data_length
+            else:
+                print('{} data loss method not implemented yet, keeping all data'.format(self.data_loss_position))
+                start_point = 0
+                end_point = data_length
 
-        hourly_dataframe_out = hourly_dataframe.loc[~hourly_dataframe.index.isin(list_of_indexes_to_drop)]
+            working_dataframe = working_dataframe.iloc[start_point:end_point]
+            hourly_dataframe_out = hourly_dataframe_out.append(working_dataframe)
         
         return hourly_dataframe_out
 
@@ -344,6 +357,12 @@ class AurnImputationTest(AurnPostProcessor):
                     NO2      (float):
                     NOXasNO2 (float):
                     SO2      (float):
+                    O3_flag       (int): flag indicating imputed data (0=original,1=imputed)
+                    PM10_flag     (int):
+                    PM2.5_flag    (int):
+                    NO2_flag      (int):
+                    NOXasNO2_flag (int):
+                    SO2_flag      (int):
             hourly_reference_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
@@ -356,12 +375,66 @@ class AurnImputationTest(AurnPostProcessor):
                     NO2      (float):
                     NOXasNO2 (float):
                     SO2      (float):
+                    O3_flag       (int): flag indicating imputed data (0=original,1=imputed)
+                    PM10_flag     (int): (all these flags should be zero)
+                    PM2.5_flag    (int):
+                    NO2_flag      (int):
+                    NOXasNO2_flag (int):
+                    SO2_flag      (int):
             site_list_internal: (list, strings) a single list of required sites
         
         Returns: None
         """
         
-        print('...analysis of hourly imputed data is work in progress...')
+        note="""
+        Analysis of the reliability of the imputation of AURN datasets
+        at the site {}. This is the original hourly data.
+        
+        The configuration used for this test is:
+        start date: {}
+        end date: {}
+        fraction of data removed: {}
+        position in timeseries for data removal: {} 
+        """
+        
+        for site in site_list_internal:
+            print('working on site: {}'.format(site))
+            with PdfPages('{}_hourly_imputed_comparison.pdf'.format(site)) as pdf_pages:
+                firstPage = plt.figure(figsize=(6,6))
+                firstPage.clf()
+                firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
+                    transform=firstPage.transFigure, size=12, ha="center")
+                pdf_pages.savefig()
+                plt.close()
+                for spc in self.species_list:
+                    print('stats for species: {}'.format(spc))
+                
+                    data_imputed   = hourly_imputed_dataframe.loc[(slice(None),site),spc]
+                    data_reference = hourly_reference_dataframe.loc[(slice(None),site),spc]
+                
+                    flag_imputed = hourly_imputed_dataframe.loc[(slice(None),site),'{}_flag'.format(spc)]
+                
+                    # keep only the data which has been imputed
+                    data_imputed   = data_imputed[flag_imputed==1]
+                    data_reference = data_reference[flag_imputed==1]
+                
+                    # remove datapoints which were NaN in the original data
+                    data_imputed   = data_imputed[data_reference.notna()] 
+                    data_reference = data_reference[data_reference.notna()] 
+                
+                    # calculate the Mean Square Error
+                    #mserror = mse(data_reference,data_imputed)
+                
+                    # plot scatter
+                    data_combined = pd.DataFrame()
+                    data_combined[spc] = data_reference
+                    data_combined['{} (imputed)'.format(spc)] = data_imputed
+                
+                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc))
+                    pdf_pages.savefig(sns_plot.fig)
+                    
+        
+        #print('...analysis of hourly imputed data is work in progress...')
 
     def imputation_daily_analysis(self,daily_imputed_dataframe,daily_reference_dataframe,site_list_internal):
         """
@@ -404,7 +477,54 @@ class AurnImputationTest(AurnPostProcessor):
         Returns: None
         """
         
-        print('...analysis of daily mean/max imputed data is work in progress...')
+        note="""
+        Analysis of the reliability of the imputation of AURN datasets
+        at the site {}. This is the daily mean and maximum data.
+        
+        The configuration used for this test is:
+        start date: {}
+        end date: {}
+        fraction of data removed: {}
+        position in timeseries for data removal: {} 
+        """
+        
+        for site in site_list_internal:
+            site_string = "{} [AQ]".format(site)
+            print('working on site: {}'.format(site))
+            with PdfPages('{}_daily_imputed_comparison.pdf'.format(site)) as pdf_pages:
+                firstPage = plt.figure(figsize=(6,6))
+                firstPage.clf()
+                firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
+                    transform=firstPage.transFigure, size=12, ha="center")
+                pdf_pages.savefig()
+                plt.close()
+                for spc in self.species_list:
+                    print('stats for species: {}'.format(spc))
+                
+                    for stat in ['max','mean']:
+                        data_imputed   = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
+                        data_reference = daily_reference_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
+                
+                        flag_imputed = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
+                
+                        # keep only the data which has been imputed
+                        data_imputed   = data_imputed[flag_imputed==1]
+                        data_reference = data_reference[flag_imputed==1]
+                
+                        # remove datapoints which were NaN in the original data
+                        data_imputed   = data_imputed[data_reference.notna()] 
+                        data_reference = data_reference[data_reference.notna()] 
+                
+                        # calculate the Mean Square Error
+                        #mserror = mse(data_reference,data_imputed)
+                
+                        # plot scatter
+                        data_combined = pd.DataFrame()
+                        data_combined['{}_{}'.format(spc,stat)] = data_reference
+                        data_combined['{}_{} (imputed)'.format(spc,stat)] = data_imputed
+                
+                    sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y='{}_{} (imputed)'.format(spc,stat))
+                    pdf_pages.savefig(sns_plot.fig)
 
 
 
