@@ -426,7 +426,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         # get a list of all sites which are required for at least one measurement set
         combined_req_site_list = list(dict.fromkeys(combined_req_site_list))
-        print('there are {} required sites, and {} reference sites'.format(len(required_sites), len(reference_sites)))
         data_filtered = data_in[data_in['SiteID'].isin(combined_req_site_list)]
 
         return data_filtered, reference_sites, required_sites, combined_req_site_list

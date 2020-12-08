@@ -72,17 +72,22 @@ if __name__ == '__main__':
 
 
     parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
-    parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
-    parser.add_argument("--min_years_ref", "-u", type=int, help="minimum number of years of data for any site that \
+    parser.add_argument("--min_years", "-n", type=float, help="minimum number of years of data that a site must have")
+    parser.add_argument("--min_years_ref", "-u", type=float, help="minimum number of years of data for any site that \
         we are going to use as a reference site later. (this cannot be less than min_years)")
     parser.add_argument("--sites", "-i", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
+    parser.add_argument("--species", "-j", metavar='S', dest="species", type=str, nargs='+', help="the chemical species \
+        to be processed. Default is to process all in list: {}.".format(AurnImputationTest.SPECIES_LIST_EXTRACTED))
     parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.add_argument("--data_lost", type=float, help="fraction of total period to remove for imputation tests")
     parser.add_argument("--data_loss_position", type=str, help="position to lose data: start, middle, end, random")
+    parser.add_argument("--check_sites",dest="check_sites",action='store_true',help="list sites suitable for \
+        tests then exit")
     parser.set_defaults(save_to_csv=True)
     parser.set_defaults(impute_values=True)
+    parser.set_defaults(check_sites=False)
 
     # output directory/file names
     parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
@@ -174,8 +179,12 @@ if __name__ == '__main__':
         print('No sites provided, so using all available sites in metadata file')
         site_list = None
 
-    print('Save to csv: {}'.format(args.save_to_csv))
-    print('Impute values: {}'.format(args.impute_values))
+    if args.species:
+        species_list = args.species
+        print('Species list: {}'.format(species_list))
+    else:
+        print('No species provided, so the default list of species in the processor')
+        species_list = AurnImputationTest.SPECIES_LIST_EXTRACTED
 
     if args.outdir_name:
         outdir_name = args.outdir_name
@@ -214,9 +223,11 @@ if __name__ == '__main__':
                         date_range=date_range,
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
+                        species_list=species_list,
                         emep_filename=emep_filename,
                         min_years=min_years,
                         min_years_reference=min_years_ref,
                         data_lost=data_lost,
                         data_loss_position=data_loss_position,
-                        save_to_csv=args.save_to_csv)
+                        save_to_csv=args.save_to_csv,
+                        check_sites=args.check_sites)

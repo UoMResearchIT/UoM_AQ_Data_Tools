@@ -20,6 +20,7 @@ class AurnImputationTest(AurnPostProcessor):
     # testing default values
     DEFAULT_DATA_LOST = 0.5
     DEFAULT_DATA_LOSS_POSITION = 'end'
+    DEFAULT_CHECK_SITES = False
     
     
     def __init__(self, metadata_filename=AurnPostProcessor.DEFAULT_METADATA_FILE, metadata_url=AurnPostProcessor.DEFAULT_METADATA_URL,
@@ -41,6 +42,8 @@ class AurnImputationTest(AurnPostProcessor):
 
         self._data_lost = AurnImputationTest.DEFAULT_DATA_LOST
         self._data_loss_position = AurnImputationTest.DEFAULT_DATA_LOSS_POSITION
+        self.check_sites = AurnImputationTest.DEFAULT_CHECK_SITES
+        self.species_list = AurnPostProcessor.SPECIES_LIST_EXTRACTED
 
     @property
     def data_lost(self):
@@ -72,7 +75,8 @@ class AurnImputationTest(AurnPostProcessor):
                 data_lost=DEFAULT_DATA_LOST, 
                 data_loss_position=DEFAULT_DATA_LOSS_POSITION,
                 save_to_csv=AurnPostProcessor.DEFAULT_SAVE_TO_CSV,
-                outfile_suffix=''):
+                outfile_suffix='',check_sites=DEFAULT_CHECK_SITES,
+                species_list=AurnPostProcessor.SPECIES_LIST_EXTRACTED):
 
         """ Testing the imputation methods used for filling in missing data. Replicates the
             methods used in 'process' function, but for the defined sites will remove a
@@ -93,6 +97,9 @@ class AurnImputationTest(AurnPostProcessor):
                 data_loss_position:     (str) where to lose the data (start,middle,end,random)
                 save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:         (str) The suffix to appended to the end of output file names.
+                check_sites:            (boolean) If True then routine will list appropriate stations
+                                            to use for the imputation tests, then exit
+                species_list:            (list of strings) list of chemical species to test
 
             Returns:
                 daily_dataframe: daily dataset, for all measurements, as pandas.Dataframe
@@ -140,6 +147,8 @@ class AurnImputationTest(AurnPostProcessor):
         self.site_list = site_list
         self.data_lost = data_lost
         self.data_loss_position = data_loss_position
+        self.species_list = species_list
+        self.check_sites = check_sites
         self.station_data = self.metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
         if self.verbose > 1: print('Station data: \n {}'.format(self.station_data))
 
@@ -149,10 +158,8 @@ class AurnImputationTest(AurnPostProcessor):
 
         print('filter for minimum data lengths, and reduce dataset to only stations of interest')
         hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal = \
-            self.list_required_and_reference_sites(hourly_dataframe)
-        # get the list of required sites from what is available, and what was requested
-        site_list_internal = set(site_list_internal).intersection(self.site_list)
-
+            self.site_list_and_preparation(hourly_dataframe)
+        
         if len(hourly_dataframe_filtered.index) == 0:
             print('Exiting post-processing: Metadata is empty after initial filtering processes')
             return
@@ -181,6 +188,77 @@ class AurnImputationTest(AurnPostProcessor):
         #    daily_dataframe.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
         #return daily_dataframe
+
+    def site_list_and_preparation(self,hourly_dataframe):
+        """
+        Wrapper for the list_required_and_reference_sites routine. This will list sites 
+        based on the given minimum and reference year requirements, then determine which
+        sites for all species of interest fit the reference year requirements. If none do,
+        or if 'check_sites' flag is True, then potential sites of use will be listed, and 
+        the program exited.
+        
+        Args:
+            hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                Index: none
+                Required Columns:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+            
+        Returns:
+            hourly_dataframe_filtered: pandas dataframe, as above, containing hourly dataset for only 
+                               the reference station datasets
+            reference_sites_out: (dict, keys are species):
+                            items: (list of strings) the siteID's for our reference sites for each `spc`
+                                                     minus the sites in the `site_working` list
+            required_sites: (dict, keys are species):
+                            items: (list of strings) required sites for `spc` (not used later?)
+            site_working_list: (list, strings) a single list of required sites for the imputation tests
+        """
+
+        df_part_filtered, reference_sites, required_sites, site_list_internal = \
+            self.list_required_and_reference_sites(hourly_dataframe)
+
+        # create a list of the sites that we can use for the imputation tests for all requested species
+        site_all = site_list_internal.copy()
+        combined_reference_site_list = []
+        for spc in self.species_list:
+            site_all = set(site_all).intersection(reference_sites[spc])
+            combined_reference_site_list = combined_reference_site_list + required_sites[spc]
+
+        # trim down the database to cover only stations which are references for at least one species
+        combined_reference_site_list = list(dict.fromkeys(combined_reference_site_list))
+        hourly_dataframe_filtered = df_part_filtered[df_part_filtered['SiteID'].isin(combined_reference_site_list)]
+
+        # get the list of required sites from what is available, and what was requested
+        site_working_list = set(site_all).intersection(self.site_list)
+
+        # checks on what sites are available, and if we use them or not
+        if self.check_sites or len(site_working_list) == 0:
+            for spc in self.species_list:
+                print('for species {} there are {} sites suitable for testing imputation'.
+                         format(spc,len(reference_sites[spc])))
+                print(reference_sites[spc])
+            print('there are {} sites suitable for all requested species'.format(len(site_all)))
+            print(site_all)
+            if not self.check_sites:
+                print('Requested sites were: {}'.format(self.site_list))
+                print('We are exiting because none were suitable sites for imputation tests for all requested species, see above messages.')
+            return pd.DataFrame(), [], [], []
+
+        # derive new lists of reference stations, excluding the sites we will use for imputation tests
+        reference_sites_out = {}
+        for spc in self.species_list:
+            reference_sites_out[spc] = [site for site in reference_sites[spc] if site not in site_working_list]
+
+        # success! return the filtered dataframe, and our lists of sites
+        return hourly_dataframe_filtered, reference_sites_out, required_sites, site_working_list
 
     def data_preparation(self, hourly_dataframe, site_list_internal, reference_sites):
         """
