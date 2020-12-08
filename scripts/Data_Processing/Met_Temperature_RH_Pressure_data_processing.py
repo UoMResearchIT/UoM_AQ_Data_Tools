@@ -21,7 +21,7 @@ Unified production script for MEDMI data processing. This will:
 
 import argparse
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 from pathlib import Path
 
 from environmental_data_modules import MetPostProcessor
@@ -178,6 +178,7 @@ if __name__ == '__main__':
         verbose = MetPostProcessor.DEFAULT_VERBOSE
 
     post_processor = MetPostProcessor(out_dir, station_data_filename=stations_filename, verbose=verbose)
+    post_processor.impute_method_setup()
     post_processor.process(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
                                 exclude_site_list=exclude_site_list,
                                 min_temperature=min_temperature, reference_num_stations=reference_num_stations,

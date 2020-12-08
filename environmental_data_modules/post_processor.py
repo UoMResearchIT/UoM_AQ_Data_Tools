@@ -53,6 +53,10 @@ class PostProcessor(EnvironmentModule):
                 save_to_csv=DEFAULT_SAVE_TO_CSV):
         raise NotImplementedError("Must override process")
 
+    @abstractmethod
+    def impute_method_setup(self):
+        raise NotImplementedError("Must override impute_method_setup")
+
     ### Class properties: Get/Sets ###
 
     @property
@@ -83,7 +87,7 @@ class PostProcessor(EnvironmentModule):
         if not impute in [True, False]:
             raise Exception('impute_data value must be a boolean. {} was input.'.format(impute))
         if impute and self.imputer is None:
-            raise Warning('Imputation requested but imputer is currently None')
+            raise Warning('Imputation requested but imputer is currently None. \n Please run impute_method_setup')
         self._impute_data = impute
 
     @property

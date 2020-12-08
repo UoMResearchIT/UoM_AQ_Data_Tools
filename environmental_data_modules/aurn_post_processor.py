@@ -86,28 +86,51 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         self._station_data = station_data
 
+
+    def impute_method_setup(self, random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
+                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
+                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
+                 transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
+        """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
+            Parameters are passed to the sklearn routines. For further documentation on how these functions work, 
+            and what the parameters denote, please refer to the sklearn documentation.
+
+            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
+            PowerTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
+            
+            Args:
+                random_state:           (int) (IterativeImputer) seed for pseudo random number generator
+                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
+                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
+                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
+                estimator:              (str) (IterativeImputer) estimator method to be used
+                transformer_standardize:(boolean) (PowerTransformer) apply zero-mean, unit-variance normalization
+                transformer_method:     (str) (PowerTransformer) power transform method to use
+
+             Returns: None
+        """
+
+        # set the imputer options (if we are using them)
+        self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
+                                        initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
+                                        estimator=estimator)
+
+        # set the power transform options
+        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
+
+
+
+
     def process(self, in_file, date_range=None,
                 site_list=AurnModule.DEFAULT_SITE_LIST,
                 emep_filename=DEFAULT_EMEP_FILENAME,
                 min_years_reference=DEFAULT_MIN_YEARS_REFERENCE,
                 min_years=DEFAULT_MIN_YEARS,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
-                random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
-                initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
-                max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE,
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV,
                 outfile_suffix=''):
 
         """ Post process the data extracted from the AURN dataset, based on the parameters given.
-            Some parameters are passed to the sklearn routines, IterativeImputer and PowerTransformer.
-            Where this is being done it is noted below. For further documentation on how these
-            functions work, and what the parameters denote, please refer to the sklearn documentation.
-            
-            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
-            PowerTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
-            
-            
             
             Args:
                 in_file:                (str) The file spec of the input file (required)
@@ -118,13 +141,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                             use as a reference site later. (this cannot be less than min_years)
                 min_years:              (float) The minimum number of years of data that a site must have
                 impute_data:            (boolean) Whether to attempt to impute missing data
-                random_state:           (int) (IterativeImputer) seed for pseudo random number generator
-                transformer_standardize:(boolean) (PowerTransformer) apply zero-mean, unit-variance normalization
-                add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
-                initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
-                max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
-                transformer_method:     (str) (PowerTransformer) power transform method to use
-                estimator:              (IterativeImputer) estimator method to be used
                 save_to_csv:            (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:         (str) The suffix to appended to the end of output file names.
 
@@ -175,15 +191,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         self.station_data = self.metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
         if self.verbose > 1: print('Station data: \n {}'.format(self.station_data))
 
-        if impute_data:
-            # set the imputer options (if we are using them)
-            self.imputer = IterativeImputer(random_state=random_state, add_indicator=add_indicator,
-                                            initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
-                                            estimator=estimator)
         self.impute_data = impute_data
-
-        # set the power transform options
-        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
         # load and prepare the hourly dataset
         hourly_dataframe = self.load_aurn_data(in_file)
