@@ -112,10 +112,10 @@ if __name__ == '__main__':
 
     if args.data_loss_position:
         data_loss_position = args.data_loss_position
-        print('Removing {} fraction of data for imputation tests'.format(data_lost))
+        print('Using method "{}" for selecting data to lose'.format(data_loss_position))
     else:
         data_loss_position = AurnImputationTest.DEFAULT_DATA_LOSS_POSITION
-        print('Default: Removing {} fraction of data for imputation tests'.format(data_lost))
+        print('Default: Using method "{}" for selecting data to lose'.format(data_loss_position))
 
 
     if args.metadata_url:
