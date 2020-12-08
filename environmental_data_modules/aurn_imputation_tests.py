@@ -164,9 +164,8 @@ class AurnImputationTest(AurnPostProcessor):
             print('Exiting post-processing: Metadata is empty after initial filtering processes')
             return
 
-        # data preparation, to create the test dataset for imputation
-        hourly_test_dataframe, reference_sites = self.data_preparation(hourly_dataframe_filtered,
-            site_list_internal,reference_sites)
+        print('data preparation, to create the test dataset for imputation')
+        hourly_test_dataframe = self.data_preparation(hourly_dataframe_filtered,site_list_internal)
 
         print('imputation of data, returning hourly data')
         hourly_imputed_dataframe = self.organise_data_imputation(
@@ -260,7 +259,7 @@ class AurnImputationTest(AurnPostProcessor):
         # success! return the filtered dataframe, and our lists of sites
         return hourly_dataframe_filtered, reference_sites_out, required_sites, site_working_list
 
-    def data_preparation(self, hourly_dataframe, site_list_internal, reference_sites):
+    def data_preparation(self, hourly_dataframe, site_list_internal):
         """
         Prepare test data for imputation, by removing the specified amount of data from the test sites.
         
@@ -277,13 +276,10 @@ class AurnImputationTest(AurnPostProcessor):
                     NO2      (float):
                     NOXasNO2 (float):
                     SO2      (float):
-            
-            reference_sites: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc` 
             site_list_internal: (list, strings) a single list of required sites
         
         Returns:
-            hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe, with the required data removed
+            hourly_dataframe_out: hourly dataset, for all measurements, as pandas.Dataframe, with the required data removed
                 Index: none
                 Required Columns:
                     Date   (datetime object):
@@ -295,14 +291,41 @@ class AurnImputationTest(AurnPostProcessor):
                     NO2      (float):
                     NOXasNO2 (float):
                     SO2      (float):
-            reference_sites: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc`
-                                      These will have our test sites removed, to avoid issues later 
         
         """
         
+        list_of_indexes_to_drop = []
         
-        return hourly_dataframe, reference_sites
+        for site in hourly_dataframe['SiteID'].unique():
+            if site in site_list_internal:
+                print('  filtering site {}'.format(site))
+                working_dataframe = hourly_dataframe[hourly_dataframe['SiteID']==site]
+                working_index = list(working_dataframe.sort_values(by='Date').index.values)
+                data_length = len(working_index)
+                if self.data_loss_position == 'end':
+                    start_point = int(np.ceil(data_length * (1-self.data_lost)))
+                    end_point = data_length
+                    data_indexes = working_index[start_point:end_point]
+                elif self.data_loss_position == 'middle':
+                    half_data_retain = (1-self.data_lost)/2
+                    start_point = int(np.floor(data_length * half_data_retain))
+                    end_point = data_length - start_point
+                    data_indexes = working_index[0:start_point]
+                    data_indexes = data_indexes + working_index[end_point:data_length]
+                elif self.data_loss_position == 'start':
+                    start_point = 0
+                    end_point = int(np.floor(data_length * self.data_lost))
+                    data_indexes = working_index[start_point:end_point]
+                else:
+                    print('{} data loss method not implemented yet, keeping all data'.format(self.data_loss_position))
+                    data_indexes = []
+                print('start_date = {}'.format(working_dataframe.iloc[working_index[start_point]]['Date']))
+                print('end_date = {}'.format(working_dataframe.iloc[working_index[end_point-1]]['Date']))
+                list_of_indexes_to_drop = list_of_indexes_to_drop + data_indexes
+
+        hourly_dataframe_out = hourly_dataframe.loc[~hourly_dataframe.index.isin(list_of_indexes_to_drop)]
+        
+        return hourly_dataframe_out
 
     def imputation_hourly_analysis(self,hourly_imputed_dataframe,hourly_reference_dataframe,site_list_internal):
         """
