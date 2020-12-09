@@ -1,4 +1,4 @@
-"Station","Latitude","Longitude","Postcode"
+"site_id","latitude","longitude","postcode"
 "     1",60.15491,-2.07206,"ZE"
 "     2",60.11091,-2.06297,"AB"
 "     3",59.52654,-1.62777,"ZE"
