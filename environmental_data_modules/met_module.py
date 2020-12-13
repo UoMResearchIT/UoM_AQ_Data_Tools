@@ -7,6 +7,7 @@ class MetModule(object):
     """
     __metaclass__ = ABCMeta
 
+    SPECIES_PROCESS_LIST = ['temperature', 'pressure', 'dewpoint']
     COLUMNS_BASE = ['timestamp', 'site_id']
 
     def __init__(self):
