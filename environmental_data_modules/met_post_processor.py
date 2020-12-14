@@ -43,6 +43,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     DEFAULT_IMPUTER_MAX_ITER = 300
     DEFAULT_IMPUTER_ESTIMATOR = None
     DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION = 'normal'
+    DEFAULT_TRANSFORMER_METHOD = 'box-cox'
+    DEFAULT_TRANSFORMER_STANDARDIZE = False
 
     def __init__(self, out_dir=DEFAULT_OUT_DIR, station_data_filename=DEFAULT_STATION_DATA_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
@@ -72,7 +74,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
-        if transformer is None or type(transformer).__name__ == 'QuantileTransformer':
+        if transformer is None or type(transformer).__name__ in ['QuantileTransformer','PowerTransformer']:
             self._transformer = transformer
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
@@ -119,7 +121,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     def impute_method_setup(self, random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,):
+                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
+                transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
         """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
             Parameters are passed to the sklearn routines. Where this is being done it is noted below. 
             For further documentation on how these functions work, and what the parameters denote, 
@@ -148,6 +151,9 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         # set the power transform options
         self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
                                                              random_state=random_state)
+
+        # set the power transform options
+#        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
 
 

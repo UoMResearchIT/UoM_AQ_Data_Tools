@@ -50,6 +50,7 @@ class AurnImputationTest(AurnPostProcessor):
         self._data_loss_position = AurnImputationTest.DEFAULT_DATA_LOSS_POSITION
         self.check_sites = AurnImputationTest.DEFAULT_CHECK_SITES
         self.species_list = AurnPostProcessor.SPECIES_LIST_EXTRACTED
+        self.rng = np.random.RandomState(0)
 
     @property
     def data_lost(self):
@@ -323,28 +324,105 @@ class AurnImputationTest(AurnPostProcessor):
             if self.data_loss_position == 'end':
                 start_point = 0
                 end_point = int(np.floor(data_length * self.data_lost))
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
             elif self.data_loss_position == 'middle':
                 half_data_retain = (1-self.data_lost)/2
                 start_point = int(np.floor(data_length * half_data_retain))
                 end_point = data_length - start_point
+                working_dataframe_start = working_dataframe.iloc[0:start_point]
+                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
+                working_dataframe = working_dataframe_start.append(working_dataframe_end)
             elif self.data_loss_position == 'start':
                 start_point = int(np.ceil(data_length * (1-self.data_lost)))
                 end_point = data_length
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
+            elif self.data_loss_position == 'random':
+                data_points_lost = int(np.floor(data_length * self.data_lost))
+                keeping_samples = np.hstack((
+                                        np.zeros(data_points_lost, dtype=np.bool),
+                                        np.ones(data_length - data_points_lost,dtype=np.bool)
+                                        ))
+                self.rng.shuffle(keeping_samples)
+                print(keeping_samples)
+                working_dataframe = working_dataframe.iloc[np.where(keeping_samples)[0]]
             else:
                 print('{} data loss method not implemented yet, keeping all data'.format(self.data_loss_position))
                 start_point = 0
                 end_point = data_length
 
-            if self.data_loss_position == 'middle':
-                working_dataframe_start = working_dataframe.iloc[0:start_point]
-                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
-                working_dataframe = working_dataframe_start.append(working_dataframe_end)
-            else:
-                working_dataframe = working_dataframe.iloc[start_point:end_point]
 
             hourly_dataframe_out = hourly_dataframe_out.append(working_dataframe)
         
         return hourly_dataframe_out
+
+    def organise_data(self, hourly_dataframe_filtered, site_list_internal): 
+        """
+        Function for organising the required datasets. This mirrors the imputation function.
+        
+        Args:
+            hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
+                Index: none
+                Required Columns:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+            site_list_internal (list, string or int): combined list of sites to retain
+        
+        Returns:
+            hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                Required Index:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                    O3_flag       (int): flag indicating imputed data (0=original,1=imputed)
+                    PM10_flag     (int):
+                    PM2.5_flag    (int):
+                    NO2_flag      (int):
+                    NOXasNO2_flag (int):
+                    SO2_flag      (int):
+        """
+
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+        output_dataframe = pd.DataFrame()
+
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
+        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+
+        if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
+        for site in site_list_internal:
+            if self.verbose > 1: print('2. Site: ', site)
+
+            # create new dataframe, with the dates that we are interested in
+            working_hourly_dataframe = pd.DataFrame([], index=date_index)
+            working_hourly_dataframe['SiteID'] = site
+
+            # copy these to a new dataframe
+            working_hourly_dataframe[spc_list] = \
+                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][spc_list]
+
+            # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
+            for spc in spc_list:
+                working_hourly_dataframe['{}_flag'.format(spc)] = 0
+                working_hourly_dataframe.loc[working_hourly_dataframe[spc].isna(),'{}_flag'.format(spc)] = 1
+
+            # append data to the output dataframe
+            output_dataframe = output_dataframe.append(working_hourly_dataframe)
+
+        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        return(output_dataframe)
+
 
     def imputation_hourly_analysis(self,hourly_imputed_dataframe,hourly_reference_dataframe,site_list_internal):
         """
@@ -495,6 +573,9 @@ class AurnImputationTest(AurnPostProcessor):
         position in timeseries for data removal: {} 
         """
         
+        fill_ranges = [0,0.125,0.25,0.5,1.0]
+        length_ranges = len(fill_ranges)
+        
         for site in site_list_internal:
             site_string = "{} [AQ]".format(site)
             print('working on site: {}'.format(site))
@@ -513,26 +594,36 @@ class AurnImputationTest(AurnPostProcessor):
                         data_reference = daily_reference_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
                 
                         flag_imputed = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
+                        
+                        flag_already_missing = daily_reference_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
+                        flag_plot = np.floor(1-flag_already_missing) # 0 = some missing data originally, 1 = no original missing data 
+                        
+                        flag_imputed = flag_imputed * flag_plot # remove all days which were originally missing some data
+                        
+                        
+                        for ind in range(length_ranges-1):
+                        
+                            # keep only the data which has been imputed
+                            data_imputed_internal   = data_imputed[flag_imputed>fill_ranges[ind]]
+                            data_reference_internal = data_reference[flag_imputed>fill_ranges[ind]]
+                            flag_imputed_internal = flag_imputed[flag_imputed>fill_ranges[ind]]
+                            
+                            data_imputed_internal   = data_imputed_internal[flag_imputed_internal<=fill_ranges[ind+1]]
+                            data_reference_internal = data_reference_internal[flag_imputed_internal<=fill_ranges[ind+1]]
+                            
                 
-                        # keep only the data which has been imputed
-                        data_imputed   = data_imputed[flag_imputed==1]
-                        data_reference = data_reference[flag_imputed==1]
+                            # calculate the Mean Square Error
+                            #mserror = mse(data_reference,data_imputed)
                 
-                        # remove datapoints which were NaN in the original data
-                        data_imputed   = data_imputed[data_reference.notna()] 
-                        data_reference = data_reference[data_reference.notna()] 
+                            # plot scatter
+                            impute_string = '{}_{} (imputed, range {}-{})'.format(spc,stat,fill_ranges[ind],fill_ranges[ind+1])
+                            data_combined = pd.DataFrame()
+                            data_combined['{}_{}'.format(spc,stat)] = data_reference_internal
+                            data_combined[impute_string] = data_imputed_internal
                 
-                        # calculate the Mean Square Error
-                        #mserror = mse(data_reference,data_imputed)
-                
-                        # plot scatter
-                        data_combined = pd.DataFrame()
-                        data_combined['{}_{}'.format(spc,stat)] = data_reference
-                        data_combined['{}_{} (imputed)'.format(spc,stat)] = data_imputed
-                
-                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y='{}_{} (imputed)'.format(spc,stat))
-                        pdf_pages.savefig(sns_plot.fig)
-                        plt.close()
+                            sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string)
+                            pdf_pages.savefig(sns_plot.fig)
+                            plt.close()
 
 
 

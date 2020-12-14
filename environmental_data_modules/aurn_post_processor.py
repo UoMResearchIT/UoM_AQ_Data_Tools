@@ -36,6 +36,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         DEFAULT_IMPUTER_ESTIMATOR = BayesianRidge()
     except:
         DEFAULT_IMPUTER_ESTIMATOR = None
+    DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION = 'normal'
     DEFAULT_TRANSFORMER_METHOD = 'box-cox'
     DEFAULT_TRANSFORMER_STANDARDIZE = False
 
@@ -67,7 +68,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
-        if transformer is None or type(transformer).__name__ == 'PowerTransformer':
+        if transformer is None or type(transformer).__name__ in ['QuantileTransformer','PowerTransformer']:
             self._transformer = transformer
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
@@ -88,6 +89,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
     def impute_method_setup(self, random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                  initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
                  max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
+                 output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
                  transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
         """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
             Parameters are passed to the sklearn routines. For further documentation on how these functions work, 
@@ -114,7 +116,11 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                         estimator=estimator)
 
         # set the power transform options
-        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
+        self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
+                                                             random_state=random_state)
+
+        # set the power transform options
+#        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
 
 
