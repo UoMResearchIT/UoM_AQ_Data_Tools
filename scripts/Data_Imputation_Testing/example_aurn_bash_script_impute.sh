@@ -34,7 +34,10 @@ OUTFILE_SUFFIX='2016-2017_imputed'
 DATA_LOSS_POS='middle'
 DATA_LOST='0.25'
 
-ARGUMENTS_1="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST} --metadata_url ${META_DATA_URL} --date_range ${DATE_RANGE} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} --metadata_filename ${META_DATA_FILENAME} --sites ${SITES} -o ${OUT_DIR} -s ${INFILE_SUFFIX} --verbose ${VERBOSE}"
+ARGUMENTS_1="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST} --metadata_url ${META_DATA_URL}
+             --date_range ${DATE_RANGE} --min_years ${MINYEARS} --min_years_ref ${USEYEARS} 
+             --metadata_filename ${META_DATA_FILENAME} --sites ${SITES} -o ${OUT_DIR} 
+             -s ${INFILE_SUFFIX} --verbose ${VERBOSE}"
 
 #echo ${ARGUMENTS_1}
 

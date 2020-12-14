@@ -392,7 +392,13 @@ class MetImputationTest(MetPostProcessor):
                 start_point = 0
                 end_point = data_length
 
-            working_dataframe = working_dataframe.iloc[start_point:end_point]
+            if self.data_loss_position == 'middle':
+                working_dataframe_start = working_dataframe.iloc[0:start_point]
+                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
+                working_dataframe = working_dataframe_start.append(working_dataframe_end)
+            else:
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
+            
             hourly_dataframe_out = hourly_dataframe_out.append(working_dataframe)
         
         return hourly_dataframe_out
