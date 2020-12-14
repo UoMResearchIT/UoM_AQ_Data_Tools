@@ -973,9 +973,9 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                     'time_stamp'   (datetime object): date (only) (e.g. 2017-06-01)
                     'sensor_name'           (string): ID string for site (e.g. '3 [WEATHER]')
                 Required columns:
-                    '[var_out_string].max'     (float): daily maximum value
-                    '[var_out_string].mean'    (float): daily mean value
-                    '[var_out_string].flag'    (float): flag to indicate fraction of imputed data 
+                    '[var_out_string]_max'     (float): daily maximum value
+                    '[var_out_string]_mean'    (float): daily mean value
+                    '[var_out_string]_flag'    (float): flag to indicate fraction of imputed data 
                                                    (1 = fully imputed, 0 = no imputed values were used)
         """
         
@@ -983,9 +983,9 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         temp_groups = ts_in.groupby([pd.Grouper(level="date", freq='1D'), 'siteID'])
         out_data = pd.DataFrame()
 
-        out_data['{}.max'.format(var_out_string)] = temp_groups.max()[var_in_string]
-        out_data['{}.mean'.format(var_out_string)] = temp_groups.mean()[var_in_string]
-        out_data['{}.flag'.format(var_out_string)] = temp_groups.mean()['{}.flag'.format(var_in_string)]
+        out_data['{}_max'.format(var_out_string)] = temp_groups.max()[var_in_string]
+        out_data['{}_mean'.format(var_out_string)] = temp_groups.mean()[var_in_string]
+        out_data['{}_flag'.format(var_out_string)] = temp_groups.mean()['{}.flag'.format(var_in_string)]
 
         return out_data
 
@@ -1028,26 +1028,26 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                     'time_stamp'   (datetime object): date (only) (e.g. 2017-06-01)
                     'sensor_name'           (string): ID string for site (e.g. '3 [WEATHER]')
                 Required columns:
-                    'Temperature.max'     (float): daily maximum value
-                    'Temperature.mean'    (float): daily mean value
-                    'Temperature.flag'    (float): flag to indicate fraction of imputed data 
+                    'temperature_max'     (float): daily maximum value
+                    'temperature_mean'    (float): daily mean value
+                    'temperature_flag'    (float): flag to indicate fraction of imputed data 
                                                    (1 = fully imputed, 0 = no imputed values were used)
-                    'RelativeHumidity.max'     (float): daily maximum value
-                    'RelativeHumidity.mean'    (float): daily mean value
-                    'RelativeHumidity.flag'    (float): flag to indicate fraction of imputed data 
+                    'relativeHumidity_max'     (float): daily maximum value
+                    'relativeHumidity_mean'    (float): daily mean value
+                    'relativeHumidity_flag'    (float): flag to indicate fraction of imputed data 
                                                         (1 = fully imputed, 0 = no imputed values were used)
-                    'Pressure.max'     (float): daily maximum value
-                    'Pressure.mean'    (float): daily mean value
-                    'Pressure.flag'    (float): flag to indicate fraction of imputed data 
+                    'pressure_max'     (float): daily maximum value
+                    'pressure_mean'    (float): daily mean value
+                    'pressure_flag'    (float): flag to indicate fraction of imputed data 
                                                 (1 = fully imputed, 0 = no imputed values were used)
                                         
             
         
         """
 
-        met_groups_rh = self.extract_mean_max(met_data_rh, 'rel_hum', 'RelativeHumidity')
-        met_groups_temp = self.extract_mean_max(met_data_temp, 'temperature', 'Temperature')
-        met_groups_pres = self.extract_mean_max(met_data_pres, 'pressure', 'Pressure')
+        met_groups_rh = self.extract_mean_max(met_data_rh, 'rel_hum', 'relativehumidity')
+        met_groups_temp = self.extract_mean_max(met_data_temp, 'temperature', 'temperature')
+        met_groups_pres = self.extract_mean_max(met_data_pres, 'pressure', 'pressure')
 
         combined_data = met_groups_temp.merge(met_groups_rh, how='outer', left_index=True, right_index=True)
         combined_data = combined_data.merge(met_groups_pres, how='outer', left_index=True, right_index=True)

@@ -30,14 +30,23 @@ DATE_RANGE_TEST="2017-01-01_00 2017-06-30_23"
 
 
 
+FILE_IN="inputs/data_met/temp_rh_press_dewtemp_2016-2019.csv"
+VERBOSE=1
+MIN_YEARS=3
+REFERENCE_NUM_YEARS=3.5
+DATE_RANGE="2016-01-01_00 2019-12-31_23"
+OUTFILE_SUFFIX='2016-2019_tests'
+
+
+
 DATA_LOSS_POS='middle'
 DATA_LOST='0.25'
 SITES="513 3 1543 1033 1039 1046 23 24089 24090 18974 1055 32 61986"
 
 
 ARGUMENTS_TEST="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}
-  --file_in ${FILE_IN_TEST}  --stations_filename ${STATIONS_FILENAME}
-  --out_dir ${OUT_DIR_TEST} --outfile_suffix ${OUTFILE_SUFFIX_TEST} --date_range ${DATE_RANGE_TEST}
+  --file_in ${FILE_IN}  --stations_filename ${STATIONS_FILENAME}
+  --out_dir ${OUT_DIR_TEST} --outfile_suffix ${OUTFILE_SUFFIX} --date_range ${DATE_RANGE}
   --exclude_sites ${EXCLUDE_SITE_LIST} --min_temp ${MIN_TEMP}  --min_years ${MIN_YEARS}
   --min_years_ref ${REFERENCE_NUM_YEARS} --ref_num_stations ${REFERENCE_NUM_STATIONS}
   --print_stats --verbose ${VERBOSE} --sites ${SITES}"
