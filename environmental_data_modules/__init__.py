@@ -13,5 +13,7 @@ from .post_processor import PostProcessor
 from .met_post_processor import MetPostProcessor
 from .aurn_post_processor import AurnPostProcessor
 
+from .aurn_imputation_tests import AurnImputationTest
+from .met_imputation_tests import MetImputationTest
 
 

@@ -78,9 +78,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             print('Loading stations data metadata')
         try:
             station_data = raw_data.drop_duplicates()
-            station_data = station_data.rename(
-                columns={"site_id": "SiteID", "latitude": "Latitude", "longitude": "Longitude"})
-            station_data = station_data.set_index('SiteID')
+            station_data = station_data.set_index('site_id')
         except Exception as err:
             raise ValueError('Unable to get correct site data from Metadata input file. Check metadata file content.')
 
@@ -428,7 +426,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         # get a list of all sites which are required for at least one measurement set
         combined_req_site_list = list(dict.fromkeys(combined_req_site_list))
-        print('there are {} required sites, and {} reference sites'.format(len(required_sites), len(reference_sites)))
         data_filtered = data_in[data_in['SiteID'].isin(combined_req_site_list)]
 
         return data_filtered, reference_sites, required_sites, combined_req_site_list
