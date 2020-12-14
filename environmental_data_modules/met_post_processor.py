@@ -85,7 +85,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             raise ValueError('Error loading station_data file {}. {}'.format(filename, err))
         else:
             try:
-                self._station_data = self._station_data.set_index('Station')
+                self._station_data = self._station_data.set_index('site_id')
             except ValueError:
                 raise ValueError('Station data file has no column header: Station')
 
@@ -294,7 +294,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         if len(met_data.index) < 1:
             raise ValueError('Input file ({}) is empty'.format(file_in))
         print('    correct date string')
-        met_data['date'] = met_data['date'].apply(self.parse_calcs_date)
+        met_data[self._timestamp_string] = met_data[self._timestamp_string].apply(self.parse_calcs_date)
 
         return met_data
 
@@ -354,7 +354,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             
         """
         # Pull out all duplicated values
-        met_duplicates = met_data_in[met_data_in.duplicated(subset=['date', 'siteID'], keep=False)]
+        met_duplicates = met_data_in[met_data_in.duplicated(subset=self._columns_base, keep=False)]
 
         # Split these into those with, and without, pressure data (SYNOP will have pressure data)
         #   We will keep (most of) the readings with pressure data, and will drop (most of) the
@@ -365,12 +365,12 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         # Get the 2nd data points which are duplicated *and* where both have pressure data (these are only a few points)
         #   These will be the few readings with pressure data that we drop, so we set keep to 'first' so that we
         #   get the indexes for the 'last' values.
-        met_dup_with_pres_dups = met_dup_with_pres[met_dup_with_pres.duplicated(subset=['date', 'siteID'], keep='first')]
+        met_dup_with_pres_dups = met_dup_with_pres[met_dup_with_pres.duplicated(subset=self._columns_base, keep='first')]
 
         # Find the duplicates where there is no pressure data for either, and save the first value (<10,000 points)
         #   In this case we also want to preserve the first data points, but as we are going to drop the
         #   indexes we extract from our list of indexes to throw away we want to set keep to 'last' in this instance.
-        met_dup_no_pres_dups = met_dup_no_pres[met_dup_no_pres.duplicated(subset=['date', 'siteID'], keep='last')]
+        met_dup_no_pres_dups = met_dup_no_pres[met_dup_no_pres.duplicated(subset=self._columns_base, keep='last')]
         met_dup_no_pres_reduced = met_dup_no_pres.drop(index=met_dup_no_pres_dups.index)
 
 
@@ -382,7 +382,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
         # Append to this list the indexes of all station data that we are dropping completely
         for station in exlude_stations:
-            station_drop_indexes = met_data_in[met_data_in['siteID'] == station].index
+            station_drop_indexes = met_data_in[met_data_in[self._site_string] == station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
         # Finally drop all the data that is unwanted
@@ -412,7 +412,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         
         """
         # group the data by date, and count the readings per day
-        tempgroups = met_data_in.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+        tempgroups = met_data_in.groupby([self._site_string, pd.Grouper(key=self._timestamp_string, freq='1D')])
         data_counts = tempgroups.count()
 
         # some diagnostic output, if required
@@ -442,7 +442,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         # drop all the stations with only single daily readings
         indexes_to_drop = pd.Int64Index(data=[],dtype='int64')
         for station in station_single_list:
-            station_drop_indexes = met_data_in[met_data_in['siteID']==station].index
+            station_drop_indexes = met_data_in[met_data_in[self._site_string]==station].index
             indexes_to_drop = indexes_to_drop.append(station_drop_indexes)
 
         # drop all the data that is unwanted
@@ -451,7 +451,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         # print diag output for new dataset
         if self._print_stats:
             print('new stats for the reduced data:')
-            temp_groups = met_data_reduced.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+            temp_groups = met_data_reduced.groupby([self._site_string, pd.Grouper(key=self._timestamp_string, freq='1D')])
             data_counts = temp_groups.count()
             self.print_data_count_stats(data_counts)
 
@@ -483,7 +483,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         
         """
         print('    get the lists of required and reference stations for each measurement variable')
-        tempgroups = data_in.groupby(['siteID', pd.Grouper(key='date', freq='1D')])
+        tempgroups = data_in.groupby([self._site_string, pd.Grouper(key=self._timestamp_string, freq='1D')])
         daily_hour_counts = tempgroups.count()
         spc_list = daily_hour_counts.columns.values
         
@@ -504,7 +504,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
         # get a list of all sites which are required for at least one measurement set
         combined_req_site_list = list(dict.fromkeys(combined_req_site_list))
-        data_filtered = data_in[data_in['siteID'].isin(combined_req_site_list)]
+        data_filtered = data_in[data_in[self._site_string].isin(combined_req_site_list)]
 
         return data_filtered, reference_sites, req_sites, combined_req_site_list
 
@@ -562,11 +562,11 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_all['temperature'].values * units.degC,
             met_data_all['dewpoint'].values * units.degC) * 100.0
 
-        met_data_out['rel_hum.flag'] = met_data_all[['temperature.flag','dewpoint.flag']].values.max(1)
+        met_data_out['rel_hum_flag'] = met_data_all[['temperature_flag','dewpoint_flag']].values.max(1)
 
         # plot the distribution of the calculated RH difference from measured RH
         if self._print_stats:
-            met_data_internal = met_data_in.set_index(['date', 'siteID'])
+            met_data_internal = met_data_in.set_index(self._columns_base)
 
             met_data_internal['rh2'] = met_data_out['rel_hum']
 
@@ -678,10 +678,10 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         """
 
         date_index = pd.date_range(start=self.start, end=self.end,
-                                   freq='1H', name='date')
+                                   freq='1H', name=self._timestamp_string)
 
         # add the Date index
-        indexed_orig_data = met_extracted_data.set_index('date')
+        indexed_orig_data = met_extracted_data.set_index(self._timestamp_string)
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -693,7 +693,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
             print('working on site {}'.format(site))
 
-            work_data = indexed_orig_data[indexed_orig_data.siteID==site]
+            work_data = indexed_orig_data[indexed_orig_data[self._site_string]==site]
 
             ts = pd.DataFrame(dataframe_columns, index=date_index)
 
@@ -707,7 +707,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 # get data for the [reference_station_number] closest stations:
                 for ii in range(0, self.reference_num_stations):
                     ts[station_list_string[ii]] = \
-                        indexed_orig_data[indexed_orig_data.siteID==station_distances.index[ii]][var_string]
+                        indexed_orig_data[indexed_orig_data[self._site_string]==station_distances.index[ii]][var_string]
 
                 # run the imputation process
                 imputed_hourly_dataframe = self.transform_and_impute_data(ts)
@@ -717,15 +717,15 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
                 # add a flag to denote the values which have been imputed
                 #   then replace the original data with the imputed data
-                ts['{}.flag'.format(var_string)] = ts[var_string].isna() * 1
+                ts['{}_flag'.format(var_string)] = ts[var_string].isna() * 1
                 ts[var_string] = imputed_hourly_dataframe[var_string]
             else:
                 # if we didn't impute anything, add zero value flags
-                ts['{}.flag'.format(var_string)] = 0
+                ts['{}_flag'.format(var_string)] = 0
 
             # add the site ID, and reindex
-            ts['siteID'] = site
-            ts = ts.reset_index().set_index(['date','siteID'])
+            ts[self._site_string] = site
+            ts = ts.reset_index().set_index(self._columns_base)
 
             # copy data to new array
             full_data_out = full_data_out.append(ts)
@@ -814,8 +814,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         """
         # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
         # Todo Doug: check OK.
-        start_date = max(met_extracted_data['date'].min(), self.start)
-        end_date = min(met_extracted_data['date'].max(), self.end)
+        start_date = max(met_extracted_data[self._timestamp_string].min(), self.start)
+        end_date = min(met_extracted_data[self._timestamp_string].max(), self.end)
 
         print('Start date: {}'.format(datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT)))
         print('End date: {}'.format(datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)))
@@ -824,10 +824,10 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)
         ))
 
-        date_index = pd.date_range(start=start_date, end=end_date, freq='1H', name='date')
+        date_index = pd.date_range(start=start_date, end=end_date, freq='1H', name=self._timestamp_string)
 
         # add the Date index
-        indexed_orig_data = met_extracted_data.set_index('date')
+        indexed_orig_data = met_extracted_data.set_index(self._timestamp_string)
 
         # define initial column for dataframe
         dataframe_columns = {var_string: np.nan}
@@ -839,18 +839,18 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
             print('extract site {}'.format(site))
 
-            work_data = indexed_orig_data[indexed_orig_data.siteID==site]
+            work_data = indexed_orig_data[indexed_orig_data[self._site_string]==site]
 
             ts = pd.DataFrame(dataframe_columns, index=date_index)
 
             ts[var_string] = work_data[var_string]
 
             # as we didn't impute anything, add zero value flags
-            ts['{}.flag'.format(var_string)] = 0
+            ts['{}_flag'.format(var_string)] = 0
 
             # add the site ID, and reindex
-            ts['siteID'] = site
-            ts = ts.reset_index().set_index(['date','siteID'])
+            ts[self._site_string] = site
+            ts = ts.reset_index().set_index(self._columns_base)
 
             # copy data to new array
             full_data_out = full_data_out.append(ts)
@@ -980,12 +980,12 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         """
         
         
-        temp_groups = ts_in.groupby([pd.Grouper(level="date", freq='1D'), 'siteID'])
+        temp_groups = ts_in.groupby([pd.Grouper(level=self._timestamp_string, freq='1D'), self._site_string])
         out_data = pd.DataFrame()
 
         out_data['{}_max'.format(var_out_string)] = temp_groups.max()[var_in_string]
         out_data['{}_mean'.format(var_out_string)] = temp_groups.mean()[var_in_string]
-        out_data['{}_flag'.format(var_out_string)] = temp_groups.mean()['{}.flag'.format(var_in_string)]
+        out_data['{}_flag'.format(var_out_string)] = temp_groups.mean()['{}_flag'.format(var_in_string)]
 
         return out_data
 
@@ -1055,6 +1055,6 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         combined_data.sort_index(level=1,inplace=True)
         combined_data.index = combined_data.index.set_levels(
             ['{} [WEATHER]'.format(x) for x in combined_data.index.levels[1]], level=1)
-        combined_data.index.rename(['time_stamp', 'sensor_name'], inplace=True)
+
 
         return combined_data

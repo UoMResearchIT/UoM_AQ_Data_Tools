@@ -8,7 +8,8 @@ class MetModule(object):
     __metaclass__ = ABCMeta
 
     SPECIES_PROCESS_LIST = ['temperature', 'pressure', 'dewpoint']
-    COLUMNS_BASE = ['timestamp', 'site_id']
+    TIMESTAMP_STRING = 'timestamp'
+    SITE_STRING = 'site_id'
 
     def __init__(self):
         """ Initialise instance of the MetModule class.
@@ -18,7 +19,9 @@ class MetModule(object):
                 Initialised instance of subclass of MetModule
 
         """
-        self._columns_base = MetModule.COLUMNS_BASE
+        self._timestamp_string = MetModule.TIMESTAMP_STRING
+        self._site_string = MetModule.SITE_STRING
+        self._columns_base = [MetModule.TIMESTAMP_STRING,MetModule.SITE_STRING]
         self._columns_specific = []
 
     def get_all_column_headers(self):

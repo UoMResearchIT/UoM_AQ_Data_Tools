@@ -306,7 +306,7 @@ class MetImputationTest(MetPostProcessor):
 
         # trim down the database to cover only stations which are references for at least one species
         combined_reference_site_list = list(dict.fromkeys(combined_reference_site_list))
-        hourly_dataframe_filtered = df_part_filtered[df_part_filtered['siteID'].isin(combined_reference_site_list)]
+        hourly_dataframe_filtered = df_part_filtered[df_part_filtered[self._site_string].isin(combined_reference_site_list)]
 
         # get the list of required sites from what is available, and what was requested
         site_working_list = set(site_all).intersection(self.site_list)
@@ -370,11 +370,11 @@ class MetImputationTest(MetPostProcessor):
         reference_site_list = list(dict.fromkeys(reference_site_list))
         
         # create dataframe with reference sites only
-        hourly_dataframe_out = hourly_dataframe[hourly_dataframe['siteID'].isin(reference_site_list)]
+        hourly_dataframe_out = hourly_dataframe[hourly_dataframe[self._site_string].isin(reference_site_list)]
         
         for site in site_list_internal:
             print('  filtering site {}'.format(site))
-            working_dataframe = hourly_dataframe[hourly_dataframe['siteID']==site].copy()
+            working_dataframe = hourly_dataframe[hourly_dataframe[self._site_string]==site].copy()
             data_length = len(working_dataframe)
             print('index length is {}'.format(data_length))
             if self.data_loss_position == 'end':
@@ -460,7 +460,7 @@ class MetImputationTest(MetPostProcessor):
         combined_data = met_data_temp.merge(met_data_rh, how='outer', left_index=True, right_index=True)
         combined_data = combined_data.merge(met_data_pres, how='outer', left_index=True, right_index=True)
 
-        combined_data.rename(columns={'temperature.flag':'temperature_flag','rel_hum':'relativehumidity','rel_hum.flag':'relativehumidity_flag','pressure.flag':'pressure_flag'}, inplace=True)
+        combined_data.rename(columns={'rel_hum':'relativehumidity','rel_hum_flag':'relativehumidity_flag'}, inplace=True)
 
         combined_data.sort_index(level=1,inplace=True)
         combined_data.index.rename(['time_stamp', 'sensor_name'], inplace=True)
