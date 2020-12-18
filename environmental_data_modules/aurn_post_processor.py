@@ -365,7 +365,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             filename = Path(filename)
             print('reading emep file')
             try:
-                emep_dataframe = pd.read_csv(filename.name)
+                emep_dataframe = pd.read_csv(filename)
             except Exception as err:
                 raise ValueError('Error loading the emap data from filename: {} . {}'.format(filename, err))
             try:
