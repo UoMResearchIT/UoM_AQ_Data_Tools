@@ -11,11 +11,14 @@ try:
     import metpy.calc as mpcalc
     from metpy.units import units
     
-    from sklearn.metrics import mean_squared_error as mse
     import seaborn as sns
-    sns.set_theme()
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+    
+    from scipy import stats
+    
+    sns.set_theme()
+
 except:
     pass  # print('Warning: Unable to load library: {}'.format(err))
 
@@ -54,6 +57,7 @@ class MetImputationTest(MetPostProcessor):
         self._site_list = MetImputationTest.DEFAULT_SITE_LIST
         self.check_sites = MetImputationTest.DEFAULT_CHECK_SITES
         self.species_list = MetPostProcessor.SPECIES_PROCESS_LIST
+        self.rng = np.random.RandomState(0)
 
     @property
     def data_lost(self):
@@ -182,7 +186,8 @@ class MetImputationTest(MetPostProcessor):
         self.data_lost = data_lost
         self.data_loss_position = data_loss_position
         self.check_sites = check_sites
-        self.site_list = [int(x) for x in site_list]
+        if site_list:
+            self.site_list = [int(x) for x in site_list]
 
 
         print('checking validity of and loading met data file')
@@ -256,7 +261,7 @@ class MetImputationTest(MetPostProcessor):
         #    if self.verbose > 1: print('Writing to file: {}'.format(self.file_out.format(outfile_suffix)))
         #    met_data_daily.to_csv(self.file_out, index=True, header=True, float_format='%.2f')
 
-        #return met_data_daily
+        return site_list_internal, met_impute_test_data, met_data_imputed_daily
 
     def site_list_and_preparation(self,hourly_dataframe):
         """
@@ -380,29 +385,164 @@ class MetImputationTest(MetPostProcessor):
             if self.data_loss_position == 'end':
                 start_point = 0
                 end_point = int(np.floor(data_length * self.data_lost))
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
             elif self.data_loss_position == 'middle':
                 half_data_retain = (1-self.data_lost)/2
                 start_point = int(np.floor(data_length * half_data_retain))
                 end_point = data_length - start_point
+                working_dataframe_start = working_dataframe.iloc[0:start_point]
+                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
+                working_dataframe = working_dataframe_start.append(working_dataframe_end)
             elif self.data_loss_position == 'start':
                 start_point = int(np.ceil(data_length * (1-self.data_lost)))
                 end_point = data_length
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
+            elif self.data_loss_position == 'random':
+                data_points_lost = int(np.floor(data_length * self.data_lost))
+                keeping_samples = np.hstack((
+                                        np.zeros(data_points_lost, dtype=np.bool),
+                                        np.ones(data_length - data_points_lost,dtype=np.bool)
+                                        ))
+                self.rng.shuffle(keeping_samples)
+                print(keeping_samples)
+                working_dataframe = working_dataframe.iloc[np.where(keeping_samples)[0]]
             else:
                 print('{} data loss method not implemented yet, keeping all data'.format(self.data_loss_position))
                 start_point = 0
                 end_point = data_length
-
-            if self.data_loss_position == 'middle':
-                working_dataframe_start = working_dataframe.iloc[0:start_point]
-                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
-                working_dataframe = working_dataframe_start.append(working_dataframe_end)
-            else:
-                working_dataframe = working_dataframe.iloc[start_point:end_point]
             
             hourly_dataframe_out = hourly_dataframe_out.append(working_dataframe)
         
         return hourly_dataframe_out
 
+    def sort_datasets(self, met_extracted_data, req_sites_list, var_string):
+        """
+        Function for creating the hourly dataset when we are not imputing any data.
+        
+        Args:
+            met_extracted_data: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            
+            req_sites_list (list, string or int): sites to retain for data
+            var_string     (string): name of the variable to sort dataset for
+        
+        Uses:
+            self.start
+            self.end
+        
+        Returns:
+            full_data_out: selected meteorological data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    '[var_string]'    (float): met variable data
+                    '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+        """
+        # AG: Trim date index to be only those available in dataset: Or memory overloads and kills process.
+        # Todo Doug: check OK.
+        start_date = max(met_extracted_data[self._timestamp_string].min(), self.start)
+        end_date = min(met_extracted_data[self._timestamp_string].max(), self.end)
+
+        print('Start date: {}'.format(datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT)))
+        print('End date: {}'.format(datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)))
+        if self.verbose > 1: print('Using date range in sort_datasets: {} to {}'.format(
+            datetime.strftime(start_date, MetPostProcessor.INPUT_DATE_FORMAT),
+            datetime.strftime(end_date, MetPostProcessor.INPUT_DATE_FORMAT)
+        ))
+
+        date_index = pd.date_range(start=start_date, end=end_date, freq='1H', name=self._timestamp_string)
+
+        # add the Date index
+        indexed_orig_data = met_extracted_data.set_index(self._timestamp_string)
+
+        # define initial column for dataframe
+        dataframe_columns = {var_string: np.nan}
+
+        # empty dataframe for storing data
+        full_data_out = pd.DataFrame()
+
+        for site in req_sites_list:
+
+            print('extract site {}'.format(site))
+
+            work_data = indexed_orig_data[indexed_orig_data[self._site_string]==site]
+
+            ts = pd.DataFrame(dataframe_columns, index=date_index)
+
+            ts[var_string] = work_data[var_string]
+
+            # as we didn't impute anything, add zero value flags
+            ts['{}_flag'.format(var_string)] = 0
+            ts.loc[ts[var_string].isna(),'{}_flag'.format(var_string)] = 1
+
+            # add the site ID, and reindex
+            ts[self._site_string] = site
+            ts = ts.reset_index().set_index(self._columns_base)
+
+            # copy data to new array
+            full_data_out = full_data_out.append(ts)
+
+        return full_data_out
+
+    def organise_data(self, met_extracted_data, req_sites_temp, req_sites_pres, req_sites_dewpoint):
+        """
+        Function for organising the creation of the datasets when no imputation is involved. 
+        This runs the 'sort_datasets' function for each of the variables of interest.
+        
+        Args:
+            met_extracted_data: met data as a pandas.DataFrame
+                Required columns:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                    'temperature' (float): temperature
+                    'rel_hum'     (float): relative humidity
+                    'pressure'    (float): pressure
+                    'dewpoint'    (float): dewpoint temperature
+            
+            req_sites_temp (list, string or int): sites to retain for temperature data
+            req_sites_pres (list, string or int): sites to retain for pressure data
+            req_sites_dewpoint (list, string or int): sites to retain for dewpoint temperature data
+                
+        Returns:
+            met_data_out_temp: temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'temperature'    (float): temperature
+                    'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            
+            met_data_out_pressure: pressure data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'pressure'    (float): pressure
+                    'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+            
+            met_data_out_dewpoint: dewpoint temperature data as pandas.Dataframe, 
+                Required MultiIndex:
+                    'date'        (datetime object) date/time of measurement
+                    'siteID'      (string) ID string for site
+                Required columns:
+                    'dewpoint'    (float): dewpoint temperature
+                    'dewpoint.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
+        """
+        print('sorting temperature data')
+        met_data_out_temp = self.sort_datasets(met_extracted_data, req_sites_temp, 'temperature')
+        print('sorting pressure data')
+        met_data_out_pressure = self.sort_datasets(met_extracted_data, req_sites_pres, 'pressure')
+        print('sorting dew point temperature')
+        met_data_out_dewpoint = self.sort_datasets(met_extracted_data, req_sites_dewpoint, 'dewpoint')
+
+        return met_data_out_temp, met_data_out_pressure, met_data_out_dewpoint
 
 
     def combine_plotting_dataset(self, met_data_in, met_data_temp, met_data_pres, met_data_rh):
@@ -514,6 +654,10 @@ class MetImputationTest(MetPostProcessor):
         Returns: None
         """
         
+        sns.set_style('ticks')
+        sns.set_context('paper')
+        sns.despine()
+
         note="""
         Analysis of the reliability of the imputation of Meteorological datasets
         at the site {}. This is the original hourly data.
@@ -525,6 +669,12 @@ class MetImputationTest(MetPostProcessor):
         position in timeseries for data removal: {} 
         """
         
+        spc_list = ['temperature','pressure','relativehumidity']
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,spc_list],names=['site_id','spc'])
+        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+        
+        hourly_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
+        
         for site in site_list_internal:
             print('working on site: {}'.format(site))
             with PdfPages('{}_hourly_imputed_comparison.pdf'.format(site)) as pdf_pages:
@@ -534,7 +684,7 @@ class MetImputationTest(MetPostProcessor):
                     transform=firstPage.transFigure, size=12, ha="center")
                 pdf_pages.savefig()
                 plt.close()
-                for spc in ['temperature','pressure','relativehumidity']: #self.species_list:
+                for spc in spc_list: #self.species_list:
                     print('stats for species: {}'.format(spc))
                 
                     data_imputed   = hourly_imputed_dataframe.loc[(slice(None),site),spc]
@@ -550,20 +700,36 @@ class MetImputationTest(MetPostProcessor):
                     data_imputed   = data_imputed[data_reference.notna()] 
                     data_reference = data_reference[data_reference.notna()] 
                 
-                    # calculate the Mean Square Error
-                    #mserror = mse(data_reference,data_imputed)
-                
                     # plot scatter
                     data_combined = pd.DataFrame()
                     data_combined[spc] = data_reference
                     data_combined['{} (imputed)'.format(spc)] = data_imputed
-                
-                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc))
+                    
+                    min_val = min(min(data_imputed),min(data_reference))
+                    max_val = max(max(data_imputed),max(data_reference))
+                    range_val = max_val - min_val
+                    
+                    k_corr, k_pval = stats.kendalltau(data_reference,data_imputed)
+                    s_corr, s_pval = stats.spearmanr(data_reference,data_imputed)
+                    p_corr, p_pval = stats.pearsonr(data_reference,data_imputed)
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference,data_imputed)
+                    hourly_stat_dataset.loc[(site,spc),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
+                    
+                    
+                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc),kind="reg")
+                    sns_plot.ax_joint.plot(data_combined['{} (imputed)'.format(spc)],data_combined['{} (imputed)'.format(spc)], 'r-', linewidth=1)
+                    sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                    sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                    sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+                    
                     pdf_pages.savefig(sns_plot.fig)
                     plt.close()
                     
+                    
         
-        #print('...analysis of hourly imputed data is work in progress...')
+        hourly_stat_dataset.to_csv('met_hourly_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+        
+
 
     def imputation_daily_analysis(self,daily_imputed_dataframe,daily_reference_dataframe,site_list_internal):
         """
@@ -605,7 +771,11 @@ class MetImputationTest(MetPostProcessor):
         
         Returns: None
         """
-        
+
+        sns.set_style('ticks')
+        sns.set_context('paper')
+        sns.despine()
+
         note="""
         Analysis of the reliability of the imputation of Meteorological datasets
         at the site {}. This is the daily mean and maximum data.
@@ -616,6 +786,16 @@ class MetImputationTest(MetPostProcessor):
         fraction of data removed: {}
         position in timeseries for data removal: {} 
         """
+        spc_list = ['temperature','pressure','relativehumidity']
+        stat_list = ['mean','max']
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,spc_list,stat_list],names=['site_id','spc','stat'])
+        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+        
+        daily_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
+
+        fill_ranges = [0,0.125,0.25,0.5,1.0]
+        length_ranges = len(fill_ranges)
+
         
         for site in site_list_internal:
             site_string = "{} [WEATHER]".format(site)
@@ -636,22 +816,64 @@ class MetImputationTest(MetPostProcessor):
                 
                         flag_imputed = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
                 
-                        # keep only the data which has been imputed
-                        data_imputed   = data_imputed[flag_imputed==1]
-                        data_reference = data_reference[flag_imputed==1]
+                        flag_already_missing = daily_reference_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
+                        flag_plot = np.floor(1-flag_already_missing) # 0 = some missing data originally, 1 = no original missing data 
+                        
+                        flag_imputed = flag_imputed * flag_plot # remove all days which were originally missing some data
+
+                        # keep the days which contain imputed data, for stat calculations
+                        data_imputed_stats   = data_imputed[flag_imputed>0]
+                        data_reference_stats = data_reference[flag_imputed>0]
                 
-                        # remove datapoints which were NaN in the original data
-                        data_imputed   = data_imputed[data_reference.notna()] 
-                        data_reference = data_reference[data_reference.notna()] 
+
+                        min_val = min(min(data_imputed_stats),min(data_reference_stats))
+                        max_val = max(max(data_imputed_stats),max(data_reference_stats))
+                        range_val = max_val - min_val
                 
-                        # calculate the Mean Square Error
-                        #mserror = mse(data_reference,data_imputed)
+                        k_corr, k_pval = stats.kendalltau(data_reference_stats,data_imputed_stats)
+                        s_corr, s_pval = stats.spearmanr(data_reference_stats,data_imputed_stats)
+                        p_corr, p_pval = stats.pearsonr(data_reference_stats,data_imputed_stats)
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference_stats,data_imputed_stats)
+                        daily_stat_dataset.loc[(site,spc,stat),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
                 
-                        # plot scatter
+                        impute_string = '{}_{} (imputed)'.format(spc,stat)
                         data_combined = pd.DataFrame()
-                        data_combined['{}_{}'.format(spc,stat)] = data_reference
-                        data_combined['{}_{} (imputed)'.format(spc,stat)] = data_imputed
+                        data_combined['{}_{}'.format(spc,stat)] = data_reference_stats
+                        data_combined[impute_string] = data_imputed_stats
                 
-                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y='{}_{} (imputed)'.format(spc,stat))
+                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string, kind='reg')
+                        sns_plot.ax_joint.plot(data_combined[impute_string],data_combined[impute_string], 'r-', linewidth=1)
+                        sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                        sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                        sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
                         pdf_pages.savefig(sns_plot.fig)
                         plt.close()
+
+                        for ind in range(length_ranges-1):
+                        
+                            # keep only the data which has been imputed
+                            data_imputed_internal   = data_imputed[flag_imputed>fill_ranges[ind]]
+                            data_reference_internal = data_reference[flag_imputed>fill_ranges[ind]]
+                            flag_imputed_internal = flag_imputed[flag_imputed>fill_ranges[ind]]
+                            
+                            data_imputed_internal   = data_imputed_internal[flag_imputed_internal<=fill_ranges[ind+1]]
+                            data_reference_internal = data_reference_internal[flag_imputed_internal<=fill_ranges[ind+1]]
+                            
+                            if not data_imputed_internal.empty:
+                                # plot scatter
+                                impute_string = '{}_{} (imputed, range {}-{})'.format(spc,stat,fill_ranges[ind],fill_ranges[ind+1])
+                                data_combined = pd.DataFrame()
+                                data_combined['{}_{}'.format(spc,stat)] = data_reference_internal
+                                data_combined[impute_string] = data_imputed_internal
+                
+                                sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string, kind='reg')
+                                sns_plot.ax_joint.plot(data_combined[impute_string],data_combined[impute_string], 'r-', linewidth=1)
+                                sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                                sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                                sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+                                pdf_pages.savefig(sns_plot.fig)
+                                plt.close()
+
+                        
+
+        daily_stat_dataset.to_csv('met_daily_correlation_stats.csv', index=True, header=True, float_format='%.4f')

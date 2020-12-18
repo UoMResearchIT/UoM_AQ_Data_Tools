@@ -45,6 +45,7 @@ SO2 has 2993 negative or zero values that will be replaced with NaNs
 
 """
 
+from pathlib import Path
 import sys
 sys.path.append("../..")
 import argparse
@@ -135,7 +136,7 @@ if __name__ == '__main__':
 
     if args.emep_filename:
         emep_filename = args.emep_filename
-        if not emep_filename.is_file():
+        if not Path(emep_filename).exists():
             print('{} does not exist, so not using emep data'.format(emep_filename))
             emep_filename = None
     else:

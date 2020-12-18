@@ -9,11 +9,13 @@ try:
     from sklearn.linear_model import BayesianRidge
     from sklearn import preprocessing
     
-    from sklearn.metrics import mean_squared_error as mse
     import seaborn as sns
-    sns.set_theme()
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+
+    from scipy import stats
+
+    sns.set_theme()
 except:
     pass
 
@@ -469,6 +471,10 @@ class AurnImputationTest(AurnPostProcessor):
         
         Returns: None
         """
+
+        sns.set_style('ticks')
+        sns.set_context('paper')
+        sns.despine()
         
         note="""
         Analysis of the reliability of the imputation of AURN datasets
@@ -480,6 +486,11 @@ class AurnImputationTest(AurnPostProcessor):
         fraction of data removed: {}
         position in timeseries for data removal: {} 
         """
+
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list],names=['site_id','spc'])
+        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+        
+        hourly_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
@@ -506,20 +517,33 @@ class AurnImputationTest(AurnPostProcessor):
                     data_imputed   = data_imputed[data_reference.notna()] 
                     data_reference = data_reference[data_reference.notna()] 
                 
-                    # calculate the Mean Square Error
-                    #mserror = mse(data_reference,data_imputed)
-                
                     # plot scatter
                     data_combined = pd.DataFrame()
                     data_combined[spc] = data_reference
                     data_combined['{} (imputed)'.format(spc)] = data_imputed
+
+                    min_val = min(min(data_imputed),min(data_reference))
+                    max_val = max(max(data_imputed),max(data_reference))
+                    range_val = max_val - min_val
+                    
+                    k_corr, k_pval = stats.kendalltau(data_reference,data_imputed)
+                    s_corr, s_pval = stats.spearmanr(data_reference,data_imputed)
+                    p_corr, p_pval = stats.pearsonr(data_reference,data_imputed)
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference,data_imputed)
+                    hourly_stat_dataset.loc[(site,spc),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
                 
-                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc))
+                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc),kind="reg")
+                    sns_plot.ax_joint.plot(data_combined['{} (imputed)'.format(spc)],data_combined['{} (imputed)'.format(spc)], 'r-', linewidth=1)
+                    sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                    sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                    sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+
                     pdf_pages.savefig(sns_plot.fig)
                     plt.close()
                     
         
-        #print('...analysis of hourly imputed data is work in progress...')
+        hourly_stat_dataset.to_csv('aurn_hourly_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+
 
     def imputation_daily_analysis(self,daily_imputed_dataframe,daily_reference_dataframe,site_list_internal):
         """
@@ -561,6 +585,11 @@ class AurnImputationTest(AurnPostProcessor):
         
         Returns: None
         """
+
+        sns.set_style('ticks')
+        sns.set_context('paper')
+        sns.despine()
+
         
         note="""
         Analysis of the reliability of the imputation of AURN datasets
@@ -572,6 +601,12 @@ class AurnImputationTest(AurnPostProcessor):
         fraction of data removed: {}
         position in timeseries for data removal: {} 
         """
+        
+        stat_list = ['mean','max']
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list,stat_list],names=['site_id','spc','stat'])
+        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+
+        daily_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
         
         fill_ranges = [0,0.125,0.25,0.5,1.0]
         length_ranges = len(fill_ranges)
@@ -589,7 +624,7 @@ class AurnImputationTest(AurnPostProcessor):
                 for spc in self.species_list:
                     print('stats for species: {}'.format(spc))
                 
-                    for stat in ['max','mean']:
+                    for stat in stat_list:
                         data_imputed   = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
                         data_reference = daily_reference_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
                 
@@ -600,7 +635,35 @@ class AurnImputationTest(AurnPostProcessor):
                         
                         flag_imputed = flag_imputed * flag_plot # remove all days which were originally missing some data
                         
+                        # keep the days which contain imputed data, for stat calculations
+                        data_imputed_stats   = data_imputed[flag_imputed>0]
+                        data_reference_stats = data_reference[flag_imputed>0]
+                
+
+                        min_val = min(min(data_imputed_stats),min(data_reference_stats))
+                        max_val = max(max(data_imputed_stats),max(data_reference_stats))
+                        range_val = max_val - min_val
+                
+                        k_corr, k_pval = stats.kendalltau(data_reference_stats,data_imputed_stats)
+                        s_corr, s_pval = stats.spearmanr(data_reference_stats,data_imputed_stats)
+                        p_corr, p_pval = stats.pearsonr(data_reference_stats,data_imputed_stats)
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference_stats,data_imputed_stats)
+                        daily_stat_dataset.loc[(site,spc,stat),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
                         
+
+                        impute_string = '{}_{} (imputed)'.format(spc,stat)
+                        data_combined = pd.DataFrame()
+                        data_combined['{}_{}'.format(spc,stat)] = data_reference_stats
+                        data_combined[impute_string] = data_imputed_stats
+                
+                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string, kind="reg")
+                        sns_plot.ax_joint.plot(data_combined[impute_string],data_combined[impute_string], 'r-', linewidth=1)
+                        sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                        sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                        sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+                        pdf_pages.savefig(sns_plot.fig)
+                        plt.close()
+
                         for ind in range(length_ranges-1):
                         
                             # keep only the data which has been imputed
@@ -612,18 +675,23 @@ class AurnImputationTest(AurnPostProcessor):
                             data_reference_internal = data_reference_internal[flag_imputed_internal<=fill_ranges[ind+1]]
                             
                 
-                            # calculate the Mean Square Error
-                            #mserror = mse(data_reference,data_imputed)
+                            if not data_imputed_internal.empty:
+                                # plot scatter
+                                impute_string = '{}_{} (imputed, range {}-{})'.format(spc,stat,fill_ranges[ind],fill_ranges[ind+1])
+                                data_combined = pd.DataFrame()
+                                data_combined['{}_{}'.format(spc,stat)] = data_reference_internal
+                                data_combined[impute_string] = data_imputed_internal
                 
-                            # plot scatter
-                            impute_string = '{}_{} (imputed, range {}-{})'.format(spc,stat,fill_ranges[ind],fill_ranges[ind+1])
-                            data_combined = pd.DataFrame()
-                            data_combined['{}_{}'.format(spc,stat)] = data_reference_internal
-                            data_combined[impute_string] = data_imputed_internal
-                
-                            sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string)
-                            pdf_pages.savefig(sns_plot.fig)
-                            plt.close()
+                                sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string,kind="reg")
+                                sns_plot.ax_joint.plot(data_combined[impute_string],data_combined[impute_string], 'r-', linewidth=1)
+                                sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                                sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                                sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+                                pdf_pages.savefig(sns_plot.fig)
+                                plt.close()
+
+
+        daily_stat_dataset.to_csv('aurn_daily_correlation_stats.csv', index=True, header=True, float_format='%.4f')
 
 
 
