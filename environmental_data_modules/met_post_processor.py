@@ -43,6 +43,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     DEFAULT_IMPUTER_MAX_ITER = 300
     DEFAULT_IMPUTER_ESTIMATOR = None
     DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION = 'normal'
+    DEFAULT_TRANSFORMER_METHOD = 'box-cox'
+    DEFAULT_TRANSFORMER_STANDARDIZE = True
 
     def __init__(self, out_dir=DEFAULT_OUT_DIR, station_data_filename=DEFAULT_STATION_DATA_FILENAME,
                  verbose=PostProcessor.DEFAULT_VERBOSE):
@@ -72,7 +74,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
-        if transformer is None or type(transformer).__name__ == 'QuantileTransformer':
+        if transformer is None or type(transformer).__name__ in ['QuantileTransformer','PowerTransformer']:
             self._transformer = transformer
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
@@ -119,14 +121,18 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
     def impute_method_setup(self, random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,):
-        """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
+                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
+                transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
+        """ Initialises the IterativeImputer, QuantileTransformer and PowerTransformer methods required 
+            if missing data is to be imputed.
+            
             Parameters are passed to the sklearn routines. Where this is being done it is noted below. 
             For further documentation on how these functions work, and what the parameters denote, 
             please refer to the sklearn documentation.
 
-            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
+            IterativeImputer:    https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
             QuantileTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
+            PowerTransformer:    https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
             
             Args:
                 random_state:           (int) (IterativeImputer & QuantileTransformer) seed for pseudo random number generator
@@ -135,6 +141,8 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
                 estimator:              (str) (IterativeImputer) estimator method to be used
                 output_distribution:    (str) (QuantileTransformer) Marginal distribution for the transformed data
+                transformer_method      (str) (PowerTransformer) method to use, 'box-cox' is default
+                transformer_standardize (boolean) (PowerTransformer) select if zero-mean, unit-variance normalisation is applied, default is True
 
              Returns: None
         """
@@ -146,8 +154,11 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
 
 
         # set the power transform options
-        self.transformer = preprocessing.QuantileTransformer(output_distribution=output_distribution,
+        self.transformer_quantile = preprocessing.QuantileTransformer(output_distribution=output_distribution,
                                                              random_state=random_state)
+
+        # set the power transform options
+        self.transformer_power = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
 
 
@@ -576,9 +587,12 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             ax.semilogy()
             ax.set_xlabel('RH_new - RH')
 
+        # cap relative humidity at 100%
+        met_data_out['rel_hum'] = [min(100.0,x) for x in met_data_out['rel_hum']]
+
         return met_data_out
 
-    def transform_and_impute_data(self, df_in):
+    def transform_and_impute_data(self, df_in, transformer):
         """
         Function for organising the transformation and imputation of the datasets.
         The input dataset is processed to remove missing variables (e.g. where a
@@ -595,9 +609,10 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                     '[var_string]'  (float): met data for the site of interest
                 Optional columns (repeated [self.reference_num_stations] times):
                     '[station_list_string]' (float): met data for selected reference sites
+            transformer: the transform function to use, passed so that we can chose based
+                         on the variable being operated on
                     
         Uses:
-            self.transformer
             self.imputer
         
         Returns:
@@ -624,15 +639,15 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         if self.verbose > 1: print('df_work input to quantile transformer: \n {}'.format(df_work))
 
         # power transformer fitting and transforming
-        self.transformer.fit(df_work.dropna())
-        np_out = self.transformer.transform(df_work)
+        transformer.fit(df_work.dropna())
+        np_out = transformer.transform(df_work)
 
         # impute the missing values in this new dataframe
         self.imputer.fit(np_out)
         imp_out = self.imputer.transform(np_out)
 
         # apply the inverse transformation for our datasets (leaving out the indicator flags)
-        np_inv = self.transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
+        np_inv = transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
 
         # copy the transformed values to a new dataframe
         df_out = df_in.copy(deep=True)
@@ -677,6 +692,15 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                     '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
         """
 
+        if var_string == 'pressure':
+            transformer = self.transformer_power
+        elif var_string == 'temperature' or var_string == 'dewpoint':
+            transformer = self.transformer_quantile
+        else:
+            print('No transformer method chosen for variable {}, so will use default (Quantile) transformer'.format(var_string))
+            transformer = self.transformer_quantile
+
+
         date_index = pd.date_range(start=self.start, end=self.end,
                                    freq='1H', name=self._timestamp_string)
 
@@ -710,7 +734,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                         indexed_orig_data[indexed_orig_data[self._site_string]==station_distances.index[ii]][var_string]
 
                 # run the imputation process
-                imputed_hourly_dataframe = self.transform_and_impute_data(ts)
+                imputed_hourly_dataframe = self.transform_and_impute_data(ts,transformer=transformer)
 
                 # drop the extra columns of station data
                 ts = ts.drop(columns=station_list_string)

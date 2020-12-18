@@ -9,11 +9,13 @@ try:
     from sklearn.linear_model import BayesianRidge
     from sklearn import preprocessing
     
-    from sklearn.metrics import mean_squared_error as mse
     import seaborn as sns
-    sns.set_theme()
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+
+    from scipy import stats
+
+    sns.set_theme()
 except:
     pass
 
@@ -50,6 +52,7 @@ class AurnImputationTest(AurnPostProcessor):
         self._data_loss_position = AurnImputationTest.DEFAULT_DATA_LOSS_POSITION
         self.check_sites = AurnImputationTest.DEFAULT_CHECK_SITES
         self.species_list = AurnPostProcessor.SPECIES_LIST_EXTRACTED
+        self.rng = np.random.RandomState(0)
 
     @property
     def data_lost(self):
@@ -323,28 +326,105 @@ class AurnImputationTest(AurnPostProcessor):
             if self.data_loss_position == 'end':
                 start_point = 0
                 end_point = int(np.floor(data_length * self.data_lost))
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
             elif self.data_loss_position == 'middle':
                 half_data_retain = (1-self.data_lost)/2
                 start_point = int(np.floor(data_length * half_data_retain))
                 end_point = data_length - start_point
+                working_dataframe_start = working_dataframe.iloc[0:start_point]
+                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
+                working_dataframe = working_dataframe_start.append(working_dataframe_end)
             elif self.data_loss_position == 'start':
                 start_point = int(np.ceil(data_length * (1-self.data_lost)))
                 end_point = data_length
+                working_dataframe = working_dataframe.iloc[start_point:end_point]
+            elif self.data_loss_position == 'random':
+                data_points_lost = int(np.floor(data_length * self.data_lost))
+                keeping_samples = np.hstack((
+                                        np.zeros(data_points_lost, dtype=np.bool),
+                                        np.ones(data_length - data_points_lost,dtype=np.bool)
+                                        ))
+                self.rng.shuffle(keeping_samples)
+                print(keeping_samples)
+                working_dataframe = working_dataframe.iloc[np.where(keeping_samples)[0]]
             else:
                 print('{} data loss method not implemented yet, keeping all data'.format(self.data_loss_position))
                 start_point = 0
                 end_point = data_length
 
-            if self.data_loss_position == 'middle':
-                working_dataframe_start = working_dataframe.iloc[0:start_point]
-                working_dataframe_end   = working_dataframe.iloc[end_point:data_length]
-                working_dataframe = working_dataframe_start.append(working_dataframe_end)
-            else:
-                working_dataframe = working_dataframe.iloc[start_point:end_point]
 
             hourly_dataframe_out = hourly_dataframe_out.append(working_dataframe)
         
         return hourly_dataframe_out
+
+    def organise_data(self, hourly_dataframe_filtered, site_list_internal): 
+        """
+        Function for organising the required datasets. This mirrors the imputation function.
+        
+        Args:
+            hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
+                Index: none
+                Required Columns:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+            site_list_internal (list, string or int): combined list of sites to retain
+        
+        Returns:
+            hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
+                Required Index:
+                    Date   (datetime object):
+                    SiteID          (string):
+                Optional Columns:
+                    O3       (float):
+                    PM10     (float):
+                    PM2.5    (float):
+                    NO2      (float):
+                    NOXasNO2 (float):
+                    SO2      (float):
+                    O3_flag       (int): flag indicating imputed data (0=original,1=imputed)
+                    PM10_flag     (int):
+                    PM2.5_flag    (int):
+                    NO2_flag      (int):
+                    NOXasNO2_flag (int):
+                    SO2_flag      (int):
+        """
+
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+        output_dataframe = pd.DataFrame()
+
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
+        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+
+        if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
+        for site in site_list_internal:
+            if self.verbose > 1: print('2. Site: ', site)
+
+            # create new dataframe, with the dates that we are interested in
+            working_hourly_dataframe = pd.DataFrame([], index=date_index)
+            working_hourly_dataframe['SiteID'] = site
+
+            # copy these to a new dataframe
+            working_hourly_dataframe[spc_list] = \
+                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][spc_list]
+
+            # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
+            for spc in spc_list:
+                working_hourly_dataframe['{}_flag'.format(spc)] = 0
+                working_hourly_dataframe.loc[working_hourly_dataframe[spc].isna(),'{}_flag'.format(spc)] = 1
+
+            # append data to the output dataframe
+            output_dataframe = output_dataframe.append(working_hourly_dataframe)
+
+        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        return(output_dataframe)
+
 
     def imputation_hourly_analysis(self,hourly_imputed_dataframe,hourly_reference_dataframe,site_list_internal):
         """
@@ -391,6 +471,10 @@ class AurnImputationTest(AurnPostProcessor):
         
         Returns: None
         """
+
+        sns.set_style('ticks')
+        sns.set_context('paper')
+        sns.despine()
         
         note="""
         Analysis of the reliability of the imputation of AURN datasets
@@ -402,6 +486,11 @@ class AurnImputationTest(AurnPostProcessor):
         fraction of data removed: {}
         position in timeseries for data removal: {} 
         """
+
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list],names=['site_id','spc'])
+        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+        
+        hourly_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
@@ -428,20 +517,33 @@ class AurnImputationTest(AurnPostProcessor):
                     data_imputed   = data_imputed[data_reference.notna()] 
                     data_reference = data_reference[data_reference.notna()] 
                 
-                    # calculate the Mean Square Error
-                    #mserror = mse(data_reference,data_imputed)
-                
                     # plot scatter
                     data_combined = pd.DataFrame()
                     data_combined[spc] = data_reference
                     data_combined['{} (imputed)'.format(spc)] = data_imputed
+
+                    min_val = min(min(data_imputed),min(data_reference))
+                    max_val = max(max(data_imputed),max(data_reference))
+                    range_val = max_val - min_val
+                    
+                    k_corr, k_pval = stats.kendalltau(data_reference,data_imputed)
+                    s_corr, s_pval = stats.spearmanr(data_reference,data_imputed)
+                    p_corr, p_pval = stats.pearsonr(data_reference,data_imputed)
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference,data_imputed)
+                    hourly_stat_dataset.loc[(site,spc),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
                 
-                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc))
+                    sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc),kind="reg")
+                    sns_plot.ax_joint.plot(data_combined['{} (imputed)'.format(spc)],data_combined['{} (imputed)'.format(spc)], 'r-', linewidth=1)
+                    sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                    sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                    sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+
                     pdf_pages.savefig(sns_plot.fig)
                     plt.close()
                     
         
-        #print('...analysis of hourly imputed data is work in progress...')
+        hourly_stat_dataset.to_csv('aurn_hourly_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+
 
     def imputation_daily_analysis(self,daily_imputed_dataframe,daily_reference_dataframe,site_list_internal):
         """
@@ -483,6 +585,11 @@ class AurnImputationTest(AurnPostProcessor):
         
         Returns: None
         """
+
+        sns.set_style('ticks')
+        sns.set_context('paper')
+        sns.despine()
+
         
         note="""
         Analysis of the reliability of the imputation of AURN datasets
@@ -494,6 +601,15 @@ class AurnImputationTest(AurnPostProcessor):
         fraction of data removed: {}
         position in timeseries for data removal: {} 
         """
+        
+        stat_list = ['mean','max']
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list,stat_list],names=['site_id','spc','stat'])
+        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+
+        daily_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
+        
+        fill_ranges = [0,0.125,0.25,0.5,1.0]
+        length_ranges = len(fill_ranges)
         
         for site in site_list_internal:
             site_string = "{} [AQ]".format(site)
@@ -508,31 +624,74 @@ class AurnImputationTest(AurnPostProcessor):
                 for spc in self.species_list:
                     print('stats for species: {}'.format(spc))
                 
-                    for stat in ['max','mean']:
+                    for stat in stat_list:
                         data_imputed   = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
                         data_reference = daily_reference_dataframe.loc[(slice(None),site_string),'{}_{}'.format(spc,stat)]
                 
                         flag_imputed = daily_imputed_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
+                        
+                        flag_already_missing = daily_reference_dataframe.loc[(slice(None),site_string),'{}_flag'.format(spc)]
+                        flag_plot = np.floor(1-flag_already_missing) # 0 = some missing data originally, 1 = no original missing data 
+                        
+                        flag_imputed = flag_imputed * flag_plot # remove all days which were originally missing some data
+                        
+                        # keep the days which contain imputed data, for stat calculations
+                        data_imputed_stats   = data_imputed[flag_imputed>0]
+                        data_reference_stats = data_reference[flag_imputed>0]
                 
-                        # keep only the data which has been imputed
-                        data_imputed   = data_imputed[flag_imputed==1]
-                        data_reference = data_reference[flag_imputed==1]
+
+                        min_val = min(min(data_imputed_stats),min(data_reference_stats))
+                        max_val = max(max(data_imputed_stats),max(data_reference_stats))
+                        range_val = max_val - min_val
                 
-                        # remove datapoints which were NaN in the original data
-                        data_imputed   = data_imputed[data_reference.notna()] 
-                        data_reference = data_reference[data_reference.notna()] 
-                
-                        # calculate the Mean Square Error
-                        #mserror = mse(data_reference,data_imputed)
-                
-                        # plot scatter
+                        k_corr, k_pval = stats.kendalltau(data_reference_stats,data_imputed_stats)
+                        s_corr, s_pval = stats.spearmanr(data_reference_stats,data_imputed_stats)
+                        p_corr, p_pval = stats.pearsonr(data_reference_stats,data_imputed_stats)
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference_stats,data_imputed_stats)
+                        daily_stat_dataset.loc[(site,spc,stat),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
+                        
+
+                        impute_string = '{}_{} (imputed)'.format(spc,stat)
                         data_combined = pd.DataFrame()
-                        data_combined['{}_{}'.format(spc,stat)] = data_reference
-                        data_combined['{}_{} (imputed)'.format(spc,stat)] = data_imputed
+                        data_combined['{}_{}'.format(spc,stat)] = data_reference_stats
+                        data_combined[impute_string] = data_imputed_stats
                 
-                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y='{}_{} (imputed)'.format(spc,stat))
+                        sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string, kind="reg")
+                        sns_plot.ax_joint.plot(data_combined[impute_string],data_combined[impute_string], 'r-', linewidth=1)
+                        sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                        sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                        sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
                         pdf_pages.savefig(sns_plot.fig)
                         plt.close()
+
+                        for ind in range(length_ranges-1):
+                        
+                            # keep only the data which has been imputed
+                            data_imputed_internal   = data_imputed[flag_imputed>fill_ranges[ind]]
+                            data_reference_internal = data_reference[flag_imputed>fill_ranges[ind]]
+                            flag_imputed_internal = flag_imputed[flag_imputed>fill_ranges[ind]]
+                            
+                            data_imputed_internal   = data_imputed_internal[flag_imputed_internal<=fill_ranges[ind+1]]
+                            data_reference_internal = data_reference_internal[flag_imputed_internal<=fill_ranges[ind+1]]
+                            
+                
+                            if not data_imputed_internal.empty:
+                                # plot scatter
+                                impute_string = '{}_{} (imputed, range {}-{})'.format(spc,stat,fill_ranges[ind],fill_ranges[ind+1])
+                                data_combined = pd.DataFrame()
+                                data_combined['{}_{}'.format(spc,stat)] = data_reference_internal
+                                data_combined[impute_string] = data_imputed_internal
+                
+                                sns_plot = sns.jointplot(data=data_combined,x='{}_{}'.format(spc,stat),y=impute_string,kind="reg")
+                                sns_plot.ax_joint.plot(data_combined[impute_string],data_combined[impute_string], 'r-', linewidth=1)
+                                sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
+                                sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
+                                sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+                                pdf_pages.savefig(sns_plot.fig)
+                                plt.close()
+
+
+        daily_stat_dataset.to_csv('aurn_daily_correlation_stats.csv', index=True, header=True, float_format='%.4f')
 
 
 

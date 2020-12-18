@@ -36,6 +36,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         DEFAULT_IMPUTER_ESTIMATOR = BayesianRidge()
     except:
         DEFAULT_IMPUTER_ESTIMATOR = None
+    DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION = 'normal'
     DEFAULT_TRANSFORMER_METHOD = 'box-cox'
     DEFAULT_TRANSFORMER_STANDARDIZE = False
 
@@ -67,7 +68,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
     @PostProcessor.transformer.setter
     def transformer(self, transformer):
-        if transformer is None or type(transformer).__name__ == 'PowerTransformer':
+        if transformer is None or type(transformer).__name__ in ['QuantileTransformer','PowerTransformer']:
             self._transformer = transformer
         else:
             raise ValueError('Error setting transformer, incorrect object type: {}'.format(type(transformer).__name__))
@@ -86,24 +87,30 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
 
     def impute_method_setup(self, random_state=DEFAULT_IMPUTER_RANDOM_STATE, add_indicator=DEFAULT_IMPUTER_ADD_INDICATOR,
-                 initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
-                 max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
-                 transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
-        """ Initialises the IterativeImputer and PowerTransformer methods required if missing data is to be imputed.
-            Parameters are passed to the sklearn routines. For further documentation on how these functions work, 
-            and what the parameters denote, please refer to the sklearn documentation.
+                initial_strategy=DEFAULT_IMPUTER_INITIAL_STRATEGY,
+                max_iter=DEFAULT_IMPUTER_MAX_ITER, estimator=DEFAULT_IMPUTER_ESTIMATOR,
+                output_distribution=DEFAULT_TRANSFORMER_OUTPUT_DISTRIBUTION,
+                transformer_method=DEFAULT_TRANSFORMER_METHOD, transformer_standardize=DEFAULT_TRANSFORMER_STANDARDIZE):
+        """ Initialises the IterativeImputer, QuantileTransformer and PowerTransformer methods required 
+            if missing data is to be imputed.
+            
+            Parameters are passed to the sklearn routines. Where this is being done it is noted below. 
+            For further documentation on how these functions work, and what the parameters denote, 
+            please refer to the sklearn documentation.
 
-            IterativeImputer: https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
-            PowerTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
+            IterativeImputer:    https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html
+            QuantileTransformer: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
+            PowerTransformer:    https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html
             
             Args:
-                random_state:           (int) (IterativeImputer) seed for pseudo random number generator
+                random_state:           (int) (IterativeImputer & QuantileTransformer) seed for pseudo random number generator
                 add_indicator:          (boolean) (IterativeImputer) if True adds a `MissingIndicator` transform to the stack
                 initial_strategy:       (str) (IterativeImputer) define strategy to use for initialising missing values
                 max_iter:               (int) (IterativeImputer) maximum number of imputation rounds to perform
                 estimator:              (str) (IterativeImputer) estimator method to be used
-                transformer_standardize:(boolean) (PowerTransformer) apply zero-mean, unit-variance normalization
-                transformer_method:     (str) (PowerTransformer) power transform method to use
+                output_distribution:    (str) (QuantileTransformer) Marginal distribution for the transformed data
+                transformer_method      (str) (PowerTransformer) method to use, 'box-cox' is default
+                transformer_standardize (boolean) (PowerTransformer) select if zero-mean, unit-variance normalisation is applied, default is True
 
              Returns: None
         """
@@ -113,8 +120,13 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                         initial_strategy=initial_strategy, max_iter=max_iter, verbose=self.verbose,
                                         estimator=estimator)
 
+
         # set the power transform options
-        self.transformer = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
+        self.transformer_quantile = preprocessing.QuantileTransformer(output_distribution=output_distribution,
+                                                             random_state=random_state)
+
+        # set the power transform options
+        self.transformer_power = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
 
 
 
@@ -473,6 +485,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                     SO2_flag      (int):
         """
 
+        transformer = self.transformer_quantile
+
         output_dataframe = pd.DataFrame()
         date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
 
@@ -527,7 +541,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                         emep_dataframe_internal[emep_dataframe_internal['SiteID'] == site][spc]
 
             # run the imputation process
-            imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe)
+            imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe,transformer=transformer)
 
             # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
             for spc in spc_list:
@@ -610,7 +624,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
         return(output_dataframe)
 
-    def transform_and_impute_data(self, df_in):
+    def transform_and_impute_data(self, df_in, transformer):
         """
         Function for organising the transformation of the dataset, then imputing missing
         data, before detransforming the data and returning it.
@@ -643,7 +657,12 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                     NO2_[siteID]      (float):
                     NOXasNO2_[siteID] (float):
                     SO2_[siteID]      (float):
-             
+            transformer: the transform function to use, passed so that we can chose based
+                         on the variable being operated on
+
+        Uses:
+            self.imputer
+
         Returns:
             df_out: pandas dataframe, containing the same datasets as above, but including
                     the imputed data too. All imputed data is included (including that for
@@ -670,9 +689,9 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         if self.verbose > 2: print('df_work input to power transformer: \n {}'.format(df_work))
         # power transformer fitting and transforming
-        self.transformer.fit(df_work.dropna())
+        transformer.fit(df_work.dropna())
         if self.verbose > 2: print('Power transformer: Completed data fitting. Beginning power transformation')
-        np_out = self.transformer.transform(df_work)
+        np_out = transformer.transform(df_work)
         if self.verbose > 2: print('Power transformer: Completed transformation. Beginning imputation')
 
         # impute the missing values in this new dataframe
@@ -682,7 +701,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         if self.verbose > 2: print('Imputer Completed transformation. Beginning inverse transformation')
 
         # apply the inverse transformation for our datasets (leaving out the indicator flags)
-        np_inv = self.transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
+        np_inv = transformer.inverse_transform(imp_out[:, :np_out.shape[1]])
         if self.verbose > 2: print('Imputer Completed inverse transformation. Beginning copying and tranforming values')
 
         # copy the transformed values to a new dataframe
