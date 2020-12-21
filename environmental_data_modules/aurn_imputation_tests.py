@@ -30,6 +30,9 @@ class AurnImputationTest(AurnPostProcessor):
     DEFAULT_DATA_LOSS_POSITION = 'end'
     DEFAULT_CHECK_SITES = False
     
+    BASE_IMPUTED_STATS_PDF_FILE = '{}/{}_{}_imputed_comparison.pdf'
+    BASE_IMPUTED_STATS_CSV_FILE = '{}/aurn_{}_correlation_stats.csv'
+    DEFAULT_FLOAT_FORMAT = '%.4f'
     
     def __init__(self, metadata_filename=AurnPostProcessor.DEFAULT_METADATA_FILE, metadata_url=AurnPostProcessor.DEFAULT_METADATA_URL,
                  out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=AurnPostProcessor.DEFAULT_VERBOSE):
@@ -160,6 +163,9 @@ class AurnImputationTest(AurnPostProcessor):
         self.check_sites = check_sites
         self.station_data = self.metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
         if self.verbose > 1: print('Station data: \n {}'.format(self.station_data))
+        self.pdf_file_string = AurnImputationTest.BASE_IMPUTED_STATS_PDF_FILE
+        self.csv_file_string = AurnImputationTest.BASE_IMPUTED_STATS_CSV_FILE
+        self.float_format = AurnImputationTest.DEFAULT_FLOAT_FORMAT
 
 
         # load and prepare the hourly dataset
@@ -494,7 +500,7 @@ class AurnImputationTest(AurnPostProcessor):
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
-            with PdfPages('{}_hourly_imputed_comparison.pdf'.format(site)) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'hourly')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -542,7 +548,7 @@ class AurnImputationTest(AurnPostProcessor):
                     plt.close()
                     
         
-        hourly_stat_dataset.to_csv('aurn_hourly_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'hourly'), index=True, header=True, float_format=self.float_format)
 
 
     def imputation_daily_analysis(self,daily_imputed_dataframe,daily_reference_dataframe,site_list_internal):
@@ -614,7 +620,7 @@ class AurnImputationTest(AurnPostProcessor):
         for site in site_list_internal:
             site_string = "{} [AQ]".format(site)
             print('working on site: {}'.format(site))
-            with PdfPages('{}_daily_imputed_comparison.pdf'.format(site)) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'daily')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -691,7 +697,7 @@ class AurnImputationTest(AurnPostProcessor):
                                 plt.close()
 
 
-        daily_stat_dataset.to_csv('aurn_daily_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+        daily_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'daily'), index=True, header=True, float_format=self.float_format)
 
 
 
