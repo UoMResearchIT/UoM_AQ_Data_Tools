@@ -36,6 +36,9 @@ class MetImputationTest(MetPostProcessor):
     DEFAULT_CHECK_SITES = False
     DEFAULT_SITE_LIST = None
     
+    BASE_IMPUTED_STATS_PDF_FILE = '{}/{}_{}_imputed_comparison.pdf'
+    BASE_IMPUTED_STATS_CSV_FILE = '{}/met_{}_correlation_stats.csv'
+    DEFAULT_FLOAT_FORMAT = '%.4f'
 
 
     def __init__(self, out_dir=MetPostProcessor.DEFAULT_OUT_DIR, station_data_filename=MetPostProcessor.DEFAULT_STATION_DATA_FILENAME,
@@ -188,6 +191,10 @@ class MetImputationTest(MetPostProcessor):
         self.check_sites = check_sites
         if site_list:
             self.site_list = [int(x) for x in site_list]
+        self.pdf_file_string = MetImputationTest.BASE_IMPUTED_STATS_PDF_FILE
+        self.csv_file_string = MetImputationTest.BASE_IMPUTED_STATS_CSV_FILE
+        self.float_format = MetImputationTest.DEFAULT_FLOAT_FORMAT
+
 
 
         print('checking validity of and loading met data file')
@@ -677,7 +684,7 @@ class MetImputationTest(MetPostProcessor):
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
-            with PdfPages('{}_hourly_imputed_comparison.pdf'.format(site)) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'hourly')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -727,7 +734,7 @@ class MetImputationTest(MetPostProcessor):
                     
                     
         
-        hourly_stat_dataset.to_csv('met_hourly_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'hourly'), index=True, header=True, float_format=self.float_format)
         
 
 
@@ -800,7 +807,7 @@ class MetImputationTest(MetPostProcessor):
         for site in site_list_internal:
             site_string = "{} [WEATHER]".format(site)
             print('working on site: {}'.format(site))
-            with PdfPages('{}_daily_imputed_comparison.pdf'.format(site)) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'daily')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -876,4 +883,4 @@ class MetImputationTest(MetPostProcessor):
 
                         
 
-        daily_stat_dataset.to_csv('met_daily_correlation_stats.csv', index=True, header=True, float_format='%.4f')
+        daily_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'daily'), index=True, header=True, float_format=self.float_format)
