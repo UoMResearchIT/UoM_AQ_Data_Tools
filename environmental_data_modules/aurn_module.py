@@ -16,13 +16,15 @@ class AurnModule(object):
 
     SPECIES_LIST_EXTRACTED = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
     INDEX_EXTRACTED = 'index'
-    SITE_ID_EXTRACTED = 'siteID'
+#    SITE_ID_EXTRACTED = 'siteID'
     SITE_ID_AURN_METADATA = 'site_id'
     DATE_EXTRACTED = 'date'
 
-    SITE_ID_NEW = 'SiteID'
-    DATE_NEW = 'Date'
-    NEW_FILE_COLS = [DATE_NEW, SITE_ID_NEW] + SPECIES_LIST_EXTRACTED
+#    SITE_ID_NEW = 'SiteID'
+#    DATE_NEW = 'Date'
+    TIMESTAMP_STRING = 'timestamp'
+    SITE_STRING = 'site_id'
+    NEW_FILE_COLS = [TIMESTAMP_STRING, SITE_STRING] + SPECIES_LIST_EXTRACTED
 
     # Define defaults
     DEFAULT_METADATA_FILE = "AURN_metadata.RData"

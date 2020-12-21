@@ -79,7 +79,6 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data(save_to_csv)
-        hourly_dataframe = hourly_dataframe.rename(columns={AurnModule.SITE_ID_EXTRACTED: AurnModule.SITE_ID_NEW})
 
         # apply some filtering of negative and zero values
 
@@ -130,7 +129,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         for site in self._site_list:
 
             # select our subset of metadata for this station
-            subset_df = self.metadata['AURN_metadata'][self.metadata['AURN_metadata'].site_id == site]
+            subset_df = self.metadata['AURN_metadata'][self.metadata['AURN_metadata'][AurnModule.SITE_ID_AURN_METADATA] == site]
             station_name = subset_df['site_name'].values[0]
 
             print("processing site {} ({})".format(site, station_name))
@@ -269,9 +268,9 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         """
 
         final_dataframe = pd.concat(downloaded_site_data, axis=0, ignore_index=True)
-        final_dataframe[AurnModule.DATE_NEW] = pd.to_datetime(final_dataframe['date'])
-        final_dataframe.drop(columns=['date'], inplace=True)
-        final_dataframe = final_dataframe.sort_values(by=AurnModule.DATE_NEW, ascending=True)
+        final_dataframe[AurnModule.TIMESTAMP_STRING] = pd.to_datetime(final_dataframe[AurnModule.DATE_EXTRACTED])
+        final_dataframe.drop(columns=[AurnModule.DATE_EXTRACTED], inplace=True)
+        final_dataframe = final_dataframe.sort_values(by=AurnModule.TIMESTAMP_STRING, ascending=True)
 
         return final_dataframe
 
@@ -306,12 +305,12 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                         NOXasNO2 (float):
                         SO2      (float):
         """
-        columns_of_interest = [AurnModule.DATE_NEW] + AurnExtractor.SPECIES_LIST_EXTRACTED
+        columns_of_interest = [AurnModule.TIMESTAMP_STRING] + AurnExtractor.SPECIES_LIST_EXTRACTED
         ds_columns = hourly_dataframe.columns
 
         # retain the data we are interested in (as not all datasets have all variables)
         columns_to_retain = set(columns_of_interest) & set(ds_columns)
         working_dataframe = hourly_dataframe[columns_to_retain].copy()
-        working_dataframe.loc[:, AurnModule.SITE_ID_EXTRACTED] = site_name
+        working_dataframe.loc[:, AurnModule.SITE_STRING] = site_name
 
         return working_dataframe
