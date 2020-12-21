@@ -268,9 +268,9 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         """
 
         final_dataframe = pd.concat(downloaded_site_data, axis=0, ignore_index=True)
-        final_dataframe[AurnModule.TIMESTAMP_STRING] = pd.to_datetime(final_dataframe[AurnModule.DATE_EXTRACTED])
+        final_dataframe[self._timestamp_string] = pd.to_datetime(final_dataframe[AurnModule.DATE_EXTRACTED])
         final_dataframe.drop(columns=[AurnModule.DATE_EXTRACTED], inplace=True)
-        final_dataframe = final_dataframe.sort_values(by=AurnModule.TIMESTAMP_STRING, ascending=True)
+        final_dataframe = final_dataframe.sort_values(by=self._timestamp_string, ascending=True)
 
         return final_dataframe
 
@@ -305,12 +305,12 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                         NOXasNO2 (float):
                         SO2      (float):
         """
-        columns_of_interest = [AurnModule.TIMESTAMP_STRING] + AurnExtractor.SPECIES_LIST_EXTRACTED
+        columns_of_interest = [self._timestamp_string] + AurnExtractor.SPECIES_LIST_EXTRACTED
         ds_columns = hourly_dataframe.columns
 
         # retain the data we are interested in (as not all datasets have all variables)
         columns_to_retain = set(columns_of_interest) & set(ds_columns)
         working_dataframe = hourly_dataframe[columns_to_retain].copy()
-        working_dataframe.loc[:, AurnModule.SITE_STRING] = site_name
+        working_dataframe.loc[:, self._site_string] = site_name
 
         return working_dataframe

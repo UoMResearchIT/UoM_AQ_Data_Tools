@@ -44,6 +44,8 @@ class AurnModule(object):
                 Initialised instance of subclass of MetModule
 
         """
+        self._timestamp_string = AurnModule.TIMESTAMP_STRING
+        self._site_string = AurnModule.SITE_STRING
         self._metadata = self.load_metadata(metadata_filename, metadata_url)
         self._site_list = AurnModule.DEFAULT_SITE_LIST
 
