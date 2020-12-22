@@ -290,8 +290,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
 
         #### group by date and site
-        daily_grouped_data = hourly_dataframe.groupby([pd.Grouper(level="Date", freq='1D'), 'SiteID'])
-        spc_list = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2'] # TODO Doug - make this check database columns! 
+        daily_grouped_data = hourly_dataframe.groupby([pd.Grouper(level=self._timestamp_string, freq='1D'), self._site_string])
+        spc_list = self.species_list
         
         
         #### loop by spc through grouped data, and calculate the mean, max, and flag values
@@ -309,8 +309,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         final_dataframe.index = final_dataframe.index.set_levels(
                     ['{} [AQ]'.format(x) for x in final_dataframe.index.levels[1]], level=1)
 
-        #### rename the index columns
-        final_dataframe.index.rename(['time_stamp', 'sensor_name'], inplace=True)
 
         #### return output dataframe
         return(final_dataframe)
@@ -342,7 +340,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                            sep=',',
                                            usecols=[AurnModule.INDEX_EXTRACTED].append(AurnModule.NEW_FILE_COLS),
                                            index_col=AurnModule.INDEX_EXTRACTED,
-                                           parse_dates=['Date'])
+                                           parse_dates=[self._timestamp_string])
         except Exception as err:
             raise ValueError('Unable to read Met extracted data file {}. {}'.format(file_in, err))
 
@@ -417,7 +415,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         
         """
         print('    get the lists of required and reference stations for each measurement variable')
-        tempgroups = data_in.groupby(['SiteID', pd.Grouper(key='Date', freq='1D')])
+        tempgroups = data_in.groupby([self._site_string, pd.Grouper(key=self._timestamp_string, freq='1D')])
         daily_hour_counts = tempgroups.count()
         spc_list = daily_hour_counts.columns.values
         
@@ -438,7 +436,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         # get a list of all sites which are required for at least one measurement set
         combined_req_site_list = list(dict.fromkeys(combined_req_site_list))
-        data_filtered = data_in[data_in['SiteID'].isin(combined_req_site_list)]
+        data_filtered = data_in[data_in[self._site_string].isin(combined_req_site_list)]
 
         return data_filtered, reference_sites, required_sites, combined_req_site_list
 
@@ -488,14 +486,15 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         transformer = self.transformer_quantile
 
         output_dataframe = pd.DataFrame()
-        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name=self._timestamp_string)
 
         # Set the number of reference stations to request
-        ref_station_numbers = [len(reference_sites[x]) for x in reference_sites.keys()] 
-        station_number = min([5] + [len(ref_station_numbers) - 1])
+        ref_station_numbers = [len(reference_sites[x]) for x in reference_sites.keys()]
+        print(ref_station_numbers)
+        station_number = min([5] + [x - 1 for x in ref_station_numbers])
         
-        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
-        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index(self._timestamp_string)
+        spc_list = self.species_list
 
 
         if not self._emep_data.empty:
@@ -515,9 +514,9 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             # copy these to a new dataframe
             working_hourly_dataframe = pd.DataFrame([], index=date_index)
             working_hourly_dataframe[req_spc] = \
-                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][req_spc]
+                hourly_dataframe_internal[hourly_dataframe_internal[self._site_string] == site][req_spc]
             copy_hourly_dataframe = working_hourly_dataframe.copy()
-            copy_hourly_dataframe['SiteID'] = site
+            copy_hourly_dataframe[self._site_string] = site
 
             # get list of neighbouring sites for each of the chemical species of interest
             for spc in spc_list:
@@ -530,7 +529,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                     if self.verbose > 1: print('7. ii', ii)
                     station_code = station_distances.index[ii]
                     working_hourly_dataframe['{}_{}'.format(spc, station_code)] = \
-                        hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == station_code][spc]
+                        hourly_dataframe_internal[hourly_dataframe_internal[self._site_string] == station_code][spc]
 
             # get EMEP predictions of chemical species of interest (if needed)
             if self.verbose > 1: print('EMEP data: {}'.format(self._emep_data))
@@ -538,7 +537,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 if self.verbose > 0: print('Using EMEP data')
                 for spc in spc_list:
                     working_hourly_dataframe['{}_{}'.format(spc, 'EMEP')] = \
-                        emep_dataframe_internal[emep_dataframe_internal['SiteID'] == site][spc]
+                        emep_dataframe_internal[emep_dataframe_internal[self._site_string] == site][spc]
 
             # run the imputation process
             imputed_hourly_dataframe = self.transform_and_impute_data(working_hourly_dataframe,transformer=transformer)
@@ -554,7 +553,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
             output_dataframe = output_dataframe.append(copy_hourly_dataframe)
 
-        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        output_dataframe = output_dataframe.reset_index().set_index([self._timestamp_string,self._site_string])
         return(output_dataframe)
 
     def organise_data(self, hourly_dataframe_filtered, site_list_internal): 
@@ -596,11 +595,11 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                     SO2_flag      (int):
         """
 
-        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name=self._timestamp_string)
         output_dataframe = pd.DataFrame()
 
-        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
-        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index(self._timestamp_string)
+        spc_list = self.species_list
 
         if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
         for site in site_list_internal:
@@ -608,11 +607,11 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
             # create new dataframe, with the dates that we are interested in
             working_hourly_dataframe = pd.DataFrame([], index=date_index)
-            working_hourly_dataframe['SiteID'] = site
+            working_hourly_dataframe[self._site_string] = site
 
             # copy these to a new dataframe
             working_hourly_dataframe[spc_list] = \
-                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][spc_list]
+                hourly_dataframe_internal[hourly_dataframe_internal[self._site_string] == site][spc_list]
 
             # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
             for spc in spc_list:
@@ -621,7 +620,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             # append data to the output dataframe
             output_dataframe = output_dataframe.append(working_hourly_dataframe)
 
-        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        output_dataframe = output_dataframe.reset_index().set_index([self._timestamp_string,self._site_string])
         return(output_dataframe)
 
     def transform_and_impute_data(self, df_in, transformer):

@@ -47,7 +47,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                      years=DateYearsProcessor.get_available_years(),
                      site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
-                     outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX):
+                     outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX,
+                     species_list=AurnPostProcessor.SPECIES_LIST_EXTRACTED):
         """ Extracts the AURN data for the given years and sites from the Rdata files
             downloaded from the AURN server.
 
@@ -76,13 +77,14 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
         self.years = years
         self.site_list = site_list
+        self.species_list = species_list
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data(save_to_csv)
 
         # apply some filtering of negative and zero values
 
-        for species in AurnExtractor.SPECIES_LIST_EXTRACTED:
+        for species in self.species_list:
             print('filtering {}:'.format(species))
             try:
                 print('\t{} has {} positive values'.format(species,
@@ -305,7 +307,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                         NOXasNO2 (float):
                         SO2      (float):
         """
-        columns_of_interest = [self._timestamp_string] + AurnExtractor.SPECIES_LIST_EXTRACTED
+        columns_of_interest = [self._timestamp_string] + self.species_list
         ds_columns = hourly_dataframe.columns
 
         # retain the data we are interested in (as not all datasets have all variables)
