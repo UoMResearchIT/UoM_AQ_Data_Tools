@@ -96,6 +96,9 @@ if __name__ == '__main__':
     parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
                         help="suffix to be appended to output file name. Default: {}".format(
                             AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
+    parser.add_argument("--statdir_name", dest="statdir_name", type=str,
+                        help="output directory name. Default: {}".format('./'))
+
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
             help="Level of output for debugging (Default: {} (0 = no verbose output))".format(
@@ -194,6 +197,14 @@ if __name__ == '__main__':
         print('No outdir_name given, so will use default: {}'.format(AurnExtractor.DEFAULT_OUT_DIR))
         outdir_name = AurnExtractor.DEFAULT_OUT_DIR
 
+    if args.statdir_name:
+        statdir_name = args.statdir_name
+        print('Using statdir_name: {}'.format(statdir_name))
+    else:
+        print('No statdir_name given, so will use default: {}'.format('./'))
+        outdir_name = './'
+
+
     if args.outfile_suffix:
         outfile_suffix = args.outfile_suffix
         print('Using outfile_suffix: {}'.format(outfile_suffix))
@@ -216,7 +227,8 @@ if __name__ == '__main__':
 
     processor = AurnImputationTest(metadata_filename=metadata_filename,
                                   metadata_url=metadata_url,
-                                  out_dir=outdir_name, verbose=verbose)
+                                  out_dir=outdir_name, verbose=verbose,
+                                  stat_dir=statdir_name)
     
     processor.impute_method_setup()
     
