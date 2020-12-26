@@ -34,7 +34,6 @@ def load_sites_and_obtain_their_grid_locations(wrf_in,sensors_file,sensor_file_t
     elif(sensor_file_type == 'RDATA'):
         metadata = pyreadr.read_r(sensors_file.as_posix())
         sens = metadata['AURN_metadata'][['site_id','latitude','longitude']].drop_duplicates() 
-        sens = sens.rename(columns={'site_id':'sensor_name','latitude':'lat','longitude':'long'})
     else:
         print('Sensor file type not recognised: {}'.format(sensor_file_type))
         print('Should be CSV or RDATA, please amend as appropriate.')
@@ -42,7 +41,7 @@ def load_sites_and_obtain_their_grid_locations(wrf_in,sensors_file,sensor_file_t
 
     # get the indexes from the wrf file
     with salem.open_wrf_dataset(wrf_in) as ds:
-        sens['iarray'],sens['jarray'] = ds.salem.grid.transform(sens['long'],sens['lat'],nearest=True)
+        sens['iarray'],sens['jarray'] = ds.salem.grid.transform(sens['longitude'],sens['latitude'],nearest=True)
 
     #%% check to make sure that all stations are within our model domain - drop those that aren't
     if any(sens['iarray']>ds.dims['west_east']) or any(sens['jarray']>ds.dims['south_north']):
@@ -61,7 +60,7 @@ def create_daily_dataframe_for_sites(emep_ds,sens):
     dates = emep_ds.time.groupby("time.dayofyear").min()[emep_ds.time.groupby("time.dayofyear").count()==24].values     
 
     # get the list of sites from the sensor data
-    sensor_list = sens.sensor_name
+    sensor_list = sens['site_id']
 
     ### create dataframe for storing model data
     #     this will start off with the format:
@@ -69,7 +68,7 @@ def create_daily_dataframe_for_sites(emep_ds,sens):
     # columns: [SPC Daily Mean] [SPC Daily Max]
 
     arrays = [dates,sensor_list]
-    name_strings = ['Date','SiteID']
+    name_strings = ['timestamp','site_id']
     dsind = pd.MultiIndex.from_product(arrays,names=name_strings)
 
     col_strings = ['NO2_mean','NO2_max','SO2_mean','SO2_max','NOx_mean','NOx_max','PM2.5_mean','PM2.5_max','PM10_mean','PM10_max']
@@ -85,7 +84,7 @@ def create_full_dataframe_for_sites(emep_ds,sens):
     dates = emep_ds.time.values     
 
     # get the list of sites from the sensor data
-    sensor_list = sens.sensor_name
+    sensor_list = sens['site_id']
 
     ### create dataframe for storing model data
     #     this will start off with the format:
@@ -93,7 +92,7 @@ def create_full_dataframe_for_sites(emep_ds,sens):
     # columns: [SPC]
 
     arrays = [dates,sensor_list]
-    name_strings = ['Date','SiteID']
+    name_strings = ['timestamp','site_id']
     dsind = pd.MultiIndex.from_product(arrays,names=name_strings)
 
     col_strings = ['NO2','SO2','NOx','PM2.5','PM10']
@@ -134,11 +133,11 @@ def calc_daily_data(model_data,NO2_data,NOX_data,SO2_data,O3_data,PM25_data,PM10
 
     # loop through sites, and dates of interest, to extract the required data
     for siteID, temp_df in model_data.groupby(level=1):
-        i_index = sens[sens.sensor_name==siteID].iarray.values[0]
-        j_index = sens[sens.sensor_name==siteID].jarray.values[0]
+        i_index = sens[sens['site_id']==siteID].iarray.values[0]
+        j_index = sens[sens['site_id']==siteID].jarray.values[0]
 
 
-        for t_index,dstamp in enumerate(temp_df.index.get_level_values(level='Date')):
+        for t_index,dstamp in enumerate(temp_df.index.get_level_values(level='timestamp')):
             model_data.loc[(dstamp,siteID)]['NO2_mean'] = mean_NO2[t_index,j_index,i_index].values
             model_data.loc[(dstamp,siteID)]['NO2_max']  = max_NO2[t_index,j_index,i_index].values
             model_data.loc[(dstamp,siteID)]['NOx_mean'] = mean_NOX[t_index,j_index,i_index].values
@@ -163,8 +162,8 @@ def calc_full_data(model_data,NO2_data,NOX_data,SO2_data,O3_data,PM25_data,PM10_
 
     # loop through sites, and dates of interest, to extract the required data
     for siteID  in model_data.index.levels[0]:
-        i_index = sens[sens.sensor_name==siteID].iarray.values[0]
-        j_index = sens[sens.sensor_name==siteID].jarray.values[0]
+        i_index = sens[sens['site_id']==siteID].iarray.values[0]
+        j_index = sens[sens['site_id']==siteID].jarray.values[0]
 
         model_data.loc[(siteID,),'NO2']   = NO2_data[:,j_index,i_index].values
         model_data.loc[(siteID,),'NOx']   = NOX_data[:,j_index,i_index].values
