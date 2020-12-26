@@ -4,9 +4,9 @@
 SENSOR="./AURN_metadata.RData"
 SENSORTYPE="RDATA"
 
-WRF="../WRF_UK/2017/wrfout_d01_2017-05-25_00:00:00"
+WRF="../../../WRF_UK/2017/wrfout_d01_2017-05-25_00:00:00"
 
-EMEP="../EMEP_UK/Base_hourInst_JanFeb2016.nc"
+EMEP="../../../EMEP_UK/Base_hourInst_JanFeb2016.nc"
 
 
 # Extracting Daily Mean / Max Data
