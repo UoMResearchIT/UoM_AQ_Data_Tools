@@ -499,7 +499,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         if not self._emep_data.empty:
             if self.verbose > 0: print('Loading EMEP data')
-            emep_dataframe_internal = self._emep_data.set_index('Date')
+            emep_dataframe_internal = self._emep_data.set_index(self._timestamp_string)
 
         if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
         for site in site_list_internal:

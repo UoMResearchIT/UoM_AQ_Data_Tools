@@ -37,7 +37,7 @@ class AurnImputationTest(AurnPostProcessor):
     DEFAULT_FLOAT_FORMAT = '%.4f'
     
     def __init__(self, metadata_filename=AurnPostProcessor.DEFAULT_METADATA_FILE, metadata_url=AurnPostProcessor.DEFAULT_METADATA_URL,
-                 out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=AurnPostProcessor.DEFAULT_VERBOSE, stat_dir=AurnImputationTest.DEFAULT_STAT_DIR):
+                 out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=AurnPostProcessor.DEFAULT_VERBOSE, stat_dir=DEFAULT_STAT_DIR):
         """ Initialise instance of the AurnImputationTest class.
             Initialises the private class variables
 

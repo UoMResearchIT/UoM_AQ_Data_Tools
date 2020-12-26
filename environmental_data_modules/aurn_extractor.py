@@ -48,7 +48,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                      site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
                      outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX,
-                     species_list=AurnPostProcessor.SPECIES_LIST_EXTRACTED):
+                     species_list=AurnModule.SPECIES_LIST_EXTRACTED):
         """ Extracts the AURN data for the given years and sites from the Rdata files
             downloaded from the AURN server.
 
