@@ -122,9 +122,16 @@ ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST} -
 SCEN_TAIL="_random_with_EMEP"
 run_analysis
 
-### with EMEP data
+### with 1/2 data loss at start of period
 DATA_LOSS_POS='start'
 DATA_LOST='0.5'
 ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
 SCEN_TAIL="_startloss"
+run_analysis
+
+### with EMEP data and 1/2 data loss at start of period
+DATA_LOSS_POS='start'
+DATA_LOST='0.5'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST} --emep_filename ${EMEP_FILE}"
+SCEN_TAIL="_startloss_with_EMEP"
 run_analysis
