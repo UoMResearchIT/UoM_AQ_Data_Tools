@@ -65,6 +65,23 @@ class MetImputationTest(MetPostProcessor):
         self.stat_dir = stat_dir
 
     @property
+    def stat_dir(self):
+        return self.__stat_dir
+
+    @stat_dir.setter
+    def stat_dir(self, dir_name):
+        try:
+            dir_name = str(dir_name)
+        except ValueError as err:
+            raise err
+        try:
+            os.makedirs(dir_name)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise ValueError("Directory name {} cannot be created.".format(dir_name))
+        self.__stat_dir = dir_name
+
+    @property
     def data_lost(self):
         return self._data_lost
     
