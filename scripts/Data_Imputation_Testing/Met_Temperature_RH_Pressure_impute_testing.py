@@ -24,6 +24,11 @@ import sys
 sys.path.append("../..")
 from pathlib import Path
 
+#import readline # optional, will allow Up/Down/History in the console
+#import code
+
+from IPython import embed
+
 from environmental_data_modules import MetImputationTest
 
 
@@ -48,6 +53,9 @@ if __name__ == '__main__':
     parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
                         help="suffix to be appended to output file name. Default: '{}'".format(
                             MetImputationTest.DEFAULT_OUT_FILE_SUFFIX))
+    parser.add_argument("--statdir_name", dest="statdir_name", type=str,
+                        help="stat output directory name. Default: {}".format('./'))
+
 
     # input files
     parser.add_argument("--file_in", "-f", dest="file_in", type=str, help="name of input file. Required")
@@ -101,6 +109,10 @@ if __name__ == '__main__':
         tests then exit")
     parser.set_defaults(check_sites=False)
 
+    # control interactive analysis work
+    parser.add_argument("--interactive", dest="interactive", action='store_true', help="enter ipython interactive prompt for data analysis")
+    parser.set_defaults(interactive=False)
+
     ### Process inputs
     args = parser.parse_args()
 
@@ -141,6 +153,13 @@ if __name__ == '__main__':
     else:
         print('No outfile_suffix provided, so no suffix added')
         outfile_suffix = ''
+
+    if args.statdir_name:
+        statdir_name = args.statdir_name
+        print('Using statdir_name: {}'.format(statdir_name))
+    else:
+        print('No statdir_name given, so will use default: {}'.format('./'))
+        statdir_name = './'
 
     if args.date_range:
         if len(args.date_range) >= 2:
@@ -208,8 +227,10 @@ if __name__ == '__main__':
         print('No verbose flag provided, so using default: {}'.format(str(MetImputationTest.DEFAULT_VERBOSE)))
         verbose = MetImputationTest.DEFAULT_VERBOSE
 
-    post_processor = MetImputationTest(out_dir, station_data_filename=stations_filename, verbose=verbose)
+    post_processor = MetImputationTest(out_dir, station_data_filename=stations_filename, 
+                     stat_dir=statdir_name, verbose=verbose)
     post_processor.impute_method_setup()
+
     post_processor.imputation_test(file_in, outfile_suffix=outfile_suffix, date_range=date_range,
                                 exclude_site_list=exclude_site_list,
                                 min_temperature=min_temperature, reference_num_stations=reference_num_stations,
