@@ -77,6 +77,8 @@ if __name__ == '__main__':
         we are going to use as a reference site later. (this cannot be less than min_years)")
     parser.add_argument("--sites", "-i", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
+    parser.add_argument("--species", "-j", metavar='S', dest="species", type=str, nargs='+', help="the chemical species \
+        to be processed. Default is to process all in list: {}.".format(AurnPostProcessor.SPECIES_LIST_EXTRACTED))
     parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.set_defaults(save_to_csv=True)
@@ -162,6 +164,13 @@ if __name__ == '__main__':
     print('Save to csv: {}'.format(args.save_to_csv))
     print('Impute values: {}'.format(args.impute_values))
 
+    if args.species:
+        species_list = args.species
+        print('Species list: {}'.format(species_list))
+    else:
+        print('No species provided, so the default list of species in the processor')
+        species_list = AurnPostProcessor.SPECIES_LIST_EXTRACTED
+
     if args.outdir_name:
         outdir_name = args.outdir_name
         print('Using outdir_name: {}'.format(outdir_name))
@@ -199,6 +208,7 @@ if __name__ == '__main__':
                         date_range=date_range,
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
+                        species_list=species_list,
                         emep_filename=emep_filename,
                         min_years=min_years,
                         min_years_reference=min_years_ref,
