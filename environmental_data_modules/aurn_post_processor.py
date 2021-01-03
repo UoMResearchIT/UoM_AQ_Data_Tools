@@ -138,7 +138,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                 min_years=DEFAULT_MIN_YEARS,
                 impute_data=PostProcessor.DEFAULT_IMPUTE_DATA,
                 save_to_csv=PostProcessor.DEFAULT_SAVE_TO_CSV,
-                outfile_suffix=''):
+                outfile_suffix='',
+                species_list=AurnModule.SPECIES_LIST_EXTRACTED):
 
         """ Post process the data extracted from the AURN dataset, based on the parameters given.
             
@@ -197,6 +198,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         self._emep_data = self.load_emep_data(emep_filename)
         self.min_years = min_years
         self.min_years_reference = min_years_reference
+        self.species_list = species_list
         self.site_list = site_list
         self.station_data = self.metadata['AURN_metadata'][['site_id', 'latitude', 'longitude', 'site_name']]
         if self.verbose > 1: print('Station data: \n {}'.format(self.station_data))
