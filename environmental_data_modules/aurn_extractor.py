@@ -47,7 +47,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                      years=DateYearsProcessor.get_available_years(),
                      site_list=AurnModule.DEFAULT_SITE_LIST,
                      save_to_csv=DEFAULT_SAVE_TO_CSV,
-                     outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX):
+                     outfile_suffix=Extractor.DEFAULT_OUT_FILE_SUFFIX,
+                     species_list=AurnModule.SPECIES_LIST_EXTRACTED):
         """ Extracts the AURN data for the given years and sites from the Rdata files
             downloaded from the AURN server.
 
@@ -76,14 +77,14 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
         self.years = years
         self.site_list = site_list
+        self.species_list = species_list
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data(save_to_csv)
-        hourly_dataframe = hourly_dataframe.rename(columns={AurnModule.SITE_ID_EXTRACTED: AurnModule.SITE_ID_NEW})
 
         # apply some filtering of negative and zero values
 
-        for species in AurnExtractor.SPECIES_LIST_EXTRACTED:
+        for species in self.species_list:
             print('filtering {}:'.format(species))
             try:
                 print('\t{} has {} positive values'.format(species,
@@ -130,7 +131,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         for site in self._site_list:
 
             # select our subset of metadata for this station
-            subset_df = self.metadata['AURN_metadata'][self.metadata['AURN_metadata'].site_id == site]
+            subset_df = self.metadata['AURN_metadata'][self.metadata['AURN_metadata'][AurnModule.SITE_ID_AURN_METADATA] == site]
             station_name = subset_df['site_name'].values[0]
 
             print("processing site {} ({})".format(site, station_name))
@@ -269,9 +270,9 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         """
 
         final_dataframe = pd.concat(downloaded_site_data, axis=0, ignore_index=True)
-        final_dataframe[AurnModule.DATE_NEW] = pd.to_datetime(final_dataframe['date'])
-        final_dataframe.drop(columns=['date'], inplace=True)
-        final_dataframe = final_dataframe.sort_values(by=AurnModule.DATE_NEW, ascending=True)
+        final_dataframe[self._timestamp_string] = pd.to_datetime(final_dataframe[AurnModule.DATE_EXTRACTED])
+        final_dataframe.drop(columns=[AurnModule.DATE_EXTRACTED], inplace=True)
+        final_dataframe = final_dataframe.sort_values(by=self._timestamp_string, ascending=True)
 
         return final_dataframe
 
@@ -306,12 +307,12 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                         NOXasNO2 (float):
                         SO2      (float):
         """
-        columns_of_interest = [AurnModule.DATE_NEW] + AurnExtractor.SPECIES_LIST_EXTRACTED
+        columns_of_interest = [self._timestamp_string] + self.species_list
         ds_columns = hourly_dataframe.columns
 
         # retain the data we are interested in (as not all datasets have all variables)
         columns_to_retain = set(columns_of_interest) & set(ds_columns)
         working_dataframe = hourly_dataframe[columns_to_retain].copy()
-        working_dataframe.loc[:, AurnModule.SITE_ID_EXTRACTED] = site_name
+        working_dataframe.loc[:, self._site_string] = site_name
 
         return working_dataframe

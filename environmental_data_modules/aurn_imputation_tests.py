@@ -1,4 +1,5 @@
 try:
+    import os, errno
     from datetime import datetime
     import pandas as pd
     import numpy as np
@@ -29,13 +30,14 @@ class AurnImputationTest(AurnPostProcessor):
     DEFAULT_DATA_LOST = 0.5
     DEFAULT_DATA_LOSS_POSITION = 'end'
     DEFAULT_CHECK_SITES = False
+    DEFAULT_STAT_DIR = './'
     
     BASE_IMPUTED_STATS_PDF_FILE = '{}/{}_{}_imputed_comparison.pdf'
     BASE_IMPUTED_STATS_CSV_FILE = '{}/aurn_{}_correlation_stats.csv'
     DEFAULT_FLOAT_FORMAT = '%.4f'
     
     def __init__(self, metadata_filename=AurnPostProcessor.DEFAULT_METADATA_FILE, metadata_url=AurnPostProcessor.DEFAULT_METADATA_URL,
-                 out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=AurnPostProcessor.DEFAULT_VERBOSE):
+                 out_dir=AurnPostProcessor.DEFAULT_OUT_DIR, verbose=AurnPostProcessor.DEFAULT_VERBOSE, stat_dir=DEFAULT_STAT_DIR):
         """ Initialise instance of the AurnImputationTest class.
             Initialises the private class variables
 
@@ -54,8 +56,25 @@ class AurnImputationTest(AurnPostProcessor):
         self._data_lost = AurnImputationTest.DEFAULT_DATA_LOST
         self._data_loss_position = AurnImputationTest.DEFAULT_DATA_LOSS_POSITION
         self.check_sites = AurnImputationTest.DEFAULT_CHECK_SITES
-        self.species_list = AurnPostProcessor.SPECIES_LIST_EXTRACTED
         self.rng = np.random.RandomState(0)
+        self.stat_dir = stat_dir
+
+    @property
+    def stat_dir(self):
+        return self.__stat_dir
+
+    @stat_dir.setter
+    def stat_dir(self, dir_name):
+        try:
+            dir_name = str(dir_name)
+        except ValueError as err:
+            raise err
+        try:
+            os.makedirs(dir_name)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise ValueError("Directory name {} cannot be created.".format(dir_name))
+        self.__stat_dir = dir_name
 
     @property
     def data_lost(self):
@@ -251,7 +270,7 @@ class AurnImputationTest(AurnPostProcessor):
 
         # trim down the database to cover only stations which are references for at least one species
         combined_reference_site_list = list(dict.fromkeys(combined_reference_site_list))
-        hourly_dataframe_filtered = df_part_filtered[df_part_filtered['SiteID'].isin(combined_reference_site_list)]
+        hourly_dataframe_filtered = df_part_filtered[df_part_filtered[self._site_string].isin(combined_reference_site_list)]
 
         # get the list of required sites from what is available, and what was requested
         site_working_list = set(site_all).intersection(self.site_list)
@@ -273,6 +292,9 @@ class AurnImputationTest(AurnPostProcessor):
         reference_sites_out = {}
         for spc in self.species_list:
             reference_sites_out[spc] = [site for site in reference_sites[spc] if site not in site_working_list]
+            if len(reference_sites_out[spc]) == 0:
+                print('there are no reference sites for species {}, please set a reduced site list'.format(spc))
+                return pd.DataFrame(), [], [], []
 
         # success! return the filtered dataframe, and our lists of sites
         return hourly_dataframe_filtered, reference_sites_out, required_sites, site_working_list
@@ -322,11 +344,11 @@ class AurnImputationTest(AurnPostProcessor):
         reference_site_list = list(dict.fromkeys(reference_site_list))
         
         # create dataframe with reference sites only
-        hourly_dataframe_out = hourly_dataframe[hourly_dataframe['SiteID'].isin(reference_site_list)]
+        hourly_dataframe_out = hourly_dataframe[hourly_dataframe[self._site_string].isin(reference_site_list)]
         
         for site in site_list_internal:
             print('  filtering site {}'.format(site))
-            working_dataframe = hourly_dataframe[hourly_dataframe['SiteID']==site].copy()
+            working_dataframe = hourly_dataframe[hourly_dataframe[self._site_string]==site].copy()
             data_length = len(working_dataframe)
             print('index length is {}'.format(data_length))
             if self.data_loss_position == 'end':
@@ -402,11 +424,11 @@ class AurnImputationTest(AurnPostProcessor):
                     SO2_flag      (int):
         """
 
-        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name='Date')
+        date_index = pd.date_range(start=self.start, end=self.end, freq='1H', name=self._timestamp_string)
         output_dataframe = pd.DataFrame()
 
-        hourly_dataframe_internal = hourly_dataframe_filtered.set_index('Date')
-        spc_list = ['O3','PM10','PM2.5','NO2','NOXasNO2','SO2'] # TODO Doug - make this check database columns! 
+        hourly_dataframe_internal = hourly_dataframe_filtered.set_index(self._timestamp_string)
+        spc_list = self.species_list
 
         if self.verbose > 1: print('1. Site list internal: ', site_list_internal)
         for site in site_list_internal:
@@ -414,11 +436,11 @@ class AurnImputationTest(AurnPostProcessor):
 
             # create new dataframe, with the dates that we are interested in
             working_hourly_dataframe = pd.DataFrame([], index=date_index)
-            working_hourly_dataframe['SiteID'] = site
+            working_hourly_dataframe[self._site_string] = site
 
             # copy these to a new dataframe
             working_hourly_dataframe[spc_list] = \
-                hourly_dataframe_internal[hourly_dataframe_internal['SiteID'] == site][spc_list]
+                hourly_dataframe_internal[hourly_dataframe_internal[self._site_string] == site][spc_list]
 
             # copy imputed data of interest into copy of original dataframe (without EMEP and neighbouring sites)
             for spc in spc_list:
@@ -428,7 +450,7 @@ class AurnImputationTest(AurnPostProcessor):
             # append data to the output dataframe
             output_dataframe = output_dataframe.append(working_hourly_dataframe)
 
-        output_dataframe = output_dataframe.reset_index().set_index(['Date','SiteID'])
+        output_dataframe = output_dataframe.reset_index().set_index([self._timestamp_string,self._site_string])
         return(output_dataframe)
 
 
@@ -493,14 +515,14 @@ class AurnImputationTest(AurnPostProcessor):
         position in timeseries for data removal: {} 
         """
 
-        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list],names=['site_id','spc'])
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list],names=[self._site_string,'spc'])
         col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
         
         hourly_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
-            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'hourly')) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.stat_dir,site,'hourly')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -548,7 +570,7 @@ class AurnImputationTest(AurnPostProcessor):
                     plt.close()
                     
         
-        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'hourly'), index=True, header=True, float_format=self.float_format)
+        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.stat_dir,'hourly'), index=True, header=True, float_format=self.float_format)
 
 
     def imputation_daily_analysis(self,daily_imputed_dataframe,daily_reference_dataframe,site_list_internal):
@@ -609,7 +631,7 @@ class AurnImputationTest(AurnPostProcessor):
         """
         
         stat_list = ['mean','max']
-        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list,stat_list],names=['site_id','spc','stat'])
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,self.species_list,stat_list],names=[self._site_string,'spc','stat'])
         col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
 
         daily_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
@@ -620,7 +642,7 @@ class AurnImputationTest(AurnPostProcessor):
         for site in site_list_internal:
             site_string = "{} [AQ]".format(site)
             print('working on site: {}'.format(site))
-            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'daily')) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.stat_dir,site,'daily')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -697,7 +719,7 @@ class AurnImputationTest(AurnPostProcessor):
                                 plt.close()
 
 
-        daily_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'daily'), index=True, header=True, float_format=self.float_format)
+        daily_stat_dataset.to_csv(self.csv_file_string.format(self.stat_dir,'daily'), index=True, header=True, float_format=self.float_format)
 
 
 
