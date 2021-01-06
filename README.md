@@ -16,8 +16,8 @@ The sections below are:
 The processing scripts in this repository are written in python, tested on unix and OSX
 systems.
 
-The EMEP (and WRF) models are written in fortran - follow these references for compiling 
-theses, preparing model inputs, and performing the simulations.
+The EMEP (and WRF) models are written in fortran - follow the references below for compiling 
+these, preparing model inputs, and performing the simulations.
 
 The MEDMI dataset are accessed using the python2 installation on their system, no more
 packages require installing to run the scripts for this.
@@ -39,9 +39,10 @@ To activate this environment: `conda activate aurn_medmi`
 
 ## Extracting EMEP Model Air Quality Data
 
-EMEP simulations should be carried out using the tools available in the X repository.
+EMEP simulations should be carried out using the tools available in this Zenodo repository:
+https://doi.org/10.5281/zenodo.3997300.
 
-Scripts for extracting the required data are given in the `EMEP_Data_Processing` directory.
+Scripts for extracting the required data are given in the `scripts/EMEP_Data_Extraction` directory.
 
 These will extract the hourly data, and daily mean / max values, for locations taken
 from the AURN metadata files. Bash scripts are provided for running these tools.
@@ -49,7 +50,7 @@ from the AURN metadata files. Bash scripts are provided for running these tools.
 
 ## Obtaining and Processing AURN Air Quality Data
 
-(All scripts for processing DEFRA AURN data are in the `AURN_DATA_Download` directory)
+(All scripts for processing DEFRA AURN data are in the `scripts/AURN_DATA_Download` directory)
 
 `AURN_download.py`
 
@@ -66,7 +67,7 @@ This data file contains the combined daily mean, max, and data count for all AUR
 
 ## Obtaining MEDMI Meteorological and Pollen Data
 
-(All scripts for obtaining Met and Pollen data are in the `MEDMI_Data_Download` directory)
+(All scripts for obtaining Met and Pollen data are in the `scripts/MEDMI_Data_Download` directory)
 
 `met_extraction_script.py`
 
@@ -100,8 +101,26 @@ If --extra_measurements is set to True then all allowed extra datasets added wil
 For example temp would have added: pressure, dewpoint and rel_hum
 
 
+## Processing AURN and MEDMI Data
 
-## Processing MEDMI Data
+Scripts for processing these datasets are included in the `scripts/Data_Processing` directory. These require
+the use of the `aurn_medmi` conda environment. Example bash scripts are provided for running these. 
 
 
 ## Combining Datasets
+
+TBD
+
+## Testing Imputation Methods
+
+Imputation of missing data is carried out for the processing of some of the AURN and MEDMI datasets. Tools 
+for carrying out statistical testing of the imputation tools used are available in the `scripts/Data_Imputation_Testing`
+directory.
+
+
+## Copyright & Licensing
+
+This software has been developed by the [Research IT](https://research-it.manchester.ac.uk/) group at the [University of Manchester](https://www.manchester.ac.uk/) for an [Alan Turing Institute](https://www.turing.ac.uk/) project.
+
+(c) 2019-2021 University of Manchester.
+Licensed under the GPL-3.0 license, see the file LICENSE for details.
