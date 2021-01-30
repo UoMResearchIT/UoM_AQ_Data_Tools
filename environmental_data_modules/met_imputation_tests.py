@@ -35,6 +35,7 @@ class MetImputationTest(MetPostProcessor):
     DEFAULT_DATA_LOSS_POSITION = 'end'
     DEFAULT_CHECK_SITES = False
     DEFAULT_SITE_LIST = None
+    DEFAULT_STAT_DIR = './'
     
     BASE_IMPUTED_STATS_PDF_FILE = '{}/{}_{}_imputed_comparison.pdf'
     BASE_IMPUTED_STATS_CSV_FILE = '{}/met_{}_correlation_stats.csv'
@@ -42,7 +43,7 @@ class MetImputationTest(MetPostProcessor):
 
 
     def __init__(self, out_dir=MetPostProcessor.DEFAULT_OUT_DIR, station_data_filename=MetPostProcessor.DEFAULT_STATION_DATA_FILENAME,
-                 verbose=MetPostProcessor.DEFAULT_VERBOSE):
+                 verbose=MetPostProcessor.DEFAULT_VERBOSE, stat_dir=DEFAULT_STAT_DIR):
         """ Initialise instance of the MetImputationTest class.
             Initialises the private class variables
 
@@ -61,6 +62,24 @@ class MetImputationTest(MetPostProcessor):
         self.check_sites = MetImputationTest.DEFAULT_CHECK_SITES
         self.species_list = MetPostProcessor.SPECIES_PROCESS_LIST
         self.rng = np.random.RandomState(0)
+        self.stat_dir = stat_dir
+
+    @property
+    def stat_dir(self):
+        return self.__stat_dir
+
+    @stat_dir.setter
+    def stat_dir(self, dir_name):
+        try:
+            dir_name = str(dir_name)
+        except ValueError as err:
+            raise err
+        try:
+            os.makedirs(dir_name)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise ValueError("Directory name {} cannot be created.".format(dir_name))
+        self.__stat_dir = dir_name
 
     @property
     def data_lost(self):
@@ -684,7 +703,7 @@ class MetImputationTest(MetPostProcessor):
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
-            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'hourly')) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.stat_dir,site,'hourly')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -734,7 +753,7 @@ class MetImputationTest(MetPostProcessor):
                     
                     
         
-        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'hourly'), index=True, header=True, float_format=self.float_format)
+        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.stat_dir,'hourly'), index=True, header=True, float_format=self.float_format)
         
 
 
@@ -807,7 +826,7 @@ class MetImputationTest(MetPostProcessor):
         for site in site_list_internal:
             site_string = "{} [WEATHER]".format(site)
             print('working on site: {}'.format(site))
-            with PdfPages(self.pdf_file_string.format(self.out_dir,site,'daily')) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.stat_dir,site,'daily')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
                 firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
@@ -883,4 +902,4 @@ class MetImputationTest(MetPostProcessor):
 
                         
 
-        daily_stat_dataset.to_csv(self.csv_file_string.format(self.out_dir,'daily'), index=True, header=True, float_format=self.float_format)
+        daily_stat_dataset.to_csv(self.csv_file_string.format(self.stat_dir,'daily'), index=True, header=True, float_format=self.float_format)

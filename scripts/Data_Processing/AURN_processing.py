@@ -57,27 +57,29 @@ from environmental_data_modules import AurnExtractor, AurnPostProcessor
 if __name__ == '__main__':
 
     # read arguments from the command line
-    parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
-    parser.add_argument("--metadata_url", "-m",
+    parser = argparse.ArgumentParser(description="*** A script for processing AURN data for a given date range. ***")
+    parser.add_argument("--metadata_url",
                         help="url of the AURN metadata. Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_URL))
-    parser.add_argument("--metadata_filename", "-f", type=str,
+    parser.add_argument("--metadata_filename", type=str,
                         help="filename of the AURN metadata in RData format (.RData). " \
                              "Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_FILE))
 
     ## Dates
-    parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
+    parser.add_argument("--date_range", dest="date_range", type=str, nargs='+',
                         help="start and end dates. (array - first two values only). \
                             Expected date format: {} \n Default: [{}, {}]".format(
                             AurnPostProcessor.INPUT_DATE_FORMAT.replace('%', ''),
                             AurnPostProcessor.get_available_start(), AurnPostProcessor.get_available_end()))
 
 
-    parser.add_argument("--emep_filename","-e", default=None, help="filename of the emep file in CSV format (.csv)")
-    parser.add_argument("--min_years", "-n", type=int, help="minimum number of years of data that a site must have")
-    parser.add_argument("--min_years_ref", "-u", type=int, help="minimum number of years of data for any site that \
+    parser.add_argument("--emep_filename", default=None, help="filename of the emep file in CSV format (.csv)")
+    parser.add_argument("--min_years", type=float, help="minimum number of years of data that a site must have")
+    parser.add_argument("--min_years_ref", type=float, help="minimum number of years of data for any site that \
         we are going to use as a reference site later. (this cannot be less than min_years)")
-    parser.add_argument("--sites", "-i", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
+    parser.add_argument("--sites", metavar='S', dest="sites", type=str, nargs='+', help="the measurement sites \
         to be processed. Default is to process all available AURN sites.")
+    parser.add_argument("--species", metavar='S', dest="species", type=str, nargs='+', help="the chemical species \
+        to be processed. Default is to process all in list: {}.".format(AurnPostProcessor.SPECIES_LIST_EXTRACTED))
     parser.add_argument("--save_to_csv",dest="save_to_csv",action='store_true',help="save output into CSV format (default).")
     parser.add_argument("--no_save_to_csv",dest="save_to_csv",action='store_false',help="don't save output to CSV format")
     parser.set_defaults(save_to_csv=True)
@@ -86,9 +88,12 @@ if __name__ == '__main__':
     parser.set_defaults(impute_values=True)
 
     # output directory/file names
-    parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
-                        help="output directory name. Default: {}".format(AurnExtractor.DEFAULT_OUT_DIR))
-    parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
+    parser.add_argument("--outdir_name", dest="outdir_name", type=str,
+                        help="data directory name. Default: {}".format(AurnExtractor.DEFAULT_OUT_DIR))
+    parser.add_argument("--infile_suffix", dest="infile_suffix", type=str,
+                        help="suffix to be appended to AURN dataset. Default: {}".format(
+                            AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
+    parser.add_argument("--outfile_suffix", dest="outfile_suffix", type=str,
                         help="suffix to be appended to output file name. Default: {}".format(
                             AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
     # Log verbose-ness
@@ -163,6 +168,13 @@ if __name__ == '__main__':
     print('Save to csv: {}'.format(args.save_to_csv))
     print('Impute values: {}'.format(args.impute_values))
 
+    if args.species:
+        species_list = args.species
+        print('Species list: {}'.format(species_list))
+    else:
+        print('No species provided, so the default list of species in the processor')
+        species_list = AurnPostProcessor.SPECIES_LIST_EXTRACTED
+
     if args.outdir_name:
         outdir_name = args.outdir_name
         print('Using outdir_name: {}'.format(outdir_name))
@@ -177,6 +189,13 @@ if __name__ == '__main__':
         print('No outfile_suffix provided, so using default: {}'.format(str(AurnExtractor.DEFAULT_OUT_FILE_SUFFIX)))
         outfile_suffix = AurnExtractor.DEFAULT_OUT_FILE_SUFFIX
 
+    if args.infile_suffix:
+        infile_suffix = args.infile_suffix
+        print('Using infile_suffix: {}'.format(infile_suffix))
+    else:
+        print('No infile_suffix provided, so using default: {}'.format(str(AurnExtractor.DEFAULT_OUT_FILE_SUFFIX)))
+        infile_suffix = AurnExtractor.DEFAULT_OUT_FILE_SUFFIX
+
     if args.verbose:
         verbose = max(args.verbose, 0)
         print('verbose: ', verbose)
@@ -188,7 +207,8 @@ if __name__ == '__main__':
                                metadata_url=metadata_url,
                                out_dir=outdir_name, verbose=verbose)
 
-    file_extracted = extractor._base_file_out.format(extractor.out_dir, '_'+outfile_suffix)
+    file_extracted = extractor._base_file_out.format(extractor.out_dir, '_'+infile_suffix)
+    print('file to extract is: {}'.format(file_extracted))
 
     processor = AurnPostProcessor(metadata_filename=metadata_filename,
                                   metadata_url=metadata_url,
@@ -200,6 +220,7 @@ if __name__ == '__main__':
                         date_range=date_range,
                         outfile_suffix= outfile_suffix,
                         site_list=site_list,
+                        species_list=species_list,
                         emep_filename=emep_filename,
                         min_years=min_years,
                         min_years_reference=min_years_ref,

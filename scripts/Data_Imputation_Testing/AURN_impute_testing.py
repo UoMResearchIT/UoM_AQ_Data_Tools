@@ -97,7 +97,7 @@ if __name__ == '__main__':
                         help="suffix to be appended to output file name. Default: {}".format(
                             AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
     parser.add_argument("--statdir_name", dest="statdir_name", type=str,
-                        help="output directory name. Default: {}".format('./'))
+                        help="stat output directory name. Default: {}".format('./'))
 
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
@@ -202,7 +202,7 @@ if __name__ == '__main__':
         print('Using statdir_name: {}'.format(statdir_name))
     else:
         print('No statdir_name given, so will use default: {}'.format('./'))
-        outdir_name = './'
+        statdir_name = './'
 
 
     if args.outfile_suffix:
