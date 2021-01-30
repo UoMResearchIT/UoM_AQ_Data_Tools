@@ -58,5 +58,54 @@ python Met_Temperature_RH_Pressure_impute_testing.py ${ARGUMENTS_FIXED} ${ARGUME
 DATA_LOSS_POS='random'
 DATA_LOST='0.5'
 ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
-SCEN_TAIL="_random"
+SCEN_TAIL="_random_50"
+#run_analysis
+
+DATA_LOSS_POS='random'
+DATA_LOST='0.75'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_random_75"
+#run_analysis
+
+DATA_LOSS_POS='random'
+DATA_LOST='0.25'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_random_25"
+#run_analysis
+
+DATA_LOSS_POS='start'
+DATA_LOST='0.5'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_startloss_50"
+#run_analysis
+
+DATA_LOSS_POS='start'
+DATA_LOST='0.25'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_startloss_25"
+#run_analysis
+
+DATA_LOSS_POS='start'
+DATA_LOST='0.75'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_startloss_75"
+#run_analysis
+
+DATA_LOSS_POS='end'
+DATA_LOST='0.5'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_endloss_50"
 run_analysis
+
+DATA_LOSS_POS='end'
+DATA_LOST='0.25'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_endloss_25"
+#run_analysis
+
+DATA_LOSS_POS='end'
+DATA_LOST='0.75'
+ARGUMENTS_DATA="--data_loss_position ${DATA_LOSS_POS} --data_lost ${DATA_LOST}"
+SCEN_TAIL="_endloss_75"
+#run_analysis
+

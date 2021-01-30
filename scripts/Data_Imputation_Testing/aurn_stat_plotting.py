@@ -19,14 +19,23 @@ hourly_file = 'aurn_hourly_correlation_stats.csv'
 
 path_head = 'aurn_stats/test_stats_{}_{}'
 
-chemical_scenarios = ['NO2','NOXasNO2','O3','PM10','PM2.5','SO2','combined','combined_and_so2']
+#chemical_scenarios = ['NO2','NOXasNO2','O3','PM10','PM2.5','SO2','combined','combined_and_so2']
+chemical_scenarios = ['NO2','NOXasNO2','O3','PM10','PM2.5','SO2','combined_and_so2']
 chemical_dictionary = {'NO2':'individual','NOXasNO2':'individual','O3':'individual','PM10':'individual',
                        'PM2.5':'individual','SO2':'individual','combined':'combined','combined_and_so2':'combined_and_so2'}
 chemical_mixes = ['individual','combined','combined_and_so2']
 
+chemical_dictionary = {'NO2':'individual','NOXasNO2':'individual','O3':'individual','PM10':'individual',
+                       'PM2.5':'individual','SO2':'individual','combined_and_so2':'combined'}
+chemical_mixes = ['individual','combined']
+
+sample_scenarios = ['random','random_with_EMEP','startloss','startloss_with_EMEP','startloss0.25','startloss0.75',
+                    'startloss0.25_with_EMEP','startloss0.75_with_EMEP']
+
 sample_scenarios = ['random','random_with_EMEP','startloss','startloss_with_EMEP']
 
-stats_list = ['kendalltau_corr','pearsonr_corr','slope']
+
+stats_list = ['kendalltau_corr','pearsonr_corr','spearmanr_corr','slope']
 index_list = ['site_id','spc']
 col_hourly_list = stats_list + index_list
 col_daily_list = col_hourly_list + ['stat']
@@ -34,6 +43,7 @@ col_daily_list = col_hourly_list + ['stat']
 
 chemical_pairs = {'NO2':'NOx','NOXasNO2':'NOx','O3':'SO2 O3','PM10':'PM','PM2.5':'PM','SO2':'SO2 O3'}
 
+column_substitutes = {'spc':'chemical species','spearmanr_corr':"Spearman's rank correlation",'slope':'slope of fit'}
 
 
 
@@ -42,9 +52,13 @@ def read_datafile(full_data,filepath,index_list_internal,col_list_internal,scena
     try:
         temp_data = pd.read_csv(filepath,usecols=col_list_internal)
         temp_data['data loss scenario'] = scenario_string
-        temp_data['chemical mix'] = chemical_string
+        if scenario_string.split('_')[-1] == 'EMEP':
+            chem_string_wrap = '{}_EMEP'
+        else:
+            chem_string_wrap = '{}'
+        temp_data['chemical mix'] = chem_string_wrap.format(chemical_string)
         temp_data['chemical group'] = [chem_pairs_internal[chemkey] for chemkey in temp_data['spc']]
-        temp_data = temp_data.rename(columns={'spc':'chemical species'})
+        temp_data = temp_data.rename(columns=column_substitutes)
         return(full_data.append(temp_data))
     except:
         print('could not process file {}'.format(filepath))
@@ -82,12 +96,54 @@ full_data = full_data.append(daily_mean_data)
 full_data = full_data.append(daily_max_data)
 
 
+### isolate particular scenarios
+
+full_data_random = full_data.loc[(['random','random_with_EMEP'],slice(None),slice(None)),]
+full_data_startloss = full_data.loc[(['startloss','startloss_with_EMEP'],slice(None),slice(None)),]
+
+full_data_startloss_only = full_data.loc[(['startloss_with_EMEP','startloss0.25_with_EMEP','startloss0.75_with_EMEP'],'combined_and_so2',slice(None)),]
+full_data_random_only = full_data.loc[(['random'],slice(None),slice(None)),]
+
+
+paper_data_random = full_data.loc[(['random','random_with_EMEP'],slice(None),['NO2','PM10']),]
+
+paper_data_random = full_data.loc[(['random','random_with_EMEP'],['individual','combined','combined_EMEP'],['NO2','PM10']),]
+
+paper_data_startloss = full_data.loc[(['startloss','startloss_with_EMEP'],['individual','combined','combined_EMEP'],['NO2','PM10']),]
+
 ## plotting data
 
-full_data_no_emep = full_data.loc[(['random','startloss'],slice(None),slice(None)),]
+sns.set_style('ticks')
+sns.set_context('talk',font_scale=0.9)
+sns.despine()
 
+col_order = ['NOx','SO2 O3','PM']
+row_order = ['hourly','daily mean','daily max']
+style_order = ['MY1','PT4','LEED','MID']
 
-sns.relplot(data=full_data_no_emep,x='slope',y='kendalltau_corr',row='dataset',col='chemical group',
-    hue='chemical species',style='site_id',size='data loss scenario',kind='scatter')
+gplot = sns.relplot(data=full_data_random,x='slope of fit',y="Spearman's rank correlation",row='dataset',col='chemical group',
+    row_order = row_order, col_order = col_order, style_order = style_order, sizes=(40,100),
+    hue='chemical species',style='site_id',size='data loss scenario',kind='scatter',legend='full',height=3,aspect=1.33)
+gplot.set(xlim=(-0.01,1.2),ylim=(-0.01,1.01))
 #sns.relplot(data=full_data,x='slope',y='pearsonr_corr',row='stat',col='chemgroup',hue='spc',style='site_id',size='scenario',kind='scatter')
+
+gplot = sns.relplot(data=full_data_random_only,x='slope of fit',y="Spearman's rank correlation",row='dataset',col='chemical group',
+    row_order = row_order, col_order = col_order, style_order = style_order, sizes=(40,100),
+    hue='chemical species',style='site_id',size='chemical mix',kind='scatter',legend='full',height=3,aspect=1.33)
+gplot.set(xlim=(-0.01,1.2),ylim=(-0.01,1.01))
+
+
+## 
+size_order = ['startloss0.25_with_EMEP','startloss_with_EMEP','startloss0.75_with_EMEP']
+gplot = sns.relplot(data=full_data_startloss_only,x='slope of fit',y="Spearman's rank correlation",row='dataset',col='chemical group',
+    row_order = row_order, col_order = col_order, style_order = style_order, size_order = size_order, sizes=(40,100),
+    hue='chemical species',style='site_id',size='data loss scenario',kind='scatter',legend='full',height=3,aspect=1.33)
+gplot.set(xlim=(-0.01,1.1),ylim=(-0.01,1.01))
+
+
+
+### paper
+gplot = sns.relplot(data=paper_data_startloss[paper_data_startloss['dataset']=='hourly'],x='slope of fit',y="Spearman's rank correlation",col='chemical species',
+    hue='chemical mix',style='site_id',kind='scatter',legend='full',height=3,aspect=1.33)
+gplot.set(xlim=(-0.01,1.1),ylim=(-0.01,1.01))
 
