@@ -81,6 +81,11 @@ full_data = full_data.append(daily_mean_data)
 full_data = full_data.append(daily_max_data)
 
 
+ds_scenarios = ['random_50','random_25','startloss_25','startloss_50']
+#site_list = ['744', '842', '847', '19188', '726', '743', '52', '17309', '1534', '161', '708', '1074', '1302', '23']
+site_list = ['744', '842', '847', '726', '743', '52', '17309', '1534', '708', '1074', '23']
+full_data_plot = full_data.loc[full_data['site_id'].isin(site_list)].loc[(ds_scenarios,slice(None),slice(None))]
+
 ## plotting data
 
 sns.set_style('ticks')
@@ -88,11 +93,13 @@ sns.set_context('talk',font_scale=0.9)
 sns.despine()
 
 
+
 gplot = sns.relplot(data=full_data,x='slope of fit',y="Spearman's rank correlation",row='dataset',col='met variable',
     hue='site_id',style='data loss scenario',kind='scatter',height=3,aspect=1.33)
 gplot.set(xlim=(-0.01,1.2),ylim=(-0.01,1.01))
 
 
-gplot = sns.relplot(data=full_data.loc[(slice(None),'relativehumidity'),],x='slope of fit',y="Spearman's rank correlation",col='dataset',
+### paper
+gplot = sns.relplot(data=full_data_plot.loc[(slice(None),'relativehumidity'),],x='slope of fit',y="Spearman's rank correlation",col='dataset',
     hue='site_id',style='data loss scenario',kind='scatter',height=3,aspect=1.33)
-gplot.set(xlim=(0.39,1.01),ylim=(0.39,1.01))
+gplot.set(xlim=(0.49,1.01),ylim=(0.49,1.01))
