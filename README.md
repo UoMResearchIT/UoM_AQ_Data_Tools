@@ -3,12 +3,23 @@
 This repository contains tools for obtaining and processing UK air quality data.
 
 The sections below are:
-- [Requirements](#heading)
- - Extracting EMEP Model Air Quality Data
- - Obtaining and Processing AURN Air Quality Data
- - Obtaining MEDMI Meteorological and Pollen Data
- - Processing MEDMI Data
- - Combining Datasets
+- [Repository Structure](#repository-structure)
+- [Requirements](#requirements)
+- [Data Acquisition](#data-acquisition)
+  - [EMEP Model Air Quality Data](#emep-model-air-quality-data)
+  - [AURN Air Quality Data](#aurn-air-quality-data)
+  - [MEDMI Meteorological and Pollen Data](#medmi-meteorological-and-pollen-data)
+- [Data Processing](#data-processing)
+  - [MEDMI Data](#medmi-data)
+  - [AURN Data](#aurn-data)
+  - [Combining Datasets](#combining-datasets)
+- [Testing Imputation Methods](#testing-imputation-methods)
+
+<!-- toc -->
+
+## Repository Structure
+
+Operational scripts are stored within the `scripts` directory. Each of the subdirectories within this contains a README file guiding tool usage. The `environmental_data_modules` directory contains the python modules used by the tools. The `station_data` directory contains station specific metadata which has been collated for the datasets, these have been gathered from the MEDMI and AURN sources.
 
 ```
 .
@@ -23,7 +34,6 @@ The sections below are:
 └── station_data
 ```
 
-<!-- toc -->
 
 ## Requirements
 
@@ -50,8 +60,10 @@ written in python3. To install the packages needed for these, use this script:
 `conda env create -f env_aurn_medmi.yml` \
 To activate this environment: `conda activate aurn_medmi`
 
+## Data Acquisition
 
-## Extracting EMEP Model Air Quality Data
+
+### EMEP Model Air Quality Data
 
 EMEP simulations should be carried out using the tools available in this Zenodo repository:
 https://doi.org/10.5281/zenodo.3997300.
@@ -62,7 +74,7 @@ These will extract the hourly data, and daily mean / max values, for locations t
 from the AURN metadata files. Bash scripts are provided for running these tools.
  
 
-## Obtaining and Processing AURN Air Quality Data
+### AURN Air Quality Data
 
 (All scripts for processing DEFRA AURN data are in the `scripts/AURN_DATA_Download` directory)
 
@@ -79,7 +91,7 @@ data file called `pollution_daily_data_[start year]-[end year].csv` in the same 
 This data file contains the combined daily mean, max, and data count for all AURN sites.
 
 
-## Obtaining MEDMI Meteorological and Pollen Data
+### MEDMI Meteorological and Pollen Data
 
 (All scripts for obtaining Met and Pollen data are in the `scripts/MEDMI_Data_Download` directory)
 
@@ -114,14 +126,16 @@ Therefore, in this tool, the only datasets that can have extra measurements adde
 If --extra_measurements is set to True then all allowed extra datasets added will be the above measurements. 
 For example temp would have added: pressure, dewpoint and rel_hum
 
+## Data Processing
 
-## Processing AURN and MEDMI Data
+### MEDMI Data
 
 Scripts for processing these datasets are included in the `scripts/Data_Processing` directory. These require
 the use of the `aurn_medmi` conda environment. Example bash scripts are provided for running these. 
 
+### AURN Data
 
-## Combining Datasets
+### Combining Datasets
 
 TBD
 
