@@ -3,13 +3,27 @@
 This repository contains tools for obtaining and processing UK air quality data.
 
 The sections below are:
- - Requirements
+- [Requirements](#heading)
  - Extracting EMEP Model Air Quality Data
  - Obtaining and Processing AURN Air Quality Data
  - Obtaining MEDMI Meteorological and Pollen Data
  - Processing MEDMI Data
  - Combining Datasets
 
+```
+.
+├── environmental_data_modules
+├── scripts
+│   ├── AURN_Data_Download
+│   ├── Data_Imputation_Testing
+│   ├── Data_Processing
+│   │   └── inputs
+│   ├── EMEP_Data_Extraction
+│   └── MEDMI_Data_Download
+└── station_data
+```
+
+<!-- toc -->
 
 ## Requirements
 
