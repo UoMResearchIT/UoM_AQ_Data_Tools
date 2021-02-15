@@ -37,14 +37,13 @@ be passed:
   - `--no_daily_means`: output the raw data (probably hourly)
   
 The `batch_hourly_emep_extraction.sh` script is an example SGE batch array script used for 
-extracting data from 24 EMEP files. This outputs a separate csv file for each period. 
+extracting data from 24 EMEP files. This outputs a separate csv file for each period, in
+the directory `extracted_model_data_hourly` (following the example script).
 
 ## Data Combination 
 
-The individual period data files can then be combined using the script `combine_data.sh` 
-(which removes the last day from each period, to avoid overlaps with the next period - 
-check your data files to determine if this is necessary or not).
-
-The full hourly data file produced by the `combine_data.sh` file is used for the further
-processing scripts.
+The individual period data files can then be combined using the script `combine_data.sh`
+in the directory `extracted_model_data_hourly`. This script removes the last day from each 
+period, to avoid overlaps with the next period - check your data files to determine if this 
+is necessary or not.
 
