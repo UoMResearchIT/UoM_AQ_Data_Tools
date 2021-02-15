@@ -7,6 +7,7 @@ Required data:
 - EMEP output files
 - A single WRF output file, for the same domain
 - station metadata file (either `RData` or `csv` format)
+  - this can be obtained by running the AURN download scripts
 
 Output data is a csv file with the following columns:
 - timestamp

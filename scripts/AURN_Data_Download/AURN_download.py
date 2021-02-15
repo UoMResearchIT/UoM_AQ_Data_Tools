@@ -2,43 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Created on Tue Sep 22 09:16:40 2020
 
-Script for automated downloading of AURN data for a given date range.
-Summary of how many sites we will be imputing for data for each species,
-and how many useful site there are for each.
+Program for downloading the AURN measurement datasets
+for a given time period and set of stations. These
+are obtained from the RData formatted datasets.
 
-NOXasNO2 has 157 req sites and 118 useful sites
-O3 has 75 req sites and 66 useful sites
-NO2 has 157 req sites and 118 useful sites
-PM2.5 has 81 req sites and 55 useful sites
-PM10 has 77 req sites and 51 useful sites
-SO2 has 27 req sites and 19 useful sites
+Usage can be obtained using the --help flag.
 
-Todo: Doug following needs updating
-We will only impute data for sites with > 1 year of data, and only use
-sites with >3.5 years of data for the imputation inputs
-
-Full dataset information on NaN's and negative/zero numbers:
-O3 has 2507061 positive values
-O3 has 3139956 NaNs
-O3 has 735 negative or zero values that will be replaced with NaNs
-PM10 has 2287338 positive values
-PM10 has 3352010 NaNs
-PM10 has 8404 negative or zero values that will be replaced with NaNs
-PM2.5 has 2336213 positive values
-PM2.5 has 3280461 NaNs
-PM2.5 has 31078 negative or zero values that will be replaced with NaNs
-NO2 has 4936512 positive values
-NO2 has 707558 NaNs
-NO2 has 3682 negative or zero values that will be replaced with NaNs
-NOXasNO2 has 4939775 positive values
-NOXasNO2 has 707425 NaNs
-NOXasNO2 has 552 negative or zero values that will be replaced with NaNs
-SO2 has 837779 positive values
-SO2 has 4806980 NaNs
-SO2 has 2993 negative or zero values that will be replaced with NaNs
-(note, the NaN count will include sites that we will not be imputing with data)
 
 @author:    Douglas Lowe and Ann Gledson
             Research IT, University of Manchester
@@ -56,7 +26,7 @@ from environmental_data_modules import AurnExtractor, AurnPostProcessor
 if __name__ == '__main__':
 
     # read arguments from the command line
-    parser = argparse.ArgumentParser(description="*** A script for automated downloading of AURN data for a given date range. ***")
+    parser = argparse.ArgumentParser(description="Downloading script for AURN data for a given date range and sites.")
     parser.add_argument("--metadata_url", "-m",
                         help="url of the AURN metadata. Default: {}".format(AurnPostProcessor.DEFAULT_METADATA_URL))
     parser.add_argument("--metadata_filename", "-f", type=str,
@@ -74,8 +44,9 @@ if __name__ == '__main__':
     parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
                         help="output directory name. Default: {}".format(AurnExtractor.DEFAULT_OUT_DIR))
     parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
-                        help="suffix to be appended to output file name. Default: {}".format(
-                            AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
+                        help="suffix to be appended to output file name. \
+                              Base name is: {}. Default suffix is: '{}'".format(
+                            AurnExtractor.BASE_FILE_OUT,AurnExtractor.DEFAULT_OUT_FILE_SUFFIX))
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
             help="Level of output for debugging (Default: {} (0 = no verbose output))".format(
