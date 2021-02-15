@@ -49,7 +49,7 @@ if __name__ == '__main__':
     parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
                         help="suffix to be appended to output file name. \
                         The base output file string is: {}. \
-                        Default: {}".format(MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
+                        Default: {}".format(MetExtractor.BASE_FILE_OUT,MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
 
     # Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
