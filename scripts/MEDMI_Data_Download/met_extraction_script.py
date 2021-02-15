@@ -11,11 +11,11 @@ Copy this script to the ssh server. Then run it using python (simply python [scr
 and use the --help command to get the full set of parameters/options.
 
     This will:
-    1) Extract weathr and pollen data from the MEDMI server, given the inputs:
+    1) Extract weather and pollen data from the MEDMI server, given the inputs:
         a) Location: expressed as latitude and longitude ranges
         b) Dates: expressed as a date range (start to end)
         c) Required measurements
-    ToDo: Doug ++?
+
 
 @author:    Douglas Lowe and Ann Gledson
             Research IT, University of Manchester
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     ### general help text
     parser = argparse.ArgumentParser(
-        description="*** A script for automated downloading of MET data for a given region and date range. ***")
+        description="Script for extracting Met data from the MEDMI dataase. Must be run on the MEDMI server.")
 
     AVAILABLE_MEASUREMENTS = MetExtractor.get_available_measurements()
 
@@ -47,7 +47,9 @@ if __name__ == '__main__':
     parser.add_argument("--outdir_name", "-o", dest="outdir_name", type=str,
                         help="output directory name. Default: {}".format(MetExtractor.DEFAULT_OUT_DIR))
     parser.add_argument("--outfile_suffix", "-s", dest="outfile_suffix", type=str,
-                        help="suffix to be appended to output file name. Default: {}".format(MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
+                        help="suffix to be appended to output file name. \
+                        The base output file string is: {}. \
+                        Default: {}".format(MetExtractor.DEFAULT_OUT_FILE_SUFFIX))
 
     # Dates
     parser.add_argument("--date_range", "-d", dest="date_range", type=str, nargs='+',
