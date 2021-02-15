@@ -31,7 +31,7 @@ fi
 
 ARGUMENTS_DATASET="--measurements ${MEASUREMENTS} ${EXTRA_DATA_FLAG}"
 ARGUMENTS_GEOTEMP="--date_range ${DATE_RANGE} --latitude_range ${LATITUDES} --longitude_range ${LONGITUDES}"
-ARGUMENTS_FILE="--outdir_prefix ${OUTDIR_PREFIX} --outfile_suffix ${OUTFILE_SUFFIX} -v ${VERBOSE}"
+ARGUMENTS_FILE="--outdir ${OUTDIR} --outfile_suffix ${OUTFILE_SUFFIX} -v ${VERBOSE}"
 
 
 python met_extraction_script.py ${ARGUMENTS_DATASET} ${ARGUMENTS_GEOTEMP} ${ARGUMENTS_FILE}
