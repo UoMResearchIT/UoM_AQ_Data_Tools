@@ -13,7 +13,7 @@ Unified production script for MEDMI data processing. This will:
                      identify all such single readings and remove them, if they are synoptic spot readings or not)
         (Points (a) and (c) based on pers. comms. with Martyn Sunter, Met Office, July 2020.
          Point (b) based on data exploration by authors.)
-    2)
+    2) impute missing data, where required
 
 @author:    Douglas Lowe and Ann Gledson
             Research IT, University of Manchester
@@ -30,15 +30,7 @@ from environmental_data_modules import MetPostProcessor
 if __name__ == '__main__':
 
     ### read arguments from the command line
-    help_string = """***Unified production script for MEDMI data processing. ***
-        Loads and cleans the dataset by:
-        a) find duplicated readings 
-            i)  filtering out the METAR data by lack of pressure reading
-            ii) retaining the first value where there's no difference in presence of pressure reading
-        b) removing stations identified as unwanted
-            i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,
-                    and as it is unlikely to be useful comparison with participant data, we will remove it
-        c) find and remove the synoptic spot readings"""
+    help_string = """Unified production script for MEDMI data processing."""
 
     parser = argparse.ArgumentParser(description=help_string)
 
@@ -84,7 +76,7 @@ if __name__ == '__main__':
                         help="print statistics (default).")
     parser.add_argument("--no_print_stats", dest="print_stats", action='store_false',
                         help="don't print statistics.")
-    parser.set_defaults(impute_values=True)
+    parser.set_defaults(print_stats=True)
 
     # Log verbose-ness
     parser.add_argument("--verbose", "-v", type=int,
