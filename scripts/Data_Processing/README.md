@@ -36,4 +36,22 @@ The settings common to scripts are:
 
 ## Meteorological Settings
 
-Meteorological specific settings
+Meteorological specific settings are:
+- `--out_dir OUT_DIR`: output directory name
+- `--outfile_suffix OUTFILE_SUFFIX`: suffix to append to output filename
+- `--file_in FILE_IN`: input file containing the hourly meteorological data to be processed
+- `--stations_filename STATIONS_FILENAME`: file containing the station location information
+- `--ref_num_stations REF_NUM_STATIONS`: number of reference stations to be used for imputation
+- `--min_temp MIN_TEMP`: minimum temperature for measurements (values lower than this are set to NaN)
+- `--exclude_sites X`: list of measurement sites to exclude
+- `--print_stats`: print statistics for dataset
+- `--no_print_stats`: don't print dataset statistics
+
+## AURN pollution Settings
+
+AURN specific settings are:
+- `--metadata_url METADATA_URL`: url of AURN metadata
+- `--metadata_filename METADATA_FILENAME`: name of AURN metadata file
+- `--emep_filename EMEP_FILENAME`: path and filename of the EMEP data file
+- `--sites S`: list of the measurement sites to be processed (default is all)
+- `--species S`: list of pollutant species to process (default is all)
