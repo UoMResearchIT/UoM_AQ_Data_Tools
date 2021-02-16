@@ -1,0 +1,26 @@
+import pandas as pd
+
+
+aurn_file='AURN_data/aurn_processed_daily_2016-2019_imputed_nox_o3_pm.csv'
+aurn_so2_file='AURN_data/aurn_processed_daily_2016-2019_unimputed_so2.csv'
+emep_file='EMEP_data/emep_daily_data_2016-2019.csv'
+poll_file='MEDMI_Pollen_data/pollen_2016-2019.csv'
+met_file='MEDMI_Met_data/Met_ppd_daily_mean_max_temp_RH_pres2016-2019_with_imputation.csv'
+
+outfile='Combined_dataset/turing_aq_daily_met_pollen_pollution_with_imputation_data.csv'
+
+
+aurn_data     = pd.read_csv(aurn_file,index_col=['timestamp','site_id'])
+aurn_so2_data = pd.read_csv(aurn_so2_file,index_col=['timestamp','site_id'])
+emep_data     = pd.read_csv(emep_file,index_col=['timestamp','site_id'])
+poll_data     = pd.read_csv(poll_file,index_col=['timestamp','site_id'])
+met_data      = pd.read_csv(met_file,index_col=['timestamp','site_id'])
+
+
+combined_data = aurn_data.copy()
+combined_data = combined_data.merge(aurn_so2_data, how='outer', left_index=True, right_index=True)
+combined_data = combined_data.merge(emep_data, how='outer', left_index=True, right_index=True)
+combined_data = combined_data.merge(poll_data, how='outer', left_index=True, right_index=True)
+combined_data = combined_data.merge(met_data, how='outer', left_index=True, right_index=True)
+
+combined_data.to_csv(outfile,index=True,header=True,float_format='%.2f')
