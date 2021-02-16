@@ -33,6 +33,16 @@ The AURN pollution scripts are:
 The AURN processing script requires the `AURN_metadata.RData` file, which is downloaded
 from the AURN website.
 
+## Data Analysis
+
+The statistical data for each test (as a csv file), as well as plots of the comparisons 
+of the hourly and daily data (as pdf files), will be stored within local `met_stats` 
+or `aurn_stats` directories (unless the output paths are changed). The aggregated stats can
+be plotted using the `met_stat_plotting.py` or `aurn_stat_plotting.py` scripts. These 
+are examples for the data paper, and will need adapting to fit the analysis simulations you
+are interested in.
+
+
 ## Common Settings
 
 The settings common to scripts are:
