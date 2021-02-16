@@ -3,7 +3,10 @@
 This directory contains the scripts for extracting the MEDMI meteorological measurement
 data for given geographic and time ranges. 
 
-This must be run on the MEDMI server.
+This must be run on the MEDMI server. Details of how to do this can be obtained from 
+the MED-MI website: [https://www.data-mashup.org.uk/contact-us/](https://www.data-mashup.org.uk/contact-us/)
+and  following the instructions for connecting to the server using an SSH client.
+Alternatively, email `health@metoffice.gov.uk` to request access.
 
 Output data is a set of csv files, one for each of the requested datasets, each with a 
 header listing the dataset extracted and date range, with the following two fixed columns:

@@ -19,16 +19,20 @@ The sections below are:
 
 ## Repository Structure
 
-Operational scripts are stored within the `scripts` directory. Each of the subdirectories within this contains a README file guiding tool usage. The `environmental_data_modules` directory contains the python modules used by the tools. The `station_data` directory contains station specific metadata which has been collated for the datasets, these have been gathered from the MEDMI and AURN sources.
+Operational scripts are stored within the `scripts` directory. Each of the subdirectories 
+within this contains a README file guiding tool usage. The `environmental_data_modules` 
+directory contains the python modules used by the tools. The `station_data` directory 
+contains station specific metadata which has been collated for the datasets, these have 
+been gathered from the MEDMI and AURN sources.
 
 ```
 .
 ├── environmental_data_modules
 ├── scripts
 │   ├── AURN_Data_Download
+│   ├── Combine_Data
 │   ├── Data_Imputation_Testing
 │   ├── Data_Processing
-│   │   └── inputs
 │   ├── EMEP_Data_Extraction
 │   └── MEDMI_Data_Download
 └── station_data
@@ -51,104 +55,75 @@ untested.
 
 The processing scripts for extracting the EMEP data are written in python3. To
 install the packages needed for these (using conda and pip) use this script:
-`conda env create -f env_emep.yml` \
-To activate this environment: `conda activate emep`
-
+`conda env create -f env_emep.yml`.
+To activate this environment use `conda activate emep`.
 
 The processing scripts for obtaining the AURN dataset, and processing all datasets, are
 written in python3. To install the packages needed for these, use this script: 
-`conda env create -f env_aurn_medmi.yml` \
-To activate this environment: `conda activate aurn_medmi`
+`conda env create -f env_aurn_medmi.yml`.
+To activate this environment this `conda activate aurn_medmi`.
 
 ## Data Acquisition
 
+Three separate sets of scripts are provided for obtaining the meteorological and pollution
+data. These are covered below and can be run separately as required.
+
+### MEDMI Meteorological and Pollen Data
+
+MEDMI data is obtained using the tools in the `scripts/MEDMI_Data_Download` directory.
+These scripts must be run on the MEDMI server, instructions on gaining access to this are
+given in the README file in that directory.
+
+### AURN Air Quality Data
+
+Scripts for the downloading of DEFRA AURN data are in the `scripts/AURN_DATA_Download` directory.
+
+These scripts access the AURN datasets that are provided in RData format on the UK-Air
+DEFRA website. Guidance on using the scripts is included in the `README.md` file in that
+directory, and bash scripts with example configurations are included too.
 
 ### EMEP Model Air Quality Data
 
 EMEP simulations should be carried out using the tools available in this Zenodo repository:
-https://doi.org/10.5281/zenodo.3997300.
+[https://doi.org/10.5281/zenodo.3997300](https://doi.org/10.5281/zenodo.3997300).
 
-Scripts for extracting the required data are given in the `scripts/EMEP_Data_Extraction` directory.
+Scripts for extracting the required data are given in the `scripts/EMEP_Data_Extraction` 
+directory. These require use of the `emep` conda environment.
 
 These will extract the hourly data, and daily mean / max values, for locations taken
-from the AURN metadata files. Bash scripts are provided for running these tools.
- 
-
-### AURN Air Quality Data
-
-(All scripts for processing DEFRA AURN data are in the `scripts/AURN_DATA_Download` directory)
-
-`AURN_download.py`
-
-This script accesses the AURN datasets that are provided in RData format on the UK-Air
-DEFRA website.
-
-Run using python and use the -help command to get the full set of parameters/options.
-
-This script creates a `AURN_data_download` directory, in which the available RData format
-files for all AURN sites will be downloaded and stored, and then will create a combined
-data file called `pollution_daily_data_[start year]-[end year].csv` in the same directory.
-This data file contains the combined daily mean, max, and data count for all AURN sites.
-
-
-### MEDMI Meteorological and Pollen Data
-
-(All scripts for obtaining Met and Pollen data are in the `scripts/MEDMI_Data_Download` directory)
-
-`met_extraction_script.py`
-
-
-To use these script(s), it is neccessary to log onto the MEDMI ssh server. Details of how to do 
-this can be obtained from the MED-MI website:
-https://www.data-mashup.org.uk/contact-us/
-and  following the instructions for:  ***connect to the server using an SSH client***.
-Alternatively, email: *health at metoffice dot gov dot uk*
-
-Copy the script to the ssh server. Then run it using python (simply `python [script name] [params/options]`) 
-and use the --help command to get the full set of parameters/options.
-
-The scripts will create a default directory 'met_extracted_data' for the extracted data.
-(To change the directory name from the default use the "--outdir_name" (-o) parameter.)
-
-Once all scripts have finished running you can copy the data back to your local computer.
-
-#### Using extra data
-With certain measurements, extra datasets can be requested and added to the outputs. To do this set the 
---extra_measurements (-x) parameter to True (default is False). 
-(Note that not all measurements can be extra datasets of others, for example the stations which measure pollen 
-don't measure meteorological parameters (and vice versa).)
-Therefore, in this tool, the only datasets that can have extra measurements added are:
-- temp
-- pressure
-- dewpoint
-- rel_hum
-
-If --extra_measurements is set to True then all allowed extra datasets added will be the above measurements. 
-For example temp would have added: pressure, dewpoint and rel_hum
+from the AURN metadata files. Bash scripts are provided for running these tools. The AURN
+metadata file will be needed for location information for the extraction of data from the
+EMEP files - this can be obtained by running the AURN download scripts first.
 
 ## Data Processing
 
-### MEDMI Data
+Scripts for processing both the meteorological and pollution datasets are included in
+the `scripts/Data_Processing` directory. These require the use of the `aurn_medmi` conda 
+environment. Example bash scripts are provided for running these tools.
 
-Scripts for processing these datasets are included in the `scripts/Data_Processing` directory. These require
-the use of the `aurn_medmi` conda environment. Example bash scripts are provided for running these. 
-
-### AURN Data
+The processing of the meteorological and pollution datasets is carried out independently of
+each other, so can be run as you wish. If EMEP data is to be used in the imputation of the
+pollution data, however, that will need to be processed first.
 
 ### Combining Datasets
 
-TBD
+The data files produced using the scripts above are combined using a pandas dataframe merge,
+based on date and site identifier. Scripts illustrating how this has been done are included
+in the `scripts/Combine_Data` directory.
 
 ## Testing Imputation Methods
 
-Imputation of missing data is carried out for the processing of some of the AURN and MEDMI datasets. Tools 
-for carrying out statistical testing of the imputation tools used are available in the `scripts/Data_Imputation_Testing`
-directory.
+Imputation of missing data is carried out for the processing of some of the AURN and MEDMI 
+datasets. Tools for carrying out statistical testing of the imputation tools used are 
+available in the `scripts/Data_Imputation_Testing` directory, with some guidance on using 
+these in the README file in that directory.
 
 
 ## Copyright & Licensing
 
-This software has been developed by the [Research IT](https://research-it.manchester.ac.uk/) group at the [University of Manchester](https://www.manchester.ac.uk/) for an [Alan Turing Institute](https://www.turing.ac.uk/) project.
+This software has been developed by the [Research IT](https://research-it.manchester.ac.uk/) 
+group at the [University of Manchester](https://www.manchester.ac.uk/) for an 
+[Alan Turing Institute](https://www.turing.ac.uk/) project.
 
 (c) 2019-2021 University of Manchester.
 Licensed under the GPL-3.0 license, see the file LICENSE for details.
