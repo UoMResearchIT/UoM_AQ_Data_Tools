@@ -1,19 +1,8 @@
 """
 Created on Tue Sep 22 09:16:40 2020
 
-Unified production script for MEDMI data processing. This will:
-    1) load and clean our dataset
-        a) find duplicated readings
-            i)  filtering out the METAR data by lack of pressure reading
-            ii) retaining the first value where there's no difference in presence of pressure reading
-        b) removing stations identified as unwanted
-            i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,
-                    and as it is unlikely to be useful comparison with participant data, we will remove it
-        c) find and remove the synoptic spot readings (these are single readings per day - so we will
-                     identify all such single readings and remove them, if they are synoptic spot readings or not)
-        (Points (a) and (c) based on pers. comms. with Martyn Sunter, Met Office, July 2020.
-         Point (b) based on data exploration by authors.)
-    2)
+Script for testing the imputation of Met data.
+
 
 @author:    Douglas Lowe and Ann Gledson
             Research IT, University of Manchester
@@ -35,15 +24,7 @@ from environmental_data_modules import MetImputationTest
 if __name__ == '__main__':
 
     ### read arguments from the command line
-    help_string = """***Unified production script for MEDMI data processing. ***
-        Loads and cleans the dataset by:
-        a) find duplicated readings 
-            i)  filtering out the METAR data by lack of pressure reading
-            ii) retaining the first value where there's no difference in presence of pressure reading
-        b) removing stations identified as unwanted
-            i) station 117 is on top of a mountain in the Cairngorms - RH readings are suspect,
-                    and as it is unlikely to be useful comparison with participant data, we will remove it
-        c) find and remove the synoptic spot readings"""
+    help_string = """Unified production script for MEDMI imputation testing."""
 
     parser = argparse.ArgumentParser(description=help_string)
 
