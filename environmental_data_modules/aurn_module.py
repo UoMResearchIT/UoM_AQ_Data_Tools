@@ -124,6 +124,6 @@ class AurnModule(object):
         # Read the RData file into a Pandas dataframe
         try:
             print('Reading filename {} into dataframe.'.format(filename.name))
-            return pyreadr.read_r(filename.name)
+            return pyreadr.read_r(str(filename))
         except Exception as err:
             raise ValueError('Error reading into dataframe from R file: {} . {}'.format(filename, err))
