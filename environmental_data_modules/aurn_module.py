@@ -27,13 +27,13 @@ class AurnModule(object):
     NEW_FILE_COLS = [TIMESTAMP_STRING, SITE_STRING] + SPECIES_LIST_EXTRACTED
 
     # Define defaults
-    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
+    DEFAULT_METADATA_FILE = 'AURN_metadata.RData'
     DEFAULT_DOWNLOAD_RDATA_URL = "https://uk-air.defra.gov.uk/openair/R_data/"
     DEFAULT_METADATA_URL = '{}/{}'.format(DEFAULT_DOWNLOAD_RDATA_URL, DEFAULT_METADATA_FILE)
     DEFAULT_SITE_LIST = None
 
     def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):
-        """ Initialise instance of the MetModule class.
+        """ Initialise instance of the AurnModule class.
             Initialises the private class variables with hard-coded / default values
 
             Args:
