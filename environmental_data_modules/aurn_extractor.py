@@ -21,7 +21,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
     DEFAULT_SAVE_TO_CSV = True
     BASE_FILE_OUT = '{}/AURN_extracted{}.csv'
 
-    def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
+    def __init__(self, metadata_filename=None, metadata_url=AurnModule.DEFAULT_METADATA_URL,
                  out_dir=Extractor.DEFAULT_OUT_DIR,
                  verbose=Extractor.DEFAULT_VERBOSE):
         """ Initialise instance of the AurnExtractor class.
@@ -57,6 +57,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 site_list:          (list of numbers/strings) The site IDs of interest
                 save_to_csv:        (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:     (string) The suffix to appended to the end of output file names.
+                species_list:       (list of string).
 
             Returns:
                 hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe

@@ -23,6 +23,16 @@ class TestAurnExtractor(unittest.TestCase):
     """
     Test constructor with correct inputs
     """
+
+    # No defaults, both filename and url
+    extractor = AurnExtractor(metadata_filename=self.metadata_filename,
+                              metadata_url=self.metadata_url,
+                              out_dir=self.out_dir,
+                              verbose=0)
+    self.assertIsNotNone(extractor)
+    self.assertIsInstance(extractor, AurnExtractor)
+
+    # No defaults, filename only
     extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                               metadata_url=None,
                               out_dir=self.out_dir,
@@ -30,6 +40,7 @@ class TestAurnExtractor(unittest.TestCase):
     self.assertIsNotNone(extractor)
     self.assertIsInstance(extractor, AurnExtractor)
 
+    # No defaults, URL only
     extractor = AurnExtractor(metadata_filename=None,
                               metadata_url=self.metadata_url,
                               out_dir=self.out_dir,
@@ -37,6 +48,14 @@ class TestAurnExtractor(unittest.TestCase):
     self.assertIsNotNone(extractor)
     self.assertIsInstance(extractor, AurnExtractor)
 
+    # Will use default filename (None)
+    extractor = AurnExtractor(metadata_url=self.metadata_url,
+                              out_dir=self.out_dir,
+                              verbose=0)
+    self.assertIsNotNone(extractor)
+    self.assertIsInstance(extractor, AurnExtractor)
+
+    # Will use default filename (None) and default url
     extractor = AurnExtractor(out_dir=self.out_dir,
                               verbose=0)
     self.assertIsNotNone(extractor)
@@ -49,6 +68,7 @@ class TestAurnExtractor(unittest.TestCase):
     """
     with self.assertRaises(AssertionError):
         extractor = AurnExtractor(metadata_filename='bad_filename',
+                                  metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
                                   verbose=0)
 
@@ -65,14 +85,13 @@ class TestAurnExtractor(unittest.TestCase):
                                   verbose='bad verbose')
 
 
-  '''def test_extract_data_OK_params(self):
+  def test_extract_data_OK_params(self):
     """
     Test extract_data with OK inputs
     """
-    extractor = AurnExtractor(metadata_filename=self.load_metadata_filename,
-                              metadata_url=self.metadata_url,
-                              out_dir=self.out_dir, verbose=0)
-
+    extractor = AurnExtractor(metadata_filename=self.metadata_filename,
+                              out_dir=self.out_dir,
+                              verbose=0)
     extractor.extract_data(
       years=self.years,
       site_list=self.site_list,
@@ -80,6 +99,7 @@ class TestAurnExtractor(unittest.TestCase):
       outfile_suffix=self.outfile_suffix)
 
 
+'''
   def test_extract_data_bad_params(self):
     """
     Test extract_data with bad inputs
