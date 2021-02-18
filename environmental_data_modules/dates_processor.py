@@ -155,10 +155,7 @@ class DateYearsProcessor(DatesProcessor):
                 None
 
         """
-        try:
-            years = list(years)
-        except Exception:
-            raise TypeError('years must be a list. Current input: {}'.format(years))
+        assert isinstance(years, list), 'years must be a list. Current input: {}'.format(years)
 
         available_years = DateYearsProcessor.get_available_years()
         error_years = set(years) - set(available_years)

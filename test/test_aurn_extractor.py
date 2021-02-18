@@ -103,31 +103,71 @@ class TestAurnExtractor(unittest.TestCase):
     self.assertIsInstance(result, pd.DataFrame)
 
 
-'''
+
   def test_extract_data_bad_params(self):
     """
     Test extract_data with bad inputs
     """
-    extractor = AurnExtractor(metadata_filename=self.load_metadata_filename,
+    extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                               metadata_url=self.metadata_url,
                               out_dir=self.out_dir, verbose=0)
 
-    extractor.extract_data(
-      years=100000,
-      site_list=self.site_list,
-      save_to_csv=False,
-      outfile_suffix=self.outfile_suffix)
+    with self.assertRaises(AssertionError):
+        # Test bad years
+        extractor.extract_data(
+          years=100000,
+          site_list=self.site_list,
+          save_to_csv=False,
+          outfile_suffix=self.outfile_suffix)
 
-    extractor.extract_data(
-      years=[2017],
-      site_list=10,
-      save_to_csv=False,
-      outfile_suffix=self.outfile_suffix)
+        extractor.extract_data(
+          years=[],
+          site_list=self.site_list,
+          save_to_csv=False,
+          outfile_suffix=self.outfile_suffix)
 
-    extractor.extract_data(
-      years=2017,
-      site_list=self.site_list,
-      save_to_csv=False,
-      outfile_suffix=10)'''
+        extractor.extract_data(
+          years=2017,
+          site_list=self.site_list,
+          save_to_csv=False,
+          outfile_suffix=self.outfile_suffix)
 
+        # Test bad site_list
+        extractor.extract_data(
+          years=[2017],
+          site_list='bad site list',
+          save_to_csv=False,
+          outfile_suffix=self.outfile_suffix)
 
+        extractor.extract_data(
+          years=[2017],
+          site_list=[],
+          save_to_csv=False,
+          outfile_suffix=self.outfile_suffix)
+
+        # Test bad species_list
+        extractor.extract_data(
+            years=[2017],
+            species_list=[],
+            save_to_csv=False,
+            outfile_suffix=self.outfile_suffix)
+
+        extractor.extract_data(
+            years=[2017],
+            species_list='bad species',
+            save_to_csv=False,
+            outfile_suffix=self.outfile_suffix)
+
+        # Test bad outfile suffix
+        extractor.extract_data(
+          years=2017,
+          site_list=self.site_list,
+          save_to_csv=False,
+          outfile_suffix=10)
+
+        # Test bad save_to_csv
+        extractor.extract_data(
+          years=[2017],
+          site_list=self.site_list,
+          save_to_csv=False,
+          outfile_suffix=10)
