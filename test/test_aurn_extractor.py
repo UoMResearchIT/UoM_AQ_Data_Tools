@@ -27,32 +27,40 @@ class TestAurnExtractor(unittest.TestCase):
                               metadata_url=None,
                               out_dir=self.out_dir,
                               verbose=0)
+    self.assertIsNotNone(extractor)
+    self.assertIsInstance(extractor, AurnExtractor)
 
+    extractor = AurnExtractor(metadata_filename=None,
+                              metadata_url=self.metadata_url,
+                              out_dir=self.out_dir,
+                              verbose=0)
     self.assertIsNotNone(extractor)
     self.assertIsInstance(extractor, AurnExtractor)
 
 
-  '''def test_init_bad_params(self):
+  def test_init_bad_params(self):
     """
     Test constructor with bad inputs
     """
-    extractor = AurnExtractor(metadata_filename='bad_filename',
-                              out_dir=self.out_dir,
-                              verbose=0)
+    with self.assertRaises(AssertionError):
+        extractor = AurnExtractor(metadata_filename='bad_filename',
+                                  out_dir=self.out_dir,
+                                  verbose=0)
 
-    extractor = AurnExtractor(metadata_url='bad url',
-                              out_dir=self.out_dir,
-                              verbose=0)
+        extractor = AurnExtractor(metadata_url='bad url',
+                                  out_dir=self.out_dir,
+                                  verbose=0)
 
-    extractor = AurnExtractor(metadata_url=self.metadata_filename,
-                              out_dir='bad outdir',
-                              verbose=0)
-    extractor = AurnExtractor(metadata_url=self.metadata_filename,
-                              out_dir='bad outdir',
-                              verbose='bad verbose')
+        extractor = AurnExtractor(metadata_filename=self.metadata_filename,
+                                  out_dir=108748485,
+                                  verbose=0)
+
+        extractor = AurnExtractor(metadata_url=self.metadata_filename,
+                                  out_dir=self.out_dir,
+                                  verbose='bad verbose')
 
 
-  def test_extract_data_OK_params(self):
+  '''def test_extract_data_OK_params(self):
     """
     Test extract_data with OK inputs
     """

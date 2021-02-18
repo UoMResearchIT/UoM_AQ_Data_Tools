@@ -54,10 +54,7 @@ class EnvironmentModule:
 
     @out_dir.setter
     def out_dir(self, dir_name):
-        try:
-            dir_name = str(dir_name)
-        except ValueError as err:
-            raise err
+        assert isinstance(dir_name, str), ValueError("dir_name is not a valid string")
         try:
             os.makedirs(dir_name)
         except OSError as e:
@@ -71,10 +68,7 @@ class EnvironmentModule:
 
     @verbose.setter
     def verbose(self, verbose):
-        try:
-            verbose = int(verbose)
-        except ValueError as err:
-            raise err
+        assert isinstance(verbose, int), ValueError("verbose is not a valid integer")
         self.__verbose = max(0, verbose)
 
     @property
