@@ -170,4 +170,4 @@ class TestAurnExtractor(unittest.TestCase):
           years=[2017],
           site_list=self.site_list,
           save_to_csv=False,
-          outfile_suffix=10)
+          outfile_suffix='% %..()')
