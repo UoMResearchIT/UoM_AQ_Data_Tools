@@ -37,6 +37,11 @@ class TestAurnExtractor(unittest.TestCase):
     self.assertIsNotNone(extractor)
     self.assertIsInstance(extractor, AurnExtractor)
 
+    extractor = AurnExtractor(out_dir=self.out_dir,
+                              verbose=0)
+    self.assertIsNotNone(extractor)
+    self.assertIsInstance(extractor, AurnExtractor)
+
 
   def test_init_bad_params(self):
     """
@@ -75,7 +80,7 @@ class TestAurnExtractor(unittest.TestCase):
       outfile_suffix=self.outfile_suffix)
 
 
-  def test_extract_data_OK_params(self):
+  def test_extract_data_bad_params(self):
     """
     Test extract_data with bad inputs
     """
