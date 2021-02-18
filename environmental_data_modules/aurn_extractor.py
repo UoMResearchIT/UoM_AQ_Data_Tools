@@ -80,8 +80,13 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         self.site_list = site_list
         self.species_list = species_list
 
+        assert site_list is not None and len(site_list) > 0, 'Site list is empty'
+        assert species_list is not None and len(species_list) > 0, 'Species list is empty'
+        assert years is not None and len(years) > 0, 'Years is empty'
+
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data(save_to_csv)
+        assert len(hourly_dataframe.index) > 0, "After extracting site data, hourly_dataframe is empty"
 
         # apply some filtering of negative and zero values
 

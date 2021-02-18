@@ -1,5 +1,6 @@
 import unittest
 from os import path
+import pandas as pd
 
 from environmental_data_modules.aurn_extractor import AurnExtractor
 
@@ -15,7 +16,7 @@ class TestAurnExtractor(unittest.TestCase):
     self.metadata_url = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
     self.out_dir = path.join(dir, 'output')
     self.outfile_suffix = 'test'
-    self.site_list = []
+    self.site_list = ['CARD', 'HS1']
     self.years = [2017]
 
 
@@ -92,11 +93,14 @@ class TestAurnExtractor(unittest.TestCase):
     extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                               out_dir=self.out_dir,
                               verbose=0)
-    extractor.extract_data(
+    result = extractor.extract_data(
       years=self.years,
       site_list=self.site_list,
       save_to_csv=False,
       outfile_suffix=self.outfile_suffix)
+
+    self.assertIsNotNone(result)
+    self.assertIsInstance(result, pd.DataFrame)
 
 
 '''

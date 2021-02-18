@@ -124,7 +124,7 @@ class AurnModule(object):
         assert alt_url is not None, ValueError('no filename or url'.format(filename))
 
         # Does the URL alternative exist and does it work
-        print("Downloading data file using url {}".format(alt_url))
+        print("\nDownloading data file using url {}".format(alt_url))
         try:
             print('\nLoading metadata file from url')
             filename = Path(wget.download(alt_url))
