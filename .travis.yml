@@ -1,0 +1,16 @@
+language: python
+dist: bionic
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "nightly"
+matrix:
+  fast_finish: true
+  allow_failures:
+    - python: "nightly"
+install:
+  - conda env create -f env_aurn_medmi.yml
+  - conda activate aurn_medmi
+script:
+  - python -m unittest discover
