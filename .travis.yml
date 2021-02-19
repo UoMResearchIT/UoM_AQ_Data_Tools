@@ -1,7 +1,6 @@
 language: python
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
-  - "2.7"
   - "3.5"
   - "3.6"
 install:
@@ -24,7 +23,6 @@ install:
 # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyreadr python-wget pandas numpy scipy scikit-learn seaborn geopy
   - conda activate test-environment
-  - python -m pip install .
 
 script:
   - python -m unittest discover
