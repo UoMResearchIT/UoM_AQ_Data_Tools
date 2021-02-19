@@ -18,8 +18,9 @@ class TestAurnExtractor(unittest.TestCase):
         self.outfile_suffix = 'test'
         self.site_list = ['CARD', 'HS1']
         self.years = [2017]
+        self.verbose = 0
 
-        self.bad_list_params = [[], 'bad', 20]  # Bad lists
+        self.bad_list_params = [[], 'bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
 
         self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                        out_dir=self.out_dir,
@@ -35,7 +36,7 @@ class TestAurnExtractor(unittest.TestCase):
         extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                   metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
@@ -43,7 +44,7 @@ class TestAurnExtractor(unittest.TestCase):
         extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                   metadata_url=None,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
@@ -51,20 +52,20 @@ class TestAurnExtractor(unittest.TestCase):
         extractor = AurnExtractor(metadata_filename=None,
                                   metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
         # Will use default filename (None)
         extractor = AurnExtractor(metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
         # Will use default filename (None) and default url
         extractor = AurnExtractor(out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
@@ -77,15 +78,15 @@ class TestAurnExtractor(unittest.TestCase):
             extractor = AurnExtractor(metadata_filename='bad_filename',
                                       metadata_url=self.metadata_url,
                                       out_dir=self.out_dir,
-                                      verbose=0)
+                                      verbose=self.verbose)
 
             extractor = AurnExtractor(metadata_url='bad url',
                                       out_dir=self.out_dir,
-                                      verbose=0)
+                                      verbose=self.verbose)
 
             extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                       out_dir=108748485,
-                                      verbose=0)
+                                      verbose=self.verbose)
 
             extractor = AurnExtractor(metadata_url=self.metadata_filename,
                                       out_dir=self.out_dir,
@@ -99,7 +100,7 @@ class TestAurnExtractor(unittest.TestCase):
       if not self.extractor:
           self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                        out_dir=self.out_dir,
-                                       verbose=0)
+                                       verbose=self.verbose)
       result = self.extractor.extract_data(
           years=self.years,
           site_list=self.site_list,
@@ -118,7 +119,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                        out_dir=self.out_dir,
-                                       verbose=0)
+                                       verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
@@ -135,7 +136,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
-                                           verbose=0)
+                                           verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
@@ -152,7 +153,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
-                                           verbose=0)
+                                           verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
@@ -169,7 +170,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
-                                           verbose=0)
+                                           verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             self.extractor.extract_data(
