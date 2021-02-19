@@ -1,5 +1,7 @@
 # UoM AQ Data Tools
 
+[![Build Status](https://travis-ci.org/UoMResearchIT/UoM_AQ_Data_Tools.svg?branch=testing)](https://travis-ci.org/UoMResearchIT/UoM_AQ_Data_Tools)
+
 This repository contains tools for obtaining and processing UK air quality data.
 
 The sections below are:
