@@ -10,7 +10,7 @@ matrix:
   allow_failures:
     - python: "nightly"
 install:
-  - conda env create -f env_aurn_medmi.yml
-  - conda activate aurn_medmi
+  - conda build env_aurn_medmi.yml
+  - conda install aurn_medmi --use-local
 script:
   - python -m unittest discover
