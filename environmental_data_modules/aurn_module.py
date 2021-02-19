@@ -27,13 +27,13 @@ class AurnModule(object):
     NEW_FILE_COLS = [TIMESTAMP_STRING, SITE_STRING] + SPECIES_LIST_EXTRACTED
 
     # Define defaults
-    DEFAULT_METADATA_FILE = "AURN_metadata.RData"
+    DEFAULT_METADATA_FILE = 'AURN_metadata.RData'
     DEFAULT_DOWNLOAD_RDATA_URL = "https://uk-air.defra.gov.uk/openair/R_data/"
     DEFAULT_METADATA_URL = '{}/{}'.format(DEFAULT_DOWNLOAD_RDATA_URL, DEFAULT_METADATA_FILE)
     DEFAULT_SITE_LIST = None
 
     def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):
-        """ Initialise instance of the MetModule class.
+        """ Initialise instance of the AurnModule class.
             Initialises the private class variables with hard-coded / default values
 
             Args:
@@ -44,6 +44,7 @@ class AurnModule(object):
                 Initialised instance of subclass of MetModule
 
         """
+
         self._timestamp_string = AurnModule.TIMESTAMP_STRING
         self._site_string = AurnModule.SITE_STRING
         self._metadata = self.load_metadata(metadata_filename, metadata_url)
@@ -102,28 +103,30 @@ class AurnModule(object):
                 alt_url: (string) Valid URL pointing to AURN metadata downloadable source, or None
 
             Returns:
-                None
+                Dataframe containing the downloaded data
 
         """
-        # Has a filname been entered and does the file exist?
-        if filename is not None and Path(filename).is_file():
+        assert filename is None or Path(filename).is_file(), ValueError('Invalid filename: {}'.format(filename))
+
+        # Has a filename been entered and does the file exist?
+        if filename is not None:
             print("Metadata file {} exists so will use this".format(filename))
             filename = Path(filename)
-        elif alt_url:
-            # Does the URL alternative exist and does it work
-            print("Downloading data file using url {}".format(alt_url))
-            try:
-                filename = Path(wget.download(alt_url))
-                print('\nMetadata file loaded from url')
-            except Exception as err:
-                raise ValueError('Error obtaining metadata file from {}. {}'.format(alt_url, err))
-        else:
-            # Neither works
-            raise ValueError('Invalid metadata filename and no url alternative provided')
 
-        # Read the RData file into a Pandas dataframe
+            # Read the RData file into a Pandas dataframe
+            try:
+                print('Reading filename {} into dataframe.'.format(filename.name))
+                return pyreadr.read_r(str(filename))
+            except Exception as err:
+                raise ValueError('Error reading into dataframe from R file: {} . {}'.format(filename, err))
+
+        # No filename so try URL if one exists, or raise error
+        assert alt_url is not None, ValueError('no filename or url'.format(filename))
+
+        # Does the URL alternative exist and does it work
+        print("\nDownloading data file using url {}".format(alt_url))
         try:
-            print('Reading filename {} into dataframe.'.format(filename.name))
-            return pyreadr.read_r(filename.name)
+            print('\nLoading metadata file from url')
+            filename = Path(wget.download(alt_url))
         except Exception as err:
-            raise ValueError('Error reading into dataframe from R file: {} . {}'.format(filename, err))
+            raise ValueError('Error obtaining metadata file from url: {}. {}'.format(alt_url, err))

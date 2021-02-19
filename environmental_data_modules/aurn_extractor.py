@@ -21,7 +21,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
     DEFAULT_SAVE_TO_CSV = True
     BASE_FILE_OUT = '{}/AURN_extracted{}.csv'
 
-    def __init__(self, metadata_filename=AurnModule.DEFAULT_METADATA_FILE, metadata_url=AurnModule.DEFAULT_METADATA_URL,
+    def __init__(self, metadata_filename=None, metadata_url=AurnModule.DEFAULT_METADATA_URL,
                  out_dir=Extractor.DEFAULT_OUT_DIR,
                  verbose=Extractor.DEFAULT_VERBOSE):
         """ Initialise instance of the AurnExtractor class.
@@ -57,6 +57,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 site_list:          (list of numbers/strings) The site IDs of interest
                 save_to_csv:        (boolean) Whether to save the output dateframes to CSV file(s)
                 outfile_suffix:     (string) The suffix to appended to the end of output file names.
+                species_list:       (list of string).
 
             Returns:
                 hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
@@ -72,6 +73,10 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                         NOXasNO2 (float):
                         SO2      (float):
         """
+        assert outfile_suffix is None or isinstance(outfile_suffix, str), 'outfile_suffix is not a valid string'
+        assert site_list is None or isinstance(site_list, list) and len(site_list) > 0, 'Site list invalid or empty'
+        assert species_list is None or isinstance(species_list, list) and len(species_list) > 0, \
+            'Species list is invalid empty'
 
         self._outfile_suffix = outfile_suffix
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
@@ -81,6 +86,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
         # create a dataframe with the hourly dataset for all stations
         hourly_dataframe = self.extract_site_data(save_to_csv)
+        assert len(hourly_dataframe.index) > 0, "After extracting site data, hourly_dataframe is empty"
 
         # apply some filtering of negative and zero values
 
