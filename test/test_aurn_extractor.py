@@ -1,6 +1,8 @@
 import unittest
 from os import path
 import pandas as pd
+from pandas.util.testing import assert_frame_equal
+from datetime import datetime
 
 from environmental_data_modules.aurn_extractor import AurnExtractor
 
@@ -19,7 +21,8 @@ class TestAurnExtractor(unittest.TestCase):
         self.site_list = ['CARD', 'HS1']
         self.years = [2017]
         self.verbose = 0
-
+        self.result = pd.read_csv(path.join(self.out_dir, 'result_aurn_extractor.csv'),
+                                  parse_dates=['timestamp'], index_col='timestamp')
         self.bad_list_params = [[], 'bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
 
         self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
@@ -94,23 +97,25 @@ class TestAurnExtractor(unittest.TestCase):
 
 
     def test_extract_data_OK_params(self):
-      """
-      Test extract_data with OK inputs
-      """
-      if not self.extractor:
-          self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                       out_dir=self.out_dir,
-                                       verbose=self.verbose)
-      result = self.extractor.extract_data(
-          years=self.years,
-          site_list=self.site_list,
-          save_to_csv=False,
-          outfile_suffix=self.outfile_suffix)
+        """
+        Test extract_data with OK inputs
+        """
+        if not self.extractor:
+            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
+                                           out_dir=self.out_dir,
+                                           verbose=self.verbose)
+        result = self.extractor.extract_data(
+            years=self.years,
+            site_list=self.site_list,
+            save_to_csv=False,
+            outfile_suffix=self.outfile_suffix)
 
-      self.assertIsNotNone(result)
-      self.assertIsInstance(result, pd.DataFrame)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, pd.DataFrame)
 
-
+        # Compare with model result
+        result.set_index('timestamp', inplace=True)
+        self.assertTrue(result.round(3).equals(self.result.round(3)))
 
     def test_extract_data_bad_years(self):
         """
