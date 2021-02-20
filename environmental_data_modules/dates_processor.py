@@ -198,8 +198,6 @@ class DateYearsProcessor(DatesProcessor):
             Returns:
                 The last available year (int)
         """
+        #  Currently set to current (now) year.
         cur_year = datetime.now().year
-        # Todo: Doug, when is best available end date to set, based on now() ? If it depends on Met or Aurn, we'll need
-        #  to sub-type this class
-        #  Currently set to previous year.
         return cur_year

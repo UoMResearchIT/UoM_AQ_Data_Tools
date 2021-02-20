@@ -38,7 +38,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
 
         """
         super(AurnExtractor, self).__init__(out_dir, verbose)
-        AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url)
+        AurnModule.__init__(self, metadata_filename=metadata_filename, metadata_url=metadata_url, out_dir=out_dir)
         DateYearsProcessor.__init__(self)
         self._base_file_out = AurnExtractor.BASE_FILE_OUT
 

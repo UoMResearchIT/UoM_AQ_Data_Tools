@@ -29,7 +29,6 @@ class TestAurnExtractor(unittest.TestCase):
                                        out_dir=self.out_dir,
                                        verbose=0)
 
-
     def test_init_ok_params(self):
         """
         Test constructor with correct inputs
@@ -96,7 +95,7 @@ class TestAurnExtractor(unittest.TestCase):
                                       verbose='bad verbose')
 
 
-    def test_extract_data_OK_params(self):
+    def test_extract_data_OK_params_local_metadata(self):
         """
         Test extract_data with OK inputs
         """
@@ -104,6 +103,26 @@ class TestAurnExtractor(unittest.TestCase):
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
                                            verbose=self.verbose)
+        result = self.extractor.extract_data(
+            years=self.years,
+            site_list=self.site_list,
+            save_to_csv=False,
+            outfile_suffix=self.outfile_suffix)
+
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, pd.DataFrame)
+
+        # Compare with model result
+        result.set_index('timestamp', inplace=True)
+        self.assertTrue(result.round(3).equals(self.result.round(3)))
+
+    def test_extract_data_OK_params_url_metadata(self):
+        """
+        Test extract_data with OK inputs
+        """
+        self.extractor = AurnExtractor(out_dir=self.out_dir,
+                                       verbose=self.verbose)
+
         result = self.extractor.extract_data(
             years=self.years,
             site_list=self.site_list,
