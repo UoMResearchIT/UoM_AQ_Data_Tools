@@ -21,7 +21,7 @@ class TestAurnExtractor(unittest.TestCase):
         self.site_list = ['CARD', 'HS1']
         self.years = [2017]
         self.verbose = 0
-        self.result = pd.read_csv(path.join(self.out_dir, 'result_aurn_extractor.csv'),
+        self.result = pd.read_csv(path.join(dir, 'data', 'OK', 'result_aurn_extractor.csv'),
                                   parse_dates=['timestamp'], index_col='timestamp')
         self.bad_list_params = [[], 'bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
 
