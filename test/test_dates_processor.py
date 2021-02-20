@@ -6,7 +6,7 @@ from environmental_data_modules.dates_processor import DatesProcessor, DateRange
 
 class TestDatesProcessor(unittest.TestCase):
     """
-    Tests for the Extractor class
+    Tests for the DatesProcessor class
     """
 
     def setUp(self):
