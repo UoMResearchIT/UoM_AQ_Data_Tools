@@ -37,7 +37,7 @@ class DateRangeProcessor(DatesProcessor):
         """ Sets the date range of interest
 
             Args:
-                date_range: (list of 2 daterange) List of 2 dates: start (date_range[0]) and end date (date_range[1])
+                date_range: (list of 2 datetime) List of 2 dates: start (date_range[0]) and end date (date_range[1])
                             date_range[0] must be and earlier date than date_range[1]
 
             Returns:
@@ -64,7 +64,7 @@ class DateRangeProcessor(DatesProcessor):
             Returns:
                 List of 2 dates, each in datetime format: start and end date
         """
-        return [DateRangeProcessor.get_available_start(), DateRangeProcessor.get_available_end]
+        return [DateRangeProcessor.get_available_start(), DateRangeProcessor.get_available_end()]
 
     @staticmethod
     def get_available_start():
@@ -102,10 +102,9 @@ class DateRangeProcessor(DatesProcessor):
         if date_start is None:
             self.__start = None
             return
-        if not isinstance(date_start, datetime):
-            raise TypeError('Start date is not in datetime format')
-        if date_start < DateRangeProcessor.get_available_start():
-            raise ValueError('Start date is less than minimum date available.')
+        assert isinstance(date_start, datetime), TypeError('Start date is not in datetime format')
+        assert date_start >= DateRangeProcessor.get_available_start(), \
+            ValueError('Start date is less than minimum date available.')
         self.__start = date_start
 
     def set_end_date(self, date_end):
