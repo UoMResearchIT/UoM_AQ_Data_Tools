@@ -36,6 +36,11 @@ class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
                 Initialised instance of MetExtractor
 
         """
+        try:
+            self._dataset = Dataset
+        except:
+            self._dataset = None
+
         super(MetExtractor, self).__init__(out_dir, verbose)
         MetModule.__init__(self)
         DateRangeProcessor.__init__(self)
@@ -44,6 +49,11 @@ class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
         self._base_file_out = MetExtractor.BASE_FILE_OUT
         self._temp_file_out = ''
         self._extra_datasets = []
+
+
+    @property
+    def dataset(self):
+        return self._dataset
 
     @staticmethod
     def get_source_ref_from_name(name):
@@ -137,7 +147,7 @@ class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
         return datadata
 
     def _perform_extraction(self, dict):
-        datadata = Dataset(dict)
+        datadata = self.dataset(dict)
         datadata.default()
 
         for ds in self._extra_datasets:
