@@ -98,7 +98,7 @@ class TestMetExtractor(unittest.TestCase):
                 result.set_index('timestamp', inplace=True)
                 self.assertTrue(result.round(3).equals(self.result[measurement].round(3)))
         else:
-            print('\nCan\'t see MEDMI Dataset object, so could not run data extraction tests.')
+            print('\nCan\'t see MEDMI Dataset object, so could not run MEDMI data extraction tests.')
 
 
 
