@@ -63,7 +63,7 @@ class TestMetExtractor(unittest.TestCase):
         with self.assertRaises(AssertionError):
             extractor = MetExtractor(out_dir=108748485,
                                      verbose=self.verbose)
-            extractor = MetExtractor(out_dir='&??. ..^£',
+            extractor = MetExtractor(out_dir='&??. ..£',
                                      verbose=self.verbose)
             extractor = MetExtractor(out_dir=[self.out_dir],
                                      verbose=self.verbose)
