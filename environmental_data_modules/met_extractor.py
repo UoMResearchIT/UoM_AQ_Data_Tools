@@ -106,6 +106,10 @@ class MetExtractor(Extractor, MetModule, DateRangeProcessor, RegionRectProcessor
                 Extracted data (pandas dataframe)
 
         """
+        assert isinstance(outfile_suffix, str), 'outfile_suffix must be a valid string'
+        assert date_range is None or isinstance(date_range, list), 'date_range must be a list'
+        assert date_range is None or len(date_range) == 2, 'date_range must be a list containing 2 strings'
+        assert isinstance(extract_extra_datasets, bool)
 
         self.set_region(latitude_range, longitude_range)
         self._outfile_suffix = outfile_suffix

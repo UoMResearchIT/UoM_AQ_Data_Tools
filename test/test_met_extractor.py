@@ -100,83 +100,76 @@ class TestMetExtractor(unittest.TestCase):
         else:
             print('\nCan\'t see MEDMI Dataset object, so could not run MEDMI data extraction tests.')
 
-
-
-
-
-
-
-
-    '''def test_extract_data_bad_years(self):
+    def test_extract_data_bad_extra_measurements(self):
         """
-        Test extract_data with bad years param
+        Test extract_data with bad extra measurements param
         """
         if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                       out_dir=self.out_dir,
-                                       verbose=self.verbose)
+            self.extractor = MetExtractor(out_dir=self.out_dir,
+                                          verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
-                  years=bad_param,
-                  site_list=self.site_list,
-                  save_to_csv=False,
-                  outfile_suffix=self.outfile_suffix)
+                    extract_extra_datasets=bad_param,
+                    latitude_range=self.latitudes,
+                    longitude_range=self.longitudes,
+                    outfile_suffix=self.outfile_suffix,
+                    date_range=self.date_range)
 
-    def test_extract_data_bad_site_list(self):
+    def test_extract_data_bad_latitudes_longitudes(self):
         """
-        Test extract_data with bad site_list param
+        Test extract_data with bad latitude or longitude range param
         """
         if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
+            self.extractor = MetExtractor(out_dir=self.out_dir,
+                                          verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
-                  years=self.years,
-                  site_list=bad_param,
-                  save_to_csv=False,
-                  outfile_suffix=self.outfile_suffix)
-
-    def test_extract_data_bad_save_to_file(self):
-        """
-        Test extract_data with bad species_list param
-        """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
-
-        with self.assertRaises(AssertionError):
-            for bad_param in self.bad_list_params:
+                    extract_extra_datasets=self.extra_measurements,
+                    latitude_range=bad_param,
+                    longitude_range=self.longitudes,
+                    outfile_suffix=self.outfile_suffix,
+                    date_range=self.date_range)
                 self.extractor.extract_data(
-                    years=self.years,
-                    site_list=self.site_list,
-                    save_to_csv=bad_param,
-                    outfile_suffix=self.outfile_suffix)
+                    extract_extra_datasets=self.extra_measurements,
+                    latitude_range=self.latitudes,
+                    longitude_range=bad_param,
+                    outfile_suffix=self.outfile_suffix,
+                    date_range=self.date_range)
 
     def test_extract_data_bad_outfile_suffix(self):
         """
-        Test extract_data with bad outfile_suffix param
+        Test extract_data with bad outfile suffix param
         """
         if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
+            self.extractor = MetExtractor(out_dir=self.out_dir,
+                                          verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
-            self.extractor.extract_data(
-              years=self.years,
-              site_list=self.site_list,
-              save_to_csv=False,
-              outfile_suffix=10)
+            for bad_param in self.bad_list_params:
+                self.extractor.extract_data(
+                    extract_extra_datasets=self.extra_measurements,
+                    latitude_range=self.latitudes,
+                    longitude_range=self.longitudes,
+                    outfile_suffix=bad_param,
+                    date_range=self.date_range)
 
-            # Test bad save_to_csv
-            self.extractor.extract_data(
-              years=self.years,
-              site_list=self.site_list,
-              save_to_csv=False,
-              outfile_suffix='% %..()')'''
+    def test_extract_data_bad_date_range(self):
+        """
+        Test extract_data with bad date range param
+        """
+        if not self.extractor:
+            self.extractor = MetExtractor(out_dir=self.out_dir,
+                                          verbose=self.verbose)
+
+        with self.assertRaises(AssertionError):
+            for bad_param in self.bad_list_params:
+                self.extractor.extract_data(
+                    extract_extra_datasets=self.extra_measurements,
+                    latitude_range=self.latitudes,
+                    longitude_range=self.longitudes,
+                    outfile_suffix=self.outfile_suffix,
+                    date_range=bad_param)

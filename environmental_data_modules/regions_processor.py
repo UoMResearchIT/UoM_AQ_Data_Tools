@@ -105,7 +105,18 @@ class RegionRectProcessor(RegionsProcessor):
                 None
 
         """
-        #Todo: Doug do we need to test if start < end for both long and latitude?
+        assert isinstance(latitude_range, list), 'latitude_renge must be a valid list'
+        assert len(latitude_range) == 2, "latitude_range must be a list of 2 values"
+        assert isinstance(latitude_range[0], float) or isinstance(latitude_range[0], int), \
+            'latitude_range[0] value must be numeric'
+        assert isinstance(latitude_range[1], float) or isinstance(latitude_range[1], int), \
+            'latitude_range[1] value must be numeric'
+        assert isinstance(longitude_range, list), 'longitude_range must be a valid list'
+        assert len(longitude_range) == 2, "longitude_range must be a list of 2 values"
+        assert isinstance(longitude_range[0], float) or isinstance(longitude_range[0], int), \
+            'longitude_range[0] value must be numeric'
+        assert isinstance(longitude_range[1], float) or isinstance(longitude_range[1], int), \
+            'longitude_range[1] value must be numeric'
         self.latitude_range = latitude_range
         self.longitude_range = longitude_range
 
