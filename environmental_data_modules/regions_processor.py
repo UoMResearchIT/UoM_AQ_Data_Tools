@@ -53,11 +53,12 @@ class RegionRectProcessor(RegionsProcessor):
                 None
 
         """
-        try:
-            val_1 = float(range[0])
-            val_2 = float(range[1])
-        except Exception as err:
-            raise TypeError('range values input are not both valid floats')
+        assert isinstance(range, list), 'renge must be a valid list'
+        assert len(range) == 2, "range must be a list of 2 values"
+        assert isinstance(range[0], float) or isinstance(range[0], int), 'range[0] value must be numeric'
+        assert isinstance(range[1], float) or isinstance(range[1], int), 'range[1] value must be numeric'
+        val_1 = float(range[0])
+        val_2 = float(range[1])
         if not ((RegionRectProcessor.LATITUDE_RANGE[0] <= val_1) and (val_1 <= RegionRectProcessor.LATITUDE_RANGE[1])):
             raise ValueError('Latitude first value falls outside global range')
         if not ((RegionRectProcessor.LATITUDE_RANGE[0] <= val_2) and (val_2 <= RegionRectProcessor.LATITUDE_RANGE[1])):
@@ -80,11 +81,12 @@ class RegionRectProcessor(RegionsProcessor):
                 None
 
         """
-        try:
-            val_1 = float(range[0])
-            val_2 = float(range[1])
-        except ValueError as err:
-            raise err
+        assert isinstance(range, list), 'renge must be a valid list'
+        assert len(range) == 2, "range must be a list of 2 values"
+        assert isinstance(range[0], float) or isinstance(range[0], int), 'range[0] value must be numeric'
+        assert isinstance(range[1], float) or isinstance(range[1], int), 'range[1] value must be numeric'
+        val_1 = float(range[0])
+        val_2 = float(range[1])
         if not (RegionRectProcessor.LONGITUDE_RANGE[0] <= val_1 <= RegionRectProcessor.LONGITUDE_RANGE[1]):
             raise ValueError('Longitude first value falls outside global range')
         if not (RegionRectProcessor.LONGITUDE_RANGE[0] <= val_2 <= RegionRectProcessor.LONGITUDE_RANGE[1]):

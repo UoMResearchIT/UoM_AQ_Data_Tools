@@ -14,12 +14,10 @@ class EnvironmentModule:
 
 
     def __init__(self, out_dir=DEFAULT_OUT_DIR, verbose=DEFAULT_VERBOSE):
-        # Todo - What are the verbose limits? 0..n
-
         """ Initialise instance of the EnvironmentModule class.
             Args:
                 out_dir: (string) directory to be used for all outputs
-                verbose: (integer) level of verbosity in output.
+                verbose: (integer) level of verbosity in output. Zero = no output
 
             Returns:
                 Initialised instance of subclass of EnvironmentModule

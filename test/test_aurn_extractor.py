@@ -1,6 +1,8 @@
 import unittest
 from os import path
 import pandas as pd
+from pandas.util.testing import assert_frame_equal
+from datetime import datetime
 
 from environmental_data_modules.aurn_extractor import AurnExtractor
 
@@ -18,13 +20,14 @@ class TestAurnExtractor(unittest.TestCase):
         self.outfile_suffix = 'test'
         self.site_list = ['CARD', 'HS1']
         self.years = [2017]
-
-        self.bad_list_params = [[], 'bad', 20]  # Bad lists
+        self.verbose = 0
+        self.result = pd.read_csv(path.join(dir, 'data', 'OK', 'result_aurn_extractor.csv'),
+                                  parse_dates=['timestamp'], index_col='timestamp')
+        self.bad_list_params = [[], 'bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
 
         self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                        out_dir=self.out_dir,
                                        verbose=0)
-
 
     def test_init_ok_params(self):
         """
@@ -35,7 +38,7 @@ class TestAurnExtractor(unittest.TestCase):
         extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                   metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
@@ -43,7 +46,7 @@ class TestAurnExtractor(unittest.TestCase):
         extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                   metadata_url=None,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
@@ -51,20 +54,20 @@ class TestAurnExtractor(unittest.TestCase):
         extractor = AurnExtractor(metadata_filename=None,
                                   metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
         # Will use default filename (None)
         extractor = AurnExtractor(metadata_url=self.metadata_url,
                                   out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
         # Will use default filename (None) and default url
         extractor = AurnExtractor(out_dir=self.out_dir,
-                                  verbose=0)
+                                  verbose=self.verbose)
         self.assertIsNotNone(extractor)
         self.assertIsInstance(extractor, AurnExtractor)
 
@@ -77,39 +80,61 @@ class TestAurnExtractor(unittest.TestCase):
             extractor = AurnExtractor(metadata_filename='bad_filename',
                                       metadata_url=self.metadata_url,
                                       out_dir=self.out_dir,
-                                      verbose=0)
+                                      verbose=self.verbose)
 
             extractor = AurnExtractor(metadata_url='bad url',
                                       out_dir=self.out_dir,
-                                      verbose=0)
+                                      verbose=self.verbose)
 
             extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                       out_dir=108748485,
-                                      verbose=0)
+                                      verbose=self.verbose)
 
             extractor = AurnExtractor(metadata_url=self.metadata_filename,
                                       out_dir=self.out_dir,
                                       verbose='bad verbose')
 
 
-    def test_extract_data_OK_params(self):
-      """
-      Test extract_data with OK inputs
-      """
-      if not self.extractor:
-          self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                       out_dir=self.out_dir,
-                                       verbose=0)
-      result = self.extractor.extract_data(
-          years=self.years,
-          site_list=self.site_list,
-          save_to_csv=False,
-          outfile_suffix=self.outfile_suffix)
+    def test_extract_data_OK_params_local_metadata(self):
+        """
+        Test extract_data with OK inputs
+        """
+        if not self.extractor:
+            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
+                                           out_dir=self.out_dir,
+                                           verbose=self.verbose)
+        result = self.extractor.extract_data(
+            years=self.years,
+            site_list=self.site_list,
+            save_to_csv=False,
+            outfile_suffix=self.outfile_suffix)
 
-      self.assertIsNotNone(result)
-      self.assertIsInstance(result, pd.DataFrame)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, pd.DataFrame)
 
+        # Compare with model result
+        result.set_index('timestamp', inplace=True)
+        self.assertTrue(result.round(3).equals(self.result.round(3)))
 
+    def test_extract_data_OK_params_url_metadata(self):
+        """
+        Test extract_data with OK inputs
+        """
+        self.extractor = AurnExtractor(out_dir=self.out_dir,
+                                       verbose=self.verbose)
+
+        result = self.extractor.extract_data(
+            years=self.years,
+            site_list=self.site_list,
+            save_to_csv=False,
+            outfile_suffix=self.outfile_suffix)
+
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, pd.DataFrame)
+
+        # Compare with model result
+        result.set_index('timestamp', inplace=True)
+        self.assertTrue(result.round(3).equals(self.result.round(3)))
 
     def test_extract_data_bad_years(self):
         """
@@ -118,7 +143,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                        out_dir=self.out_dir,
-                                       verbose=0)
+                                       verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
@@ -135,7 +160,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
-                                           verbose=0)
+                                           verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
@@ -152,7 +177,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
-                                           verbose=0)
+                                           verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
@@ -169,7 +194,7 @@ class TestAurnExtractor(unittest.TestCase):
         if not self.extractor:
             self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
                                            out_dir=self.out_dir,
-                                           verbose=0)
+                                           verbose=self.verbose)
 
         with self.assertRaises(AssertionError):
             self.extractor.extract_data(

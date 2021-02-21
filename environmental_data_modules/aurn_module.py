@@ -16,12 +16,9 @@ class AurnModule(object):
 
     SPECIES_LIST_EXTRACTED = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
     INDEX_EXTRACTED = 'index'
-#    SITE_ID_EXTRACTED = 'siteID'
     SITE_ID_AURN_METADATA = 'site_id'
     DATE_EXTRACTED = 'date'
 
-#    SITE_ID_NEW = 'SiteID'
-#    DATE_NEW = 'Date'
     TIMESTAMP_STRING = 'timestamp'
     SITE_STRING = 'site_id'
     NEW_FILE_COLS = [TIMESTAMP_STRING, SITE_STRING] + SPECIES_LIST_EXTRACTED
@@ -32,7 +29,7 @@ class AurnModule(object):
     DEFAULT_METADATA_URL = '{}/{}'.format(DEFAULT_DOWNLOAD_RDATA_URL, DEFAULT_METADATA_FILE)
     DEFAULT_SITE_LIST = None
 
-    def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL):
+    def __init__(self, metadata_filename=DEFAULT_METADATA_FILE, metadata_url=DEFAULT_METADATA_URL, out_dir=None):
         """ Initialise instance of the AurnModule class.
             Initialises the private class variables with hard-coded / default values
 
@@ -47,7 +44,7 @@ class AurnModule(object):
 
         self._timestamp_string = AurnModule.TIMESTAMP_STRING
         self._site_string = AurnModule.SITE_STRING
-        self._metadata = self.load_metadata(metadata_filename, metadata_url)
+        self._metadata = self.load_metadata(metadata_filename, metadata_url, out_dir)
         self._site_list = AurnModule.DEFAULT_SITE_LIST
 
     @property
@@ -90,7 +87,7 @@ class AurnModule(object):
             self._site_list = site_list
 
 
-    def load_metadata(self, filename=None, alt_url=None):
+    def load_metadata(self, filename=None, alt_url=None, out_dir=None):
         """ Load the AURN metadata from file or URL.
             If filename is None, will use the metadata stored at the URL: alt_url
             Otherwise, will load from URL: alt_url
@@ -101,6 +98,7 @@ class AurnModule(object):
             Args:
                 filename: (string) Valid file name of existing AURN metadata R file, or None
                 alt_url: (string) Valid URL pointing to AURN metadata downloadable source, or None
+                out_dir: (string) Directory to store .RData file if alt_url used.
 
             Returns:
                 Dataframe containing the downloaded data
@@ -127,6 +125,7 @@ class AurnModule(object):
         print("\nDownloading data file using url {}".format(alt_url))
         try:
             print('\nLoading metadata file from url')
-            filename = Path(wget.download(alt_url))
+            filename = Path(wget.download(alt_url, out_dir))
+            return pyreadr.read_r(str(filename))
         except Exception as err:
             raise ValueError('Error obtaining metadata file from url: {}. {}'.format(alt_url, err))
