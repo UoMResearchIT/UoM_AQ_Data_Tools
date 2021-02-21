@@ -165,7 +165,7 @@ class TestAurnExtractor(unittest.TestCase):
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
-                  years=[2017],
+                  years=self.years,
                   site_list=bad_param,
                   save_to_csv=False,
                   outfile_suffix=self.outfile_suffix)
@@ -182,8 +182,26 @@ class TestAurnExtractor(unittest.TestCase):
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
-                    years=[2017],
-                    species_list=[],
+                    years=self.years,
+                    site_list=self.site_list,
+                    species_list=bad_param,
+                    save_to_csv=False,
+                    outfile_suffix=self.outfile_suffix)
+
+    def test_extract_data_bad_save_to_file(self):
+        """
+        Test extract_data with bad species_list param
+        """
+        if not self.extractor:
+            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
+                                           out_dir=self.out_dir,
+                                           verbose=self.verbose)
+
+        with self.assertRaises(AssertionError):
+            for bad_param in self.bad_list_params:
+                self.extractor.extract_data(
+                    years=self.years,
+                    site_list=self.site_list,
                     save_to_csv=bad_param,
                     outfile_suffix=self.outfile_suffix)
 
@@ -198,14 +216,14 @@ class TestAurnExtractor(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             self.extractor.extract_data(
-              years=[2017],
+              years=self.years,
               site_list=self.site_list,
               save_to_csv=False,
               outfile_suffix=10)
 
             # Test bad save_to_csv
             self.extractor.extract_data(
-              years=[2017],
+              years=self.years,
               site_list=self.site_list,
               save_to_csv=False,
               outfile_suffix='% %..()')

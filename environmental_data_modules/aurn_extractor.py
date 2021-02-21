@@ -77,6 +77,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         assert site_list is None or isinstance(site_list, list) and len(site_list) > 0, 'Site list invalid or empty'
         assert species_list is None or isinstance(species_list, list) and len(species_list) > 0, \
             'Species list is invalid empty'
+        assert save_to_csv is None or isinstance(save_to_csv, bool), 'Save to CSV should be a valid boolean'
 
         self._outfile_suffix = outfile_suffix
         self.file_out = self._base_file_out.format(self.out_dir, self.outfile_suffix_string)
