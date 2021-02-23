@@ -1,19 +1,17 @@
-from .environment_module import EnvironmentModule
+from environmental_data_modules.environment_module import EnvironmentModule
 
-from .aurn_module import AurnModule
-from .met_module import MetModule
-from .dates_processor import DatesProcessor, DateRangeProcessor, DateYearsProcessor
-from .regions_processor import RegionsProcessor, RegionRectProcessor
+from environmental_data_modules.aurn_module import AurnModule
+from environmental_data_modules.met_module import MetModule
+from environmental_data_modules.dates_processor import DatesProcessor, DateRangeProcessor, DateYearsProcessor
+from environmental_data_modules.regions_processor import RegionsProcessor, RegionRectProcessor
 
-from .extractor import Extractor
-from .met_extractor import MetExtractor
-from .aurn_extractor import AurnExtractor
-from .post_processor import PostProcessor
+from environmental_data_modules.extractor import Extractor
+from environmental_data_modules.met_extractor import MetExtractor
+from environmental_data_modules.aurn_extractor import AurnExtractor
+from environmental_data_modules.post_processor import PostProcessor
 
-from .met_post_processor import MetPostProcessor
-from .aurn_post_processor import AurnPostProcessor
+from environmental_data_modules.met_post_processor import MetPostProcessor
+from environmental_data_modules.aurn_post_processor import AurnPostProcessor
 
-from .aurn_imputation_tests import AurnImputationTest
-from .met_imputation_tests import MetImputationTest
-
-
+from environmental_data_modules.aurn_imputation_tests import AurnImputationTest
+from environmental_data_modules.met_imputation_tests import MetImputationTest
