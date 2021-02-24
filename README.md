@@ -121,10 +121,10 @@ in the `scripts/Combine_Data` directory.
 
 Unit tests are currently set up for AURN and MEDMI data extraction
 
-To run all tests (currently extraction only) run: `python -m unittest discover`
-Note that if not run on MEDMI server, data extraction of MEDMI data will not be tested.
+To run all tests (currently extraction only) run: `python -m unittest discover`\
+Note that if not run on the MEDMI server, data extraction of MEDMI data will not be tested.
 
-To test on the MEDMI server, run `python -m unittest discover test/MEDMI`
+To test on the MEDMI server, run `python -m unittest discover test/MEDMI`\
 Note that running all tests (`python -m unittest discover`) on the MEDMI server will result 
 in failures for the non MEDMI tests.
 
