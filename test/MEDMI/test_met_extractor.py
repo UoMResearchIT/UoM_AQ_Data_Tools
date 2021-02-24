@@ -4,7 +4,12 @@ import unittest
 from os import path
 import pandas as pd
 
-from environmental_data_modules.met_extractor import MetExtractor
+try:
+    from medmi_database import Dataset
+except:
+    pass
+
+from environmental_data_modules.met_extractor import MetExtractor, MEDMI_COMPLIANT
 
 
 class TestMetExtractor(unittest.TestCase):
@@ -15,30 +20,30 @@ class TestMetExtractor(unittest.TestCase):
     def setUp(self):
         dir, _ = path.split(__file__)
         self.out_dir = path.join(dir, '../output')
+        self.result_filespec = path.join(self.out_dir, 'Met_extracted_temp_extras-rel_hum-pressure-dewpoint_reduced.csv')
+
         self.verbose = 0
-        self.measurements = ['temperature', 'rain', 'wind', 'alnus', 'urtica']
-        self.result = {'alnus': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
-                                                      'Met_extracted_pollen-alnus_reduced.csv'),
-                                            parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'urtica': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
-                                                       'Met_extracted_pollen-urtica_reduced.csv'),
-                                             parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'rain': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
-                                                     'Met_extracted_rain_reduced.csv'),
-                                           parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'temp': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
-                                                     'Met_extracted_temp_extras-rel_hum-pressure-dewpoint_reduced.csv'),
-                                           parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'wind': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
-                                                     'Met_extracted_wind_reduced.csv'),
-                                           parse_dates=['timestamp'], index_col='timestamp', skiprows=1)}
+        self.measurements = {'temperature': 'Met_extracted_temp_extras-rel_hum-pressure-dewpoint_reduced.csv',
+                             'rain': 'Met_extracted_rain_reduced.csv',
+                             'wind': 'Met_extracted_wind_reduced.csv',
+                             'alnus': 'Met_extracted_pollen-alnus_reduced.csv',
+                             'urtica': 'Met_extracted_pollen-urtica_reduced.csv'
+                             }
+
+        self.result = {}
+        for measurement in self.measurements:
+            self.result[measurement] = pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
+                                                             self.measurements[measurement]),
+                                                   parse_dates=['timestamp'], 
+                                                   index_col=['timestamp', 'site_id'],
+                                                   skiprows=1)
 
         self.bad_list_params = [[], 'bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
 
         self.extractor = MetExtractor(out_dir=self.out_dir,
                                       verbose=0)
 
-        self.latitudes = [53, 55]
+        self.latitudes = [55, 56]
         self.longitudes = [-5, -3]
         self.date_range = ['2017-06-01_0', '2017-06-30_23']
         self.outfile_suffix = "reduced"
@@ -78,8 +83,8 @@ class TestMetExtractor(unittest.TestCase):
         """
         Test extract_data with OK inputs
         """
-        if MetExtractor.dataset is not None and callable(MetExtractor.dataset):
-            for measurement in self.measurements:
+        if MEDMI_COMPLIANT:
+            for measurement in self.measurements.keys():
                 class_ = MetExtractor.get_class_from_measurement_name(measurement)
                 met_extractor = class_(self.out_dir, self.verbose)
                 result = met_extractor.extract_data(
@@ -90,11 +95,14 @@ class TestMetExtractor(unittest.TestCase):
                     date_range=self.date_range)
 
                 self.assertIsNotNone(result)
-                self.assertIsInstance(result, pd.DataFrame)
+                df_result = pd.read_csv(path.join(self.out_dir, self.measurements[measurement]),
+                                        parse_dates=['timestamp'], index_col=['timestamp', 'site_id'], skiprows=1)
+                                        
+                print('RESULT: \n{}'.format(df_result))
+                print('TEST: \n{}'.format(self.result[measurement]))
 
                 # Compare with model result
-                result.set_index('timestamp', inplace=True)
-                self.assertTrue(result.round(3).equals(self.result[measurement].round(3)))
+                self.assertTrue(df_result.equals(self.result[measurement]))
         else:
             print('\nCan\'t see MEDMI Dataset object, so could not run full set of MEDMI data extraction tests.')
 

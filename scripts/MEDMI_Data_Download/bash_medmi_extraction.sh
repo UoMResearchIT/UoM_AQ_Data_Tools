@@ -17,7 +17,7 @@ if [[ $SCENARIO == 'FULL' ]]; then
 
 elif [[ $SCENARIO == 'REDUCED' ]]; then
 
-	LATITUDES='53 55'
+	LATITUDES='55 56'
 	LONGITUDES='-5 -3'
 	VERBOSE=1
 	MEASUREMENTS='temperature rain wind pollen'
