@@ -15,7 +15,9 @@ The sections below are:
   - [MEDMI Data](#medmi-data)
   - [AURN Data](#aurn-data)
   - [Combining Datasets](#combining-datasets)
-- [Testing Imputation Methods](#testing-imputation-methods)
+- [Testing](#testing) 
+  - [Unit testing](#testing-unit)
+  - [Imputation Methods](#testing-imputation-methods)
 
 <!-- toc -->
 
@@ -113,7 +115,22 @@ The data files produced using the scripts above are combined using a pandas data
 based on date and site identifier. Scripts illustrating how this has been done are included
 in the `scripts/Combine_Data` directory.
 
-## Testing Imputation Methods
+## Testing 
+
+### Unit Testing 
+
+Unit tests are currently set up for AURN and MEDMI data extraction
+
+To run all tests (currently extraction only) run: `python -m unittest discover`\
+_Note that if not run on the MEDMI server, data extraction of MEDMI data will not be tested._
+
+To test on the MEDMI server, run `python -m unittest discover test/MEDMI`\
+_Note that running all tests (`python -m unittest discover`) on the MEDMI server will result 
+in failures for the non MEDMI tests._
+
+_(A basic set of unit tests for the post-processing classes will follow soon.)_
+
+### Testing Imputation Methods
 
 Imputation of missing data is carried out for the processing of some of the AURN and MEDMI 
 datasets. Tools for carrying out statistical testing of the imputation tools used are 
