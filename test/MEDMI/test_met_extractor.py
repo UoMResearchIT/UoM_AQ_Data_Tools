@@ -97,9 +97,6 @@ class TestMetExtractor(unittest.TestCase):
                 self.assertIsNotNone(result)
                 df_result = pd.read_csv(path.join(self.out_dir, self.measurements[measurement]),
                                         parse_dates=['timestamp'], index_col=['timestamp', 'site_id'], skiprows=1)
-                                        
-                print('RESULT: \n{}'.format(df_result))
-                print('TEST: \n{}'.format(self.result[measurement]))
 
                 # Compare with model result
                 self.assertTrue(df_result.equals(self.result[measurement]))
