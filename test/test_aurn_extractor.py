@@ -1,8 +1,6 @@
 import unittest
 from os import path
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
-from datetime import datetime
 
 from environmental_data_modules.aurn_extractor import AurnExtractor
 

@@ -3,8 +3,6 @@
 import unittest
 from os import path
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
-from datetime import datetime
 
 from environmental_data_modules.met_extractor import MetExtractor
 
@@ -16,22 +14,22 @@ class TestMetExtractor(unittest.TestCase):
 
     def setUp(self):
         dir, _ = path.split(__file__)
-        self.out_dir = path.join(dir, 'output')
+        self.out_dir = path.join(dir, '../output')
         self.verbose = 0
         self.measurements = ['temperature', 'rain', 'wind', 'alnus', 'urtica']
-        self.result = {'alnus': pd.read_csv(path.join(dir, 'data', 'OK', 'results_MEDMI',
+        self.result = {'alnus': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
                                                       'Met_extracted_pollen-alnus_reduced.csv'),
                                             parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'urtica': pd.read_csv(path.join(dir, 'data', 'OK', 'results_MEDMI',
+                       'urtica': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
                                                        'Met_extracted_pollen-urtica_reduced.csv'),
                                              parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'rain': pd.read_csv(path.join(dir, 'data', 'OK', 'results_MEDMI',
+                       'rain': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
                                                      'Met_extracted_rain_reduced.csv'),
                                            parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'temp': pd.read_csv(path.join(dir, 'data', 'OK', 'results_MEDMI',
+                       'temp': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
                                                      'Met_extracted_temp_extras-rel_hum-pressure-dewpoint_reduced.csv'),
                                            parse_dates=['timestamp'], index_col='timestamp', skiprows=1),
-                       'wind': pd.read_csv(path.join(dir, 'data', 'OK', 'results_MEDMI',
+                       'wind': pd.read_csv(path.join(dir, '../data', 'OK', 'results_MEDMI',
                                                      'Met_extracted_wind_reduced.csv'),
                                            parse_dates=['timestamp'], index_col='timestamp', skiprows=1)}
 
