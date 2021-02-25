@@ -4,19 +4,20 @@ on: push
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted]
     strategy:
       matrix:
-        python-version: [2.7]
+        python-version: [2.7, Linux, X64]
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python 3.9
+      - name: Set up Python 2.7
         uses: actions/setup-python@v2
         with:
           python-version: 2.7
       - name: Install dependencies
         run: |
+          . ~cs467/pythonpath
           wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
           bash miniconda.sh -b -p $HOME/miniconda
           source "$HOME/miniconda/etc/profile.d/conda.sh"
