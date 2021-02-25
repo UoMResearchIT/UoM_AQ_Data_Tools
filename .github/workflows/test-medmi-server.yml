@@ -4,17 +4,17 @@ on: push
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, x64, medmi-test]
+    runs-on: [self-hosted, linux, medmi-test]
     strategy:
       matrix:
-        python-version: [2.7.x]
+        python-version: [2.x]
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python 2.7
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: 2.7.x
+          python-version: 2.x
       - name: Install dependencies
         run: |
           . ~cs467/pythonpath
