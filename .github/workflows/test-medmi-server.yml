@@ -4,7 +4,7 @@ on: push
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64, medmi]
+    runs-on: [self-hosted, Linux, X64, medmi-test]
     strategy:
       matrix:
         python-version: [2.7]
