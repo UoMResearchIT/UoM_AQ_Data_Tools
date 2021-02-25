@@ -1,0 +1,34 @@
+name: test-medmi-server
+
+on: push
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux]
+    strategy:
+      matrix:
+        python-version: [2.7]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 2.7
+      - name: Install dependencies
+        run: |
+          wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+          bash miniconda.sh -b -p $HOME/miniconda
+          source "$HOME/miniconda/etc/profile.d/conda.sh"
+          hash -r
+          conda config --set always_yes yes --set changeps1 no
+          conda update -q conda
+          conda config --add channels conda-forge
+          # Useful for debugging any issues with conda
+          conda info -a
+
+          conda create -q -n test-environment python=2.7 pyreadr python-wget pandas numpy scipy scikit-learn seaborn geopy
+          conda activate test-environment
+      - name: Test with unittest
+        run: |
+          python -m unittest discover test/MEDMI/
