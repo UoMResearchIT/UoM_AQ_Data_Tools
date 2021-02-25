@@ -4,10 +4,10 @@ on: push
 
 jobs:
   build:
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Linux, X64, medmi]
     strategy:
       matrix:
-        python-version: [2.7, Linux, X64]
+        python-version: [2.7]
 
     steps:
       - uses: actions/checkout@v2
