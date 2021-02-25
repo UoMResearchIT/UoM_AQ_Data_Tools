@@ -1,7 +1,6 @@
 # UoM AQ Data Tools
 
 [![Build Status](https://travis-ci.org/UoMResearchIT/UoM_AQ_Data_Tools.svg?branch=testing)](https://travis-ci.org/UoMResearchIT/UoM_AQ_Data_Tools)
-[![test-medmi-server](https://github.com/UoMResearchIT/UoM_AQ_Data_Tools/actions/workflows/test-medmi-server.yml/badge.svg)](https://github.com/UoMResearchIT/UoM_AQ_Data_Tools/actions/workflows/test-medmi-server.yml)
 
 This repository contains tools for obtaining and processing UK air quality data.
 
