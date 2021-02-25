@@ -7,14 +7,14 @@ jobs:
     runs-on: [self-hosted, linux, x64, medmi-test]
     strategy:
       matrix:
-        python-version: [2.7.18]
+        python-version: [2.7.x]
 
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 2.7
         uses: actions/setup-python@v2
         with:
-          python-version: 2.7.18
+          python-version: 2.7.x
       - name: Install dependencies
         run: |
           . ~cs467/pythonpath
