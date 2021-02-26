@@ -141,6 +141,7 @@ class PostProcessor(EnvironmentModule):
                     distance (float): distance to listed station from station of interest, in km
         """
         station_distances = pd.DataFrame(index=stations_in.index)
+        station_distances.index.names = ['site_id']
         station_distances['distance'] = np.nan
 
         for index, row in stations_in.iterrows():

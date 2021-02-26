@@ -15,6 +15,9 @@ class TestPostProcessor(unittest.TestCase):
         self.out_dir = path.join(dir, 'output')
         self.verbose = 0
         self.file_in = path.join(self.out_dir, 'AURN_extracted_test.csv')
+        self.stations_in_file = path.join(dir, 'data', 'processing', 'stations_in.csv')
+        self.stat_locn = (51.91614, -0.99958)
+        self.result_filename = path.join(dir, 'data', 'OK', 'results_AURN', 'result_calc_station_distance.csv')
 
     def test_load_good_params(self):
         """
@@ -37,9 +40,22 @@ class TestPostProcessor(unittest.TestCase):
 
     def test_direct_init(self):
         """
-        Test that an PostProcessor class can not be initialised and then called directly
+        Test that a PostProcessor class can not be initialised and then called directly
         """
         post_processor = PostProcessor(self.out_dir, self.verbose)
         with self.assertRaises(NotImplementedError):
             post_processor.process(self.file_in)
+
+    def test_calc_station_distances(self):
+        """
+        Test that a PostProcessor.calc_station_distances
+        """
+        stations_in = pd.read_csv(self.stations_in_file)
+        post_processor = PostProcessor(self.out_dir, self.verbose)
+        result = post_processor.calc_station_distances(stations_in, self.stat_locn)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, pd.DataFrame)
+        stored_result = pd.read_csv(self.result_filename, index_col='site_id')
+        self.assertTrue(result.round(3).equals(stored_result.round(3)))
+
 
