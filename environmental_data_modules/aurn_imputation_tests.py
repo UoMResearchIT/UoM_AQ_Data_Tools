@@ -237,8 +237,8 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -251,7 +251,7 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_dataframe_filtered: pandas dataframe, as above, containing hourly dataset for only 
                                the reference station datasets
             reference_sites_out: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc`
+                            items: (list of strings) the site_id's for our reference sites for each `spc`
                                                      minus the sites in the `site_working` list
             required_sites: (dict, keys are species):
                             items: (list of strings) required sites for `spc` (not used later?)
@@ -307,8 +307,8 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -317,7 +317,7 @@ class AurnImputationTest(AurnPostProcessor):
                     NOXasNO2 (float):
                     SO2      (float):
             reference_sites: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc`
+                            items: (list of strings) the site_id's for our reference sites for each `spc`
                                                      minus the sites in the `site_working` list
             site_list_internal: (list, strings) a single list of required sites
         
@@ -325,8 +325,8 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_dataframe_out: hourly dataset, for all measurements, as pandas.Dataframe, with the required data removed
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -393,8 +393,8 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -407,8 +407,8 @@ class AurnImputationTest(AurnPostProcessor):
         Returns:
             hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Required Index:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -462,8 +462,8 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_imputed_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -480,8 +480,8 @@ class AurnImputationTest(AurnPostProcessor):
             hourly_reference_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):

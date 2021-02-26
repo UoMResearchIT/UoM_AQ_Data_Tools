@@ -242,8 +242,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         Args:
             hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Required Index:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -326,8 +326,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             hourly_dataframe:  hourly dataset, for all measurements, as pandas.Dataframe
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
-                        SiteID          (string):
+                        timestamp   (datetime object):
+                        site_id          (string):
                     Optional Columns:
                         O3       (float):
                         PM10     (float):
@@ -364,8 +364,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                             is to be used then this will be an empty Dataframe.
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
-                        SiteID          (string):
+                        timestamp   (datetime object):
+                        site_id          (string):
                         O3       (float):
                         PM10     (float):
                         PM2.5    (float):
@@ -396,8 +396,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             data_in: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -410,7 +410,7 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             met_data_filtered: pandas dataframe, as above, containing hourly dataset for only 
                                the required station datasets
             reference_sites: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc` 
+                            items: (list of strings) the site_id's for our reference sites for each `spc`
             required_sites: (dict, keys are species):
                             items: (list of strings) required sites for `spc`
             combined_req_site_list: (list, strings) a single list of required sites
@@ -451,8 +451,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -468,8 +468,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         Returns:
             output_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Required Index:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -566,8 +566,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
             hourly_dataframe_filtered: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -580,8 +580,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
         Returns:
             hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Required Index:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -652,12 +652,12 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                    then these are added for EMEP data too, but only at 
                                    the station of interest (so only another 6 columns are
                                    added). 
-                    O3_[siteID]       (float): 
-                    PM10_[siteID]     (float):
-                    PM2.5_[siteID]    (float):
-                    NO2_[siteID]      (float):
-                    NOXasNO2_[siteID] (float):
-                    SO2_[siteID]      (float):
+                    O3_[site_id]       (float):
+                    PM10_[site_id]     (float):
+                    PM2.5_[site_id]    (float):
+                    NO2_[site_id]      (float):
+                    NOXasNO2_[site_id] (float):
+                    SO2_[site_id]      (float):
             transformer: the transform function to use, passed so that we can chose based
                          on the variable being operated on
 

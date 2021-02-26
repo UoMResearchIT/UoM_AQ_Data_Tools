@@ -21,7 +21,7 @@ class MetModule(object):
         """
         self._timestamp_string = MetModule.TIMESTAMP_STRING
         self._site_string = MetModule.SITE_STRING
-        self._columns_base = [MetModule.TIMESTAMP_STRING,MetModule.SITE_STRING]
+        self._columns_base = [MetModule.TIMESTAMP_STRING, MetModule.SITE_STRING]
         self._columns_specific = []
 
     def get_all_column_headers(self):

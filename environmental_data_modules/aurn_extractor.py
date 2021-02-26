@@ -63,8 +63,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
-                        SiteID          (string):
+                        timestamp   (datetime object):
+                        site_id          (string):
                     Optional Columns:
                         O3       (float):
                         PM10     (float):
@@ -122,8 +122,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 hourly_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
-                        SiteID          (string):
+                        timestamp   (datetime object):
+                        site_id          (string):
                     Optional Columns:
                         O3       (float):
                         PM10     (float):
@@ -220,7 +220,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         """ Downloads and opens the AURN datafiles
         
             Args:
-                site           (str): siteID, used in the file names
+                site           (str): site_id, used in the file names
                 station_name   (str): used for diagnostic messages
                 years (list of ints): list of the years to download
                          
@@ -265,7 +265,7 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 final_dataframe: hourly dataset, for the given site, as pandas.Dataframe
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
+                        timestamp   (datetime object):
                     Optional Columns:
                         O3       (float):
                         PM10     (float):
@@ -284,13 +284,13 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
         return final_dataframe
 
     def tidy_hourly_data(self, hourly_dataframe, site_name):
-        """ Removes any unneeded pollutant data, and adds a column with the siteID.
+        """ Removes any unneeded pollutant data, and adds a column with the site_id.
         
             Args:
                 hourly_dataframe: hourly dataset, for the given site, as pandas.Dataframe
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
+                        timestamp   (datetime object):
                     Optional Columns:
                         O3       (float):
                         PM10     (float):
@@ -304,8 +304,8 @@ class AurnExtractor(Extractor, AurnModule, DateYearsProcessor):
                 working_dataframe: hourly dataset, for the given site, as pandas.Dataframe
                     Index: none
                     Required Columns:
-                        Date   (datetime object):
-                        SiteID          (string):
+                        timestamp   (datetime object):
+                        site_id          (string):
                     Optional Columns:
                         O3       (float):
                         PM10     (float):
