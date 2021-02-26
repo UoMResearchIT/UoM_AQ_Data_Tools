@@ -16,7 +16,7 @@ class TestEnvironmentModule(unittest.TestCase):
 
     def test_load_good_params(self):
         """
-        Test that an EnvironmentModule can not be initialised directly and then be used (calling methods)
+        Test that an EnvironmentModule can be initialised with OK parameters
         """
         env_mod = EnvironmentModule(self.out_dir, self.verbose)
         self.assertIsNotNone(env_mod)
@@ -25,8 +25,7 @@ class TestEnvironmentModule(unittest.TestCase):
 
     def test_load_bad_data(self):
         """
-        Test that a RegionEstimator object can be initialized with good data.
-        Also check that various other initializations happen within the object.
+        Test that a RegionEstimator object cannot be initialized with bad data.
         """
         with self.assertRaises(AssertionError):
             env_mod = EnvironmentModule(10, self.verbose)

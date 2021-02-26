@@ -145,8 +145,7 @@ class PostProcessor(EnvironmentModule):
 
         for index, row in stations_in.iterrows():
             new_location = (row['latitude'], row['longitude'])
-
-            station_distances.loc[index]['Distance'] = distance.distance(stat_location,new_location).km
+            station_distances.loc[index]['Distance'] = distance.distance(stat_location, new_location).km
 
         return station_distances
 
