@@ -127,25 +127,25 @@ class PostProcessor(EnvironmentModule):
         Args:
             stations_in: pandas.Dataframe containing station locations
                 Required Index:
-                    SiteID   (str): identifiers for the stations
+                    site_id   (str): identifiers for the stations
                 Required Columns:
-                    Latitude (float):
-                    Longitude (float):
+                    latitude (float):
+                    longitude (float):
             stat_location (tuple, float): (latitude, longitude) of station of interest
         
         Returns:
             station_distances: pandas.Dataframe containing (sorted) list of distances to stations
                 Required Index:
-                    SiteID   (str): identifiers for the stations
+                    site_id   (str): identifiers for the stations
                 Required Columns:
-                    Distance (float): distance to listed station from station of interest, in km 
+                    distance (float): distance to listed station from station of interest, in km
         """
         station_distances = pd.DataFrame(index=stations_in.index)
-        station_distances['Distance'] = np.nan
+        station_distances['distance'] = np.nan
 
         for index, row in stations_in.iterrows():
             new_location = (row['latitude'], row['longitude'])
-            station_distances.loc[index]['Distance'] = distance.distance(stat_location, new_location).km
+            station_distances.loc[index]['distance'] = distance.distance(stat_location, new_location).km
 
         return station_distances
 
@@ -156,25 +156,25 @@ class PostProcessor(EnvironmentModule):
         station of interest.
         
         Args:
-            site_in               (str):  siteID for our station of interest
-            useful_sites_in (list, str):  siteID's for our reference stations
+            site_in               (str):  site_id for our station of interest
+            useful_sites_in (list, str):  site_id's for our reference stations
         
         Returns:
             station_distances: pandas.Dataframe containing (sorted) list of distances to stations
                                these will be sorted by distance, with the station of interest removed
                 Required Index:
-                    SiteID   (str): identifiers for the stations
+                    site_id   (str): identifiers for the stations
                 Required Columns:
-                    Distance (float): distance to listed station from station of interest, in km 
+                    distance (float): distance to listed station from station of interest, in km
         """
 
         station_location = (self.station_data.loc[site_in]['latitude'], self.station_data.loc[site_in]['longitude'])
-        station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in], \
-                                                   stat_location=station_location)
+        station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in],
+                                                        stat_location=station_location)
 
         # sort by distance, then drop any station which is the same location as our site of interest
-        station_distances = station_distances.sort_values(by='Distance',ascending=True)
-        station_distances[station_distances.Distance==0]=np.nan
+        station_distances = station_distances.sort_values(by='distance', ascending=True)
+        station_distances[station_distances.distance==0]=np.nan
         station_distances = station_distances.dropna()
 
         return station_distances
@@ -191,8 +191,8 @@ class PostProcessor(EnvironmentModule):
         Args:
             grouped_data_in: pandas series object
                 Required MultiIndex:
-                    SiteID: (level 0)
-                    Date: (level 1)
+                    site_id: (level 0)
+                    timestamp: (level 1)
                 Required data:
                     daily count of measurement data (should be in range 0-24 for hourly data)
                     

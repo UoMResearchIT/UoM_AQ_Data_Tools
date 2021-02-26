@@ -301,7 +301,7 @@ class MetImputationTest(MetPostProcessor):
             met_data_in: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -312,13 +312,13 @@ class MetImputationTest(MetPostProcessor):
                                the reference station datasets
                                
             reference_sites_out: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc`
+                            items: (list of strings) the site_id's for our reference sites for each `spc`
                                                      minus the sites in the `site_working` list
             required_sites: (dict, keys are species):
                             items: (list of strings) required sites for `spc` (not used later?)
             site_working_list: (list, strings) a single list of required sites for the imputation tests
             
-            reference_sites: (list, string or int) the siteID's for our reference sites 
+            reference_sites: (list, string or int) the site_id's for our reference sites
                              (composite list made up from the measurement specific lists below)
             req_sites_temp: (list, string or int) required sites for temperature data
             req_sites_pres: (list, string or int) required sites for pressure data
@@ -372,13 +372,13 @@ class MetImputationTest(MetPostProcessor):
                 Index: none
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
                     'dewpoint'    (float): dewpoint temperature
             reference_sites: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc`
+                            items: (list of strings) the site_id's for our reference sites for each `spc`
                                                      minus the sites in the `site_working` list
             site_list_internal: (list, strings) a single list of required sites
         
@@ -386,7 +386,7 @@ class MetImputationTest(MetPostProcessor):
             hourly_dataframe_out: hourly dataset, for all measurements, as pandas.Dataframe, with the required data removed
                 Index: none
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -449,7 +449,7 @@ class MetImputationTest(MetPostProcessor):
             met_extracted_data: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -466,7 +466,7 @@ class MetImputationTest(MetPostProcessor):
             full_data_out: selected meteorological data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     '[var_string]'    (float): met variable data
                     '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -526,7 +526,7 @@ class MetImputationTest(MetPostProcessor):
             met_extracted_data: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -540,7 +540,7 @@ class MetImputationTest(MetPostProcessor):
             met_data_out_temp: temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'temperature'    (float): temperature
                     'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -548,7 +548,7 @@ class MetImputationTest(MetPostProcessor):
             met_data_out_pressure: pressure data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'pressure'    (float): pressure
                     'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -556,7 +556,7 @@ class MetImputationTest(MetPostProcessor):
             met_data_out_dewpoint: dewpoint temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'dewpoint'    (float): dewpoint temperature
                     'dewpoint.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -583,7 +583,7 @@ class MetImputationTest(MetPostProcessor):
             met_data_temp: hourly temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'temperature'    (float): temperature
                     'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -591,14 +591,14 @@ class MetImputationTest(MetPostProcessor):
             met_data_pressure: hourly pressure data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'pressure'    (float): pressure
                     'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
             met_data_rh: hourly relative humidity data as pandas.Dataframe 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'rel_hum'    (float): relative humidity
                     'rel_hum.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed),
@@ -642,8 +642,8 @@ class MetImputationTest(MetPostProcessor):
             hourly_imputed_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -660,8 +660,8 @@ class MetImputationTest(MetPostProcessor):
             hourly_reference_dataframe: hourly dataset, for all measurements, as pandas.Dataframe
                 Index: none
                 Required Columns:
-                    Date   (datetime object):
-                    SiteID          (string):
+                    timestamp   (datetime object):
+                    site_id          (string):
                 Optional Columns:
                     O3       (float):
                     PM10     (float):
@@ -695,28 +695,28 @@ class MetImputationTest(MetPostProcessor):
         position in timeseries for data removal: {} 
         """
         
-        spc_list = ['temperature','pressure','relativehumidity']
-        mul_ind = pd.MultiIndex.from_product([site_list_internal,spc_list],names=['site_id','spc'])
-        col_headers = ['kendalltau_corr','spearmanr_corr','pearsonr_corr','slope','r_squared','p_value','std_err']
+        spc_list = ['temperature', 'pressure', 'relativehumidity']
+        mul_ind = pd.MultiIndex.from_product([site_list_internal,spc_list],names=['site_id', 'spc'])
+        col_headers = ['kendalltau_corr', 'spearmanr_corr', 'pearsonr_corr', 'slope', 'r_squared', 'p_value',' std_err']
         
         hourly_stat_dataset = pd.DataFrame(index=mul_ind,columns=col_headers,dtype=np.float)
         
         for site in site_list_internal:
             print('working on site: {}'.format(site))
-            with PdfPages(self.pdf_file_string.format(self.stat_dir,site,'hourly')) as pdf_pages:
+            with PdfPages(self.pdf_file_string.format(self.stat_dir, site, 'hourly')) as pdf_pages:
                 firstPage = plt.figure(figsize=(6,6))
                 firstPage.clf()
-                firstPage.text(0.5,0.5,note.format(site,self.start,self.end,self.data_lost,self.data_loss_position), 
+                firstPage.text(0.5,0.5,note.format(site,self.start,self.end, self.data_lost, self.data_loss_position),
                     transform=firstPage.transFigure, size=12, ha="center")
                 pdf_pages.savefig()
                 plt.close()
                 for spc in spc_list: #self.species_list:
                     print('stats for species: {}'.format(spc))
                 
-                    data_imputed   = hourly_imputed_dataframe.loc[(slice(None),site),spc]
-                    data_reference = hourly_reference_dataframe.loc[(slice(None),site),spc]
+                    data_imputed   = hourly_imputed_dataframe.loc[(slice(None), site), spc]
+                    data_reference = hourly_reference_dataframe.loc[(slice(None), site), spc]
                 
-                    flag_imputed = hourly_imputed_dataframe.loc[(slice(None),site),'{}_flag'.format(spc)]
+                    flag_imputed = hourly_imputed_dataframe.loc[(slice(None), site), '{}_flag'.format(spc)]
                 
                     # keep only the data which has been imputed
                     data_imputed   = data_imputed[flag_imputed==1]
@@ -739,21 +739,23 @@ class MetImputationTest(MetPostProcessor):
                     s_corr, s_pval = stats.spearmanr(data_reference,data_imputed)
                     p_corr, p_pval = stats.pearsonr(data_reference,data_imputed)
                     slope, intercept, r_value, p_value, std_err = stats.linregress(data_reference,data_imputed)
-                    hourly_stat_dataset.loc[(site,spc),col_headers] = [k_corr,s_corr,p_corr,slope,r_value**2,p_value,std_err]
+                    hourly_stat_dataset.loc[(site, spc), col_headers] = [k_corr, s_corr, p_corr, slope, r_value**2,
+                                                                       p_value, std_err]
                     
                     
                     sns_plot = sns.jointplot(data=data_combined,x=spc,y='{} (imputed)'.format(spc),kind="reg")
-                    sns_plot.ax_joint.plot(data_combined['{} (imputed)'.format(spc)],data_combined['{} (imputed)'.format(spc)], 'r-', linewidth=1)
+                    sns_plot.ax_joint.plot(data_combined['{} (imputed)'.format(spc)],
+                                           data_combined['{} (imputed)'.format(spc)], 'r-', linewidth=1)
                     sns_plot.ax_joint.set_xlim(min_val-range_val*0.05,max_val+range_val*0.05)
                     sns_plot.ax_joint.set_ylim(min_val-range_val*0.05,max_val+range_val*0.05)
-                    sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
+                    sns_plot.ax_joint.text(min_val+range_val*0.1,max_val-range_val*0.1,
+                                           'KendallTau; corr = {0:.2f}; p = {1:.2f}'.format(k_corr,k_pval))
                     
                     pdf_pages.savefig(sns_plot.fig)
                     plt.close()
-                    
-                    
         
-        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.stat_dir,'hourly'), index=True, header=True, float_format=self.float_format)
+        hourly_stat_dataset.to_csv(self.csv_file_string.format(self.stat_dir,'hourly'), index=True, header=True,
+                                   float_format=self.float_format)
         
 
 

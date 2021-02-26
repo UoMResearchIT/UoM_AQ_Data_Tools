@@ -289,7 +289,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                       This will include corrected date strings.
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -320,7 +320,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             dc_in: Pandas groupby dataframe containing met data, 
                     grouped by site and date (at 1 day frequency)
                 Required index:
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'date'        (datetime object) date of measurement set
                 Required columns:
                     'temperature' (float): temperature
@@ -352,7 +352,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_in: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -409,7 +409,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_in: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -477,7 +477,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             data_in: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -487,7 +487,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_filtered: pandas dataframe, as above, containing hourly dataset for only 
                                the required station datasets
             reference_sites: (dict, keys are species):
-                            items: (list of strings) the siteID's for our reference sites for each `spc` 
+                            items: (list of strings) the site_id's for our reference sites for each `spc`
             required_sites: (dict, keys are species):
                             items: (list of strings) required sites for `spc`
             combined_req_site_list: (list, strings) a single list of required sites
@@ -528,7 +528,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_in: met data as a pandas.DataFrame, used for original RH dataset
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -536,14 +536,14 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_temp: temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'temperature'    (float): temperature
                     'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
             met_data_dewpoint: dewpoint temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'dewpoint'    (float): dewpoint temperature
                     'dewpoint.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -556,7 +556,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_out: relative humidity data as pandas.Dataframe 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'rel_hum'    (float): relative humidity
                     'rel_hum.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed),
@@ -665,7 +665,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_extracted_data: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -686,7 +686,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             full_data_out: selected meteorological data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     '[var_string]'    (float): met variable data
                     '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -766,7 +766,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_extracted_data: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -814,7 +814,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_extracted_data: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -831,7 +831,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             full_data_out: selected meteorological data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     '[var_string]'    (float): met variable data
                     '[var_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -890,7 +890,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_extracted_data: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -904,7 +904,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_out_temp: temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'temperature'    (float): temperature
                     'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -912,7 +912,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_out_pressure: pressure data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'pressure'    (float): pressure
                     'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -920,7 +920,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_out_dewpoint: dewpoint temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'dewpoint'    (float): dewpoint temperature
                     'dewpoint.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -944,7 +944,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_in: met data as a pandas.DataFrame
                 Required columns:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                     'temperature' (float): temperature
                     'rel_hum'     (float): relative humidity
                     'pressure'    (float): pressure
@@ -982,7 +982,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             ts_in: pandas dataframe, containing hourly data for the given variable
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     '[var_in_string]'    (float): met variable
                     '[var_in_string].flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -1025,7 +1025,7 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_temp: hourly temperature data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'temperature'    (float): temperature
                     'temperature.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
@@ -1033,14 +1033,14 @@ class MetPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
             met_data_pressure: hourly pressure data as pandas.Dataframe, 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'ssite_id'      (string) ID string for site
                 Required columns:
                     'pressure'    (float): pressure
                     'pressure.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed)
             met_data_rh: hourly relative humidity data as pandas.Dataframe 
                 Required MultiIndex:
                     'date'        (datetime object) date/time of measurement
-                    'siteID'      (string) ID string for site
+                    'site_id'      (string) ID string for site
                 Required columns:
                     'rel_hum'    (float): relative humidity
                     'rel_hum.flag' (int): flag to indicate imputed data (1 = imputed, 0 = not imputed),
