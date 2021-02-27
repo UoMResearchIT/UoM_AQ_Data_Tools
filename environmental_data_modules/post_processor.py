@@ -167,7 +167,16 @@ class PostProcessor(EnvironmentModule):
                     site_id   (str): identifiers for the stations
                 Required Columns:
                     distance (float): distance to listed station from station of interest, in km
+
+        Assert:
+            self.station_data is not None
         """
+        assert isinstance(site_in, str), ValueError('site_in must be a valid string')
+        assert isinstance(useful_sites_in, list), ValueError('site_in must be a valid list')
+        if not all(isinstance(item, str) for item in useful_sites_in):
+            raise ValueError('all elements in useful_sites_in list must be strings')
+        
+        assert self.station_data is not None, "self.station_data must not be None"
 
         station_location = (self.station_data.loc[site_in]['latitude'], self.station_data.loc[site_in]['longitude'])
         station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in],
@@ -202,8 +211,8 @@ class PostProcessor(EnvironmentModule):
                 list of sites with a data count > min_years
             useful_site_list (list of strings):
                 list of sites with a data count > min_years_reference
-        """
 
+        """
         site_list_interior = grouped_data_in.index.levels[0]
 
         required_site_list = []

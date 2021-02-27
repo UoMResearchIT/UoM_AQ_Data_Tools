@@ -18,6 +18,8 @@ class TestPostProcessor(unittest.TestCase):
         self.stations_in_file = path.join(dir, 'data', 'processing', 'stations_in.csv')
         self.stat_locn = (51.91614, -0.99958)
         self.result_filename = path.join(dir, 'data', 'OK', 'results_AURN', 'result_calc_station_distance.csv')
+        self.site_in = 61
+        self.useful_sites_in = [50, 80, 500, 800]
 
     def test_load_good_params(self):
         """
@@ -59,3 +61,26 @@ class TestPostProcessor(unittest.TestCase):
         self.assertTrue(result.round(3).equals(stored_result.round(3)))
 
 
+
+    def test_get_station_distances_ok_params(self):
+        """
+        Test that a PostProcessor.calc_station_distances can be called with OK params
+        """
+        post_processor = PostProcessor(self.out_dir, self.verbose)
+        with self.assertRaises(AssertionError):
+            result = post_processor.get_station_distances(self.site_in, self.useful_sites_in)
+
+    def test_get_station_distances_bad_params(self):
+        """
+        Test that a PostProcessor.calc_station_distances fails with bad params
+        """
+
+        bad_list_params = ['bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
+        post_processor = PostProcessor(self.out_dir, self.verbose)
+
+        with self.assertRaises(ValueError):
+            for bad_param in bad_list_params:
+                post_processor.get_station_distances(site_in=bad_param,
+                                                     useful_sites_in=self.useful_sites_in)
+                post_processor.get_station_distances(site_in=self.site_in,
+                                                     useful_sites_in=bad_param)
