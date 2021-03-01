@@ -39,6 +39,9 @@ class PostProcessor(EnvironmentModule):
         """
         super(PostProcessor, self).__init__(out_dir, verbose)
 
+        if type(self) == PostProcessor:
+            raise NotImplementedError('PostProcessor cannot be instantiated directly')
+
         self._impute_data = PostProcessor.DEFAULT_IMPUTE_DATA
         self._print_stats = PostProcessor.DEFAULT_PRINT_STATS
         self._file_in = None
@@ -120,9 +123,9 @@ class PostProcessor(EnvironmentModule):
 
     ### station geographic routines
 
-    def calc_station_distances(self, stations_in, stat_location):
+    def calc_station_distances(self, stations_in, location):
         """
-        Calculates the distances between stations.
+        Calculates the distances between a list of stations and a specified location.
         
         Args:
             stations_in: pandas.Dataframe containing station locations
@@ -134,19 +137,34 @@ class PostProcessor(EnvironmentModule):
             stat_location (tuple, float): (latitude, longitude) of station of interest
         
         Returns:
-            station_distances: pandas.Dataframe containing (sorted) list of distances to stations
+            station_distances: pandas.Dataframe containing (sorted) list of distances to location for each station
                 Required Index:
                     site_id   (str): identifiers for the stations
                 Required Columns:
                     distance (float): distance to listed station from station of interest, in km
         """
+        if stations_in is None:
+            raise ValueError("stations_in must not be None")
+        if location is None:
+            raise ValueError("location must not be None")
+        if not isinstance(stations_in, pd.DataFrame):
+            raise ValueError('stations_in must be a valid pandas Dataframe')
+        if not isinstance(location, tuple):
+            raise ValueError('location must be a valid tuple')
+        if len(location) != 2:
+            raise ValueError('location must contain 2 items')
+        if not all(isinstance(item, float) for item in location):
+            raise ValueError('both elements in location list must be floats')
+        if stations_in.index.dtype != str:
+            ValueError('stations_in dataframe must have index with string type (containing site_id\'s')
+
         station_distances = pd.DataFrame(index=stations_in.index)
         station_distances.index.names = ['site_id']
         station_distances['distance'] = np.nan
 
         for index, row in stations_in.iterrows():
             new_location = (row['latitude'], row['longitude'])
-            station_distances.loc[index]['distance'] = distance.distance(stat_location, new_location).km
+            station_distances.loc[index]['distance'] = distance.distance(location, new_location).km
 
         return station_distances
 
@@ -171,11 +189,13 @@ class PostProcessor(EnvironmentModule):
         Assert:
             self.station_data is not None
         """
-        assert isinstance(site_in, str), ValueError('site_in must be a valid string')
-        assert isinstance(useful_sites_in, list), ValueError('site_in must be a valid list')
+        if not isinstance(site_in, str):
+            raise ValueError('site_in must be a valid string')
+        if not isinstance(useful_sites_in, list):
+            ValueError('site_in must be a valid list')
         if not all(isinstance(item, str) for item in useful_sites_in):
             raise ValueError('all elements in useful_sites_in list must be strings')
-        
+
         assert self.station_data is not None, "self.station_data must not be None"
 
         station_location = (self.station_data.loc[site_in]['latitude'], self.station_data.loc[site_in]['longitude'])
@@ -213,8 +233,17 @@ class PostProcessor(EnvironmentModule):
                 list of sites with a data count > min_years_reference
 
         """
-        site_list_interior = grouped_data_in.index.levels[0]
 
+        if grouped_data_in is None:
+            raise ValueError('grouped_data_in can not be None')
+        if not isinstance(grouped_data_in, pd.Series):
+            raise ValueError('grouped_data_in must be a pandas series')
+        if len(grouped_data_in.index.names) != 2:
+            raise ValueError(
+            'grouped_data_in series index must have two levels: site_id (level 0) and timestamp (level 1)')
+
+
+        site_list_interior = grouped_data_in.index.levels[0]
         required_site_list = []
         useful_site_list = []
 
