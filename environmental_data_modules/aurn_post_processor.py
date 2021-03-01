@@ -126,10 +126,8 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                                                              random_state=random_state)
 
         # set the power transform options
-        self.transformer_power = preprocessing.PowerTransformer(method=transformer_method, standardize=transformer_standardize)
-
-
-
+        self.transformer_power = preprocessing.PowerTransformer(method=transformer_method,
+                                                                standardize=transformer_standardize)
 
     def process(self, in_file, date_range=None,
                 site_list=AurnModule.DEFAULT_SITE_LIST,
@@ -186,6 +184,9 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                         'SO2.flag'      (float): flag to indicate fraction of imputed data
                                                         (1 = fully imputed, 0 = no imputed values were used)
         """
+
+        if not isinstance(in_file, str):
+            raise ValueError('in_file must be a string')
 
         # Process inputs
         if date_range is not None:
@@ -289,7 +290,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
                     'SO2.flag'      (float): flag to indicate fraction of imputed data
                                                     (1 = fully imputed, 0 = no imputed values were used)
         """
-
 
         #### group by date and site
         daily_grouped_data = hourly_dataframe.groupby([pd.Grouper(level=self._timestamp_string, freq='1D'), self._site_string])
