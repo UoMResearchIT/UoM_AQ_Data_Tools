@@ -27,6 +27,11 @@ class TestAurnPostProcessor(unittest.TestCase):
         self.df_bad_stations_in = pd.DataFrame({'bad_col': [8, 6, 2, 9]})
         self.bad_list_params = [None, 'bad', 20, [10, 'mixed list', 8.3, self.df_bad_stations_in],
                                 self.df_bad_stations_in]
+        self.site_list = ['CARD', 'LEED', 'ED3', 'NOTT', 'LEAM', 'MY1', 'LON6', 'CHBO']
+        self.species_list = ['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2']
+        self.result = pd.read_csv(path.join(dir, 'data', 'OK', 'results_AURN', 'aurn_post_process_result.csv'),
+                                  parse_dates=['timestamp'],
+                                  index_col=['timestamp', 'site_id'])
 
     def test_load_good_params(self):
         """
@@ -132,7 +137,7 @@ class TestAurnPostProcessor(unittest.TestCase):
             for bad_param in bad_list_params:
                 post_processor.station_listing(bad_param)
 
-    def test_process(self):
+    def test_process_ok_params(self):
         """
         Test that a PostProcessor.process can be called with OK params
         """
@@ -141,14 +146,50 @@ class TestAurnPostProcessor(unittest.TestCase):
         with self.assertRaises(Warning):
             post_processor.process(in_file=self.file_in,
                                    date_range=["2017-01-01_00", "2017-05-31_23"],
-                                   site_list=["CARD"],
-                                   species_list=['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2'])
+                                   site_list=self.site_list,
+                                   species_list=['O3'])
 
         post_processor.impute_method_setup()
         result = post_processor.process(in_file=self.file_in,
-                                        date_range=["2017-01-01_00", "2017-12-31_23"],
-                                        site_list=["CARD"],
-                                        species_list=['O3', 'PM10', 'PM2.5', 'NO2', 'NOXasNO2', 'SO2'])
+                                        date_range=["2017-01-01_00", "2018-12-31_23"],
+                                        site_list=self.site_list,
+                                        species_list=self.species_list,
+                                        impute_data=False)
 
-        print('\nRESULT:\n', result)
+        # Compare with model result
+        pd.testing.assert_frame_equal(result, self.result, check_dtype=False, check_frame_type=False, check_exact=False)
 
+    def test_process_bad_params(self):
+        """
+        Test that a PostProcessor.process cannot be called with bad params
+        """
+        post_processor = AurnPostProcessor(self.metadata_filename, out_dir=self.out_dir, verbose=self.verbose)
+        post_processor.impute_method_setup()
+
+        with self.assertRaises(ValueError):
+            for bad_param in self.bad_list_params:
+                post_processor.process(in_file=bad_param,
+                                       date_range=["2017-01-01_00", "2018-12-31_23"],
+                                       site_list=self.site_list,
+                                       species_list=self.species_list,
+                                       impute_data=False)
+                post_processor.process(in_file=self.file_in,
+                                       date_range=bad_param,
+                                       site_list=self.site_list,
+                                       species_list=self.species_list,
+                                       impute_data=False)
+                post_processor.process(in_file=self.file_in,
+                                       date_range=["2017-01-01_00", "2018-12-31_23"],
+                                       site_list=bad_param,
+                                       species_list=self.species_list,
+                                       impute_data=False)
+                post_processor.process(in_file=self.file_in,
+                                       date_range=["2017-01-01_00", "2018-12-31_23"],
+                                       site_list=self.site_list,
+                                       species_list=bad_param,
+                                       impute_data=False)
+                post_processor.process(in_file=self.file_in,
+                                       date_range=["2017-01-01_00", "2018-12-31_23"],
+                                       site_list=self.site_list,
+                                       species_list=self.species_list,
+                                       impute_data=bad_param)
