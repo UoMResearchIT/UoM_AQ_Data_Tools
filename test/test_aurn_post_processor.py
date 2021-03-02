@@ -139,7 +139,7 @@ class TestAurnPostProcessor(unittest.TestCase):
 
     def test_process_ok_params(self):
         """
-        Test that a PostProcessor.process can be called with OK params
+        Test that a AurnPostProcessor.process can be called with OK params
         """
         post_processor = AurnPostProcessor(self.metadata_filename, out_dir=self.out_dir, verbose=self.verbose)
 
@@ -161,7 +161,7 @@ class TestAurnPostProcessor(unittest.TestCase):
 
     def test_process_bad_params(self):
         """
-        Test that a PostProcessor.process cannot be called with bad params
+        Test that a AurnPostProcessor.process cannot be called with bad params
         """
         post_processor = AurnPostProcessor(self.metadata_filename, out_dir=self.out_dir, verbose=self.verbose)
         post_processor.impute_method_setup()
