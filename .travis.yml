@@ -20,7 +20,7 @@ install:
   - conda info -a
 
 # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyreadr python-wget pandas numpy scipy scikit-learn seaborn geopy
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyreadr python-wget pandas numpy scipy scikit-learn seaborn geopy metpy
   - conda activate test-environment
 
 script:

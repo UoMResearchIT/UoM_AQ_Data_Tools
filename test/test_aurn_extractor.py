@@ -16,11 +16,11 @@ class TestAurnExtractor(unittest.TestCase):
         self.metadata_url = 'https://uk-air.defra.gov.uk/openair/R_data/AURN_metadata.RData'
         self.out_dir = path.join(dir, 'output')
         self.outfile_suffix = 'test'
-        self.site_list = ['CARD', 'HS1']
-        self.years = [2017]
+        self.site_list = ['CARD', 'LEED', 'ED3', 'NOTT', 'LEAM', 'MY1', 'LON6', 'CHBO']
+        self.years = [2017, 2018]
         self.verbose = 0
         self.result = pd.read_csv(path.join(dir, 'data', 'OK', 'results_AURN', 'aurn_extracted_result.csv'),
-                                  parse_dates=['timestamp'], index_col='timestamp')
+                                  parse_dates=['timestamp'], index_col=['timestamp', 'site_id'])
         self.bad_list_params = [[], 'bad', 20, [10, 'mixed list', 8.3, self]]  # Bad lists
 
         self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
@@ -97,21 +97,18 @@ class TestAurnExtractor(unittest.TestCase):
         """
         Test extract_data with OK inputs
         """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
         result = self.extractor.extract_data(
             years=self.years,
             site_list=self.site_list,
-            save_to_csv=False,
+            save_to_csv=True,
             outfile_suffix=self.outfile_suffix)
 
         self.assertIsNotNone(result)
         self.assertIsInstance(result, pd.DataFrame)
 
         # Compare with model result
-        result.set_index('timestamp', inplace=True)
+        result.sort_values(by=['timestamp', 'site_id'], inplace=True)
+        result.set_index(['timestamp', 'site_id'], inplace=True)
         self.assertTrue(result.round(3).equals(self.result.round(3)))
 
     def test_extract_data_OK_params_url_metadata(self):
@@ -131,18 +128,14 @@ class TestAurnExtractor(unittest.TestCase):
         self.assertIsInstance(result, pd.DataFrame)
 
         # Compare with model result
-        result.set_index('timestamp', inplace=True)
+        result.sort_values(by=['timestamp', 'site_id'], inplace=True)
+        result.set_index(['timestamp', 'site_id'], inplace=True)
         self.assertTrue(result.round(3).equals(self.result.round(3)))
 
     def test_extract_data_bad_years(self):
         """
         Test extract_data with bad years param
         """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                       out_dir=self.out_dir,
-                                       verbose=self.verbose)
-
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
@@ -155,11 +148,6 @@ class TestAurnExtractor(unittest.TestCase):
         """
         Test extract_data with bad site_list param
         """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
-
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
@@ -172,11 +160,6 @@ class TestAurnExtractor(unittest.TestCase):
         """
         Test extract_data with bad species_list param
         """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
-
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
@@ -190,11 +173,6 @@ class TestAurnExtractor(unittest.TestCase):
         """
         Test extract_data with bad species_list param
         """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
-
         with self.assertRaises(AssertionError):
             for bad_param in self.bad_list_params:
                 self.extractor.extract_data(
@@ -207,11 +185,6 @@ class TestAurnExtractor(unittest.TestCase):
         """
         Test extract_data with bad outfile_suffix param
         """
-        if not self.extractor:
-            self.extractor = AurnExtractor(metadata_filename=self.metadata_filename,
-                                           out_dir=self.out_dir,
-                                           verbose=self.verbose)
-
         with self.assertRaises(AssertionError):
             self.extractor.extract_data(
               years=self.years,

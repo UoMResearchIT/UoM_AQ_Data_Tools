@@ -134,7 +134,7 @@ class PostProcessor(EnvironmentModule):
                 Required Columns:
                     latitude (float):
                     longitude (float):
-            stat_location (tuple, float): (latitude, longitude) of station of interest
+            location (tuple, float): (latitude, longitude) of station of interest
         
         Returns:
             station_distances: pandas.Dataframe containing (sorted) list of distances to location for each station
@@ -200,7 +200,7 @@ class PostProcessor(EnvironmentModule):
 
         station_location = (self.station_data.loc[site_in]['latitude'], self.station_data.loc[site_in]['longitude'])
         station_distances = self.calc_station_distances(stations_in=self.station_data.loc[useful_sites_in],
-                                                        stat_location=station_location)
+                                                        location=station_location)
 
         # sort by distance, then drop any station which is the same location as our site of interest
         station_distances = station_distances.sort_values(by='distance', ascending=True)
