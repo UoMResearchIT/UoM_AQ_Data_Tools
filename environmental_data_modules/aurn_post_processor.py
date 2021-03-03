@@ -208,7 +208,6 @@ class AurnPostProcessor(PostProcessor, AurnModule, DateRangeProcessor):
 
         # load and prepare the hourly dataset
         hourly_dataframe = self.load_aurn_data(in_file)
-        print('\nhourly df:\n{}'.format(hourly_dataframe))
 
         print('filter for minimum data lengths, and reduce dataset to only stations of interest')
         hourly_dataframe_filtered, reference_sites, required_sites, site_list_internal = \
