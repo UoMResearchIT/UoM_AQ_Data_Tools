@@ -12,6 +12,8 @@ from environmental_data_modules.post_processor import PostProcessor
 
 from environmental_data_modules.met_post_processor import MetPostProcessor
 from environmental_data_modules.aurn_post_processor import AurnPostProcessor
+from environmental_data_modules.met_pollen_processor import PollenPostProcessor
 
 from environmental_data_modules.aurn_imputation_tests import AurnImputationTest
 from environmental_data_modules.met_imputation_tests import MetImputationTest
+
