@@ -60,6 +60,9 @@ class PollenPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                
         work_dir = Path(data_directory)
         assert work_dir.is_dir()
+        if self.verbose > 1: print('Data directory is: {}'.format(work_dir))
+
+
         if outfile:
             outfilepath = work_dir.joinpath(outfile)
         elif outsuffix:
@@ -67,13 +70,18 @@ class PollenPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
         else:
             print('Must specify outfile or outsuffix')
             return
+        if self.verbose > 1: print('Output file will be : {}'.format(outfilepath))
+
         
         
         index_array = [self._timestamp_string,self._site_string]
         
+        print('Loading and processing pollen data')
         for pollen in pollen_species:
+            if self.verbose > 1: print('Working on pollen: {}'.format(pollen))
             work_file = work_dir.joinpath(file_template.format(pollen))
             if work_file.is_file():
+                if self.verbose > 2: print('  Loading data')
                 temp_dataset = pd.read_csv(work_file,skiprows=1)
                 temp_dataset[self._timestamp_string] = temp_dataset[self._timestamp_string].apply(self.parse_calcs_date_only)
                 temp_dataset[self._site_string] = temp_dataset[self._site_string].apply(self.rename_siteid)                
@@ -81,11 +89,15 @@ class PollenPostProcessor(PostProcessor, MetModule, DateRangeProcessor):
                 
                 try:
                     pollen_dataset = pd.merge(pollen_dataset,temp_dataset,how='outer',on=index_array)
+                    if self.verbose > 2: print('  Merging data')
                 except:
+                    if self.verbose > 2: print('  Starting final dataset')
                     pollen_dataset = temp_dataset.copy(deep=True)
-                
+            else:
+                print('Data file {} does not exist? Skipping'.format(work_file))
         
         if save_to_csv:
+            print('Saving data to file.')
             pollen_dataset.to_csv(outfilepath, index=True, header=True)
     
         return pollen_dataset
