@@ -22,7 +22,12 @@ The AURN pollution scripts are:
 The AURN processing script requires the `AURN_metadata.RData` file, which is downloaded
 from the AURN website.
 
-## Common Settings
+The pollen scripts are:
+- `Pollen_data_processing.py`
+- `RUN_pollen_script.sh`
+These require only the pollen data files copied across from the MEDMI server.
+
+## Common Settings for Meteorological and AURN pollution scripts
 
 The settings common to scripts are:
 - `--date_range DATE_RANGE`: the start and end dates for the period of interest
@@ -55,3 +60,13 @@ AURN specific settings are:
 - `--emep_filename EMEP_FILENAME`: path and filename of the EMEP data file
 - `--sites S`: list of the measurement sites to be processed (default is all)
 - `--species S`: list of pollutant species to process (default is all)
+
+## Pollen Settings
+
+Pollen specific settings are:
+- `--data_dir DATA_DIR`: data directory for both the original files, and the combined file that is produced
+- `--file_template FILE_TEMPLATE`: a string giving the standard name for the pollen data files
+- `--outfile OUT_FILE`: name of the combined data file that will be output (optional)
+- `--outfile_suffix OUT_SUFFIX`: a string giving the identifier to be added to the file template for the output file (optional)
+- `--pollen_list POLLENLIST`: a list of the pollen species to process (default is all)
+- `--verbose VERBOSE`: verbosity of log messages (0=minimal)
