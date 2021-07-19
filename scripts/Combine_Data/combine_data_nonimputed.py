@@ -1,18 +1,18 @@
 import pandas as pd
 
 
-aurn_file='AURN_data/aurn_processed_daily_2016-2019.csv'
-emep_file='EMEP_data/emep_daily_data_2016-2019.csv'
-poll_file='MEDMI_Pollen_data/pollen_2016-2019.csv'
-met_file='MEDMI_Met_data/Met_ppd_daily_mean_max_temp_RH_pres_2016-2019_no_imputation.csv'
+aurn_file='../AURN_Data_Download/AURN_data/aurn_processed_daily_2016-2019.csv'
+emep_file='../EMEP_Data_Extraction/EMEP_data/emep_daily_data_2016-2019.csv'
+poll_file='../MEDMI_Data_Download/full_data/pollen_2016-2019.csv'
+met_file='../Data_Processing/MEDMI_Met_data/Met_ppd_daily_mean_max_temp_RH_pres_2016-2019_no_imputation.csv'
 
 outfile='Combined_dataset/turing_aq_daily_met_pollen_pollution_data.csv'
 
 
-aurn_data = pd.read_csv(aurn_file,index_col=['time_stamp','site_id'])
-emep_data = pd.read_csv(emep_file,index_col=['time_stamp','site_id'])
-poll_data = pd.read_csv(poll_file,index_col=['time_stamp','site_id'])
-met_data = pd.read_csv(met_file,index_col=['time_stamp','site_id'])
+aurn_data = pd.read_csv(aurn_file,index_col=['timestamp','site_id'])
+emep_data = pd.read_csv(emep_file,index_col=['timestamp','site_id'])
+poll_data = pd.read_csv(poll_file,index_col=['timestamp','site_id'])
+met_data = pd.read_csv(met_file,index_col=['timestamp','site_id'])
 
 
 combined_data = aurn_data.copy()
