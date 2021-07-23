@@ -145,4 +145,4 @@ group at the [University of Manchester](https://www.manchester.ac.uk/) for an
 [Alan Turing Institute](https://www.turing.ac.uk/) project.
 
 (c) 2019-2021 University of Manchester.
-Licensed under the GPL-3.0 license, see the file LICENSE for details.
+Licensed under the MIT license, see the file LICENSE for details.
