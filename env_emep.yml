@@ -12,6 +12,4 @@ dependencies:
   - pyproj
   - netcdf4
   - pyreadr
-  - pip
-  - pip:
-    - salem
+  - salem
