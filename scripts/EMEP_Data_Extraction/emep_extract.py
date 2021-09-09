@@ -31,6 +31,9 @@ def load_sites_and_obtain_their_grid_locations(wrf_in,sensors_file,sensor_file_t
     # open the sensor dataset
     if(sensor_file_type == 'CSV'):
         sens = pd.read_csv(sensors_file,usecols=['long','lat','sensor_name'])
+        sens['latitude']  = sens['lat']
+        sens['longitude'] = sens['long']
+        sens['site_id']   = sens['sensor_name']
     elif(sensor_file_type == 'RDATA'):
         metadata = pyreadr.read_r(sensors_file.as_posix())
         sens = metadata['AURN_metadata'][['site_id','latitude','longitude']].drop_duplicates() 
